@@ -1,5 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject SettingsService service
+@inject Seed seed
 
 <MudProviders/>
 <MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme"/>
@@ -46,6 +47,7 @@
     {
         data = await service.GetSettings();
         _isDarkMode = data.IsDarkMode;
+        await seed.SeedData();
     }
 
 }
