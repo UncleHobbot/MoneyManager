@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.DependencyInjection;
+using MoneyManager.Services;
 
 namespace MoneyManager;
 
@@ -12,8 +13,10 @@ public partial class MainForm : Form
         services.AddWindowsFormsBlazorWebView();
         services.AddMudServices();
 
+        services.AddTransient<FolderPicker>();
         services.AddSingleton<SettingsService>();
-
+        services.AddSingleton<TransactionService>();
+        
         services.AddDbContextFactory<DataContext>(options => options.UseSqlite(@"Data Source=c:\Projects\MoneyManager\Data\MoneyManager.db"));
         services.AddSingleton<Seed>();
 

@@ -1,0 +1,104 @@
+﻿@page "/"
+@inject FolderPicker folderPicker
+@inject IDialogService DialogService
+
+<h3>Home</h3>
+
+<MudGrid>
+    <MudItem xs="4" Class="mb-3">
+        <MudCard Style="height:300px;">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Import transaction file</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudSelect @bind-Value="@importFileType" Label="Select file type">
+                    <MudSelectItem T="int" Value="1">Mint</MudSelectItem>
+                    <MudSelectItem T="int" Value="2">RBC csv</MudSelectItem>
+                </MudSelect>
+                <MudTextField @bind-Value="importFile" Label="Select file to import" Variant="Variant.Text"
+                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.InsertDriveFile" OnAdornmentClick="SelectImportFile" AdornmentAriaLabel="Select File" />
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ImportFile">Import</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="4" Class="mb-3">
+        <MudCard Style="height:300px;">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.Category" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Uncategorized transactions</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" Color="Color.Primary">Go to transactions</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="4" Class="mb-3">
+        <MudCard Style="height:300px;">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.NewReleases" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Recent transactions</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Text" Color="Color.Primary">Go to transactions</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+
+@code {
+    int importFileType = 1;
+    string importFile;
+
+    void SelectImportFile()
+    {
+        string filterName = null;
+        string filterExt = null;
+        if (importFileType == 1)
+        {
+            filterName = "CSV file";
+            filterExt = "csv";
+        }
+        importFile = folderPicker.DisplayFilePicker(filterName, filterExt);
+    }
+
+    async Task ImportFile()
+    {
+        var parameters = new DialogParameters<ImportFileDialog>
+        {
+            { x => x.ImportFileType, importFileType },
+            { x => x.ImportFile, importFile }
+        };
+
+        var dialog = await DialogService.ShowAsync<ImportFileDialog>("Import file", parameters);
+        var result = await dialog.Result;
+    }
+
+}
