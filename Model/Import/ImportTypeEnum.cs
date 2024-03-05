@@ -1,6 +1,6 @@
 ﻿namespace MoneyManager.Model.Import;
 
-public class ImportTypeEnum
+public enum ImportTypeEnum
 {
-    
+    MintCSV, RBCCSV
 }

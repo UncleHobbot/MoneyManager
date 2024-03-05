@@ -8,4 +8,5 @@ public class Category
     public Category Parent { get; set; }
     public string Name { get; set; }
     public string Icon { get; set; }
+    public bool IsNew { get; set; }
 }

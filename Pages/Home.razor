@@ -10,7 +10,7 @@
             <MudCardHeader>
                 <CardHeaderAvatar>
                     <MudAvatar Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" />
+                        <MudIcon Icon="@Icons.Material.Filled.UploadFile"/>
                     </MudAvatar>
                 </CardHeaderAvatar>
                 <CardHeaderContent>
@@ -19,11 +19,11 @@
             </MudCardHeader>
             <MudCardContent>
                 <MudSelect @bind-Value="@importFileType" Label="Select file type">
-                    <MudSelectItem T="int" Value="1">Mint</MudSelectItem>
-                    <MudSelectItem T="int" Value="2">RBC csv</MudSelectItem>
+                    <MudSelectItem T="ImportTypeEnum" Value="ImportTypeEnum.MintCSV">Mint csv</MudSelectItem>
+                    <MudSelectItem T="ImportTypeEnum" Value="ImportTypeEnum.RBCCSV">RBC csv</MudSelectItem>
                 </MudSelect>
                 <MudTextField @bind-Value="importFile" Label="Select file to import" Variant="Variant.Text"
-                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.InsertDriveFile" OnAdornmentClick="SelectImportFile" AdornmentAriaLabel="Select File" />
+                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.InsertDriveFile" OnAdornmentClick="SelectImportFile" AdornmentAriaLabel="Select File"/>
             </MudCardContent>
             <MudCardActions>
                 <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ImportFile">Import</MudButton>
@@ -36,7 +36,7 @@
             <MudCardHeader>
                 <CardHeaderAvatar>
                     <MudAvatar Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.Category" />
+                        <MudIcon Icon="@Icons.Material.Filled.Category"/>
                     </MudAvatar>
                 </CardHeaderAvatar>
                 <CardHeaderContent>
@@ -56,7 +56,7 @@
             <MudCardHeader>
                 <CardHeaderAvatar>
                     <MudAvatar Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.NewReleases" />
+                        <MudIcon Icon="@Icons.Material.Filled.NewReleases"/>
                     </MudAvatar>
                 </CardHeaderAvatar>
                 <CardHeaderContent>
@@ -74,18 +74,19 @@
 
 
 @code {
-    int importFileType = 1;
+    ImportTypeEnum importFileType = ImportTypeEnum.MintCSV;
     string importFile;
 
     void SelectImportFile()
     {
         string filterName = null;
         string filterExt = null;
-        if (importFileType == 1)
+        if (importFileType == ImportTypeEnum.MintCSV)
         {
             filterName = "CSV file";
             filterExt = "csv";
         }
+
         importFile = folderPicker.DisplayFilePicker(filterName, filterExt);
     }
 
@@ -100,5 +101,4 @@
         var dialog = await DialogService.ShowAsync<ImportFileDialog>("Import file", parameters);
         var result = await dialog.Result;
     }
-
 }

@@ -10,4 +10,5 @@ public class Account
     public string Description { get; set; }
     public int Type { get; set; }
     public string Number { get; set; }
+    public bool IsHideFromGraph { get; set; }
 }

@@ -12,4 +12,5 @@ public class Transaction
     public decimal Amount { get; set; }
     public bool IsDebit { get; set; }
     public Category Category { get; set; }
+    public bool IsRuleApplied { get; set; }
 }

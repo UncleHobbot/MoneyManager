@@ -1,14 +1,16 @@
-﻿<MudDialog Style="width:500px;height500px;">
+﻿@inject TransactionService TransactionService
+
+<MudDialog Style="width:700px;height:400px;">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-3 mb-n1" />
+            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-3 mb-n1"/>
             Delete server?
         </MudText>
     </TitleContent>
     <DialogContent>
         <MudText>File Type @ImportFileType</MudText>
         <MudText>File @ImportFile</MudText>
-        <MudProgressLinear Color="Color.Success" Rounded="true" Size="Size.Large" Value="@progress" />
+        <MudProgressLinear Color="Color.Success" Rounded="true" Size="Size.Large" Value="@progress"/>
     </DialogContent>
     <DialogActions>
         <MudButton Color="Color.Error" OnClick="Import">Import</MudButton>
@@ -19,10 +21,8 @@
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; }
 
-    [Parameter]
-    public int ImportFileType { get; set; }
-    [Parameter]
-    public string ImportFile { get; set; }
+    [Parameter] public ImportTypeEnum ImportFileType { get; set; }
+    [Parameter] public string ImportFile { get; set; }
 
     private void Close()
     {
@@ -33,10 +33,14 @@
 
     private async Task Import()
     {
-        for (var i = 0; i < 100; i++)
+        var actionProgress = void (int p) => progress = p;
+
+        switch (ImportFileType)
         {
-            await Task.Delay(100);
-            progress++;
+            case ImportTypeEnum.MintCSV:
+                await TransactionService.ImportMintCSV(ImportFile, actionProgress);
+                break;
         }
     }
+
 }
