@@ -15,6 +15,7 @@ public partial class MainForm : Form
 
         services.AddTransient<FolderPicker>();
         services.AddSingleton<SettingsService>();
+        services.AddSingleton<DataService>();
         services.AddSingleton<TransactionService>();
         
         services.AddDbContextFactory<DataContext>(options => options.UseSqlite(@"Data Source=c:\Projects\MoneyManager\Data\MoneyManager.db"));

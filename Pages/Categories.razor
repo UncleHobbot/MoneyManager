@@ -1,0 +1,159 @@
+﻿@page "/categories"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
+@inject DataService dataService
+
+<MudExpansionPanels MultiExpansion="false">
+    <MudExpansionPanel IsInitiallyExpanded="true" IsExpandedChanged="OpenAllCategories">
+        <TitleContent>
+            <MudText Typo="Typo.h6" Align="Align.Center">Categories</MudText>
+        </TitleContent>
+        <ChildContent>
+            <MudTreeView Items="TreeCategories" Dense="true">
+                <ItemTemplate>
+                    <MudTreeViewItem Value="@context" Icon="@context.Icon" LoadingIconColor="Color.Info"
+                                     Expanded="false" CanExpand="true" Text="@context.Name" Items="@context.Children"/>
+                </ItemTemplate>
+            </MudTreeView>
+        </ChildContent>
+    </MudExpansionPanel>
+
+    <MudExpansionPanel IsExpandedChanged="OpenNewParent" >
+        <TitleContent>
+            <MudText Typo="Typo.h6" Align="Align.Center">New Parents</MudText>
+        </TitleContent>
+        <ChildContent>
+            <MudDropContainer T="CategoryDropItem" Items="newPossibleParents" ItemsSelector="@((item, dropzone) => item.ParentCategory == dropzone)"
+                              ItemDropped="ItemPUpdated" Class="d-flex flex-wrap flex-grow-1">
+                <ChildContent>
+                    <MudDropZone T="CategoryDropItem" Identifier="new" Class="rounded mud-background-gray pa-6 ma-8 flex-grow-1">
+                        <MudText Typo="Typo.h6" Class="mb-4">New categories</MudText>
+                    </MudDropZone>
+                    <MudDropZone T="CategoryDropItem" Identifier="parent" Class="rounded mud-background-gray pa-6 ma-8 flex-grow-1">
+                        <MudText Typo="Typo.h6" Class="mb-4">Will be Parent Categories</MudText>
+                    </MudDropZone>
+                </ChildContent>
+                <ItemRenderer>
+                    <MudPaper Elevation="25" Class="pa-4 my-4">@context.Name</MudPaper>
+                </ItemRenderer>
+            </MudDropContainer>
+        </ChildContent>
+    </MudExpansionPanel>
+
+
+    <MudExpansionPanel IsExpandedChanged="OpenNewCategories">
+        <TitleContent>
+            <MudText Typo="Typo.h6" Align="Align.Center">New Categories</MudText>
+        </TitleContent>
+        <ChildContent>
+            <MudDropContainer T="CategoryDropItem" Class="d-flex flex-wrap flex-grow-1"
+                            Items="newCategories" ItemsSelector="@((item, dropzone) => item.ParentCategory == dropzone)" ItemDropped="ItemUpdated">
+                <ChildContent>
+                    @foreach (var parent in parentCategories.Where(x => x.Id != 999999).OrderBy(x => x.Name))
+                    {
+                        <MudDropZone T="CategoryDropItem" Identifier="@(parent.Id.ToString())" Class="rounded mud-background-gray pa-6 ma-8 flex-grow-1">
+                            <MudText Typo="Typo.h6" Class="mb-4">@parent.Name</MudText>
+                        </MudDropZone>
+                    }
+                    <MudPaper Class="pa-4" Elevation="0" Width="250px">
+                        @if (_addCategoryOpen)
+                        {
+                            <MudPaper Elevation="0" Width="250px" Class="pa-4 d-flex flex-column mud-background-gray rounded-lg">
+                                <EditForm Model="@newCategoryModel" OnValidSubmit="OnValidSectionSubmit">
+                                    <DataAnnotationsValidator/>
+                                    <MudTextField @bind-Value="newCategoryModel.Name" For="@(() => newCategoryModel.Name)" Placeholder="New Parent Category" DisableUnderLine="true"/>
+                                    <MudButton ButtonType="ButtonType.Submit" Size="Size.Small" Color="Color.Primary" FullWidth="true">Add Parent Category</MudButton>
+                                </EditForm>
+                            </MudPaper>
+                        }
+                        else
+                        {
+                            <MudButton OnClick="OpenAddNewCategory" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" Color="Color.Primary" Class="rounded-lg py-2" FullWidth="true">Add Section</MudButton>
+                        }
+                    </MudPaper>
+                    <MudDivider Vertical="false" FlexItem="true"/>
+                    <MudDropZone T="CategoryDropItem" Identifier="@(newCategoriesParent.Id.ToString())" Class="rounded mud-background-gray pa-6 ma-8 flex-grow-1">
+                        <MudText Typo="Typo.h6" Class="mb-4">@newCategoriesParent.Name</MudText>
+                    </MudDropZone>
+
+                </ChildContent>
+                <ItemRenderer>
+                    <MudPaper Elevation="25" Class="pa-4 my-4">@context.Name</MudPaper>
+                </ItemRenderer>
+            </MudDropContainer>
+        </ChildContent>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+@code {
+    private HashSet<CategoryTree> TreeCategories { get; set; } = [];
+    private List<Category> parentCategories = [];
+    private List<CategoryDropItem> newCategories = [];
+    private List<CategoryDropItem> newPossibleParents = [];
+    private bool _addCategoryOpen;
+    private int _newCategoryId = 100000;
+    private Category newCategoriesParent = new() { Id = 999999, Name = "New categories" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await dataService.InitStaticStorage();
+        TreeCategories = dataService.GetCategoriesTree();
+    }
+
+    private async Task OpenAllCategories(bool newVal)
+    {
+        if (newVal)
+            TreeCategories = dataService.GetCategoriesTree();
+    }
+
+    private async Task OpenNewParent(bool newVal)
+    {
+        if (newVal)
+            newPossibleParents = dataService.GetCategories().Where(x => x.IsNew).Select(x => new CategoryDropItem(x, "new")).OrderBy(x => x.Name).ToList();
+    }
+
+    private async Task OpenNewCategories(bool newVal)
+    {
+        if (newVal)
+        {
+            newCategories = dataService.GetCategories().Where(x => x.IsNew).Select(x => new CategoryDropItem(x, "999999")).OrderBy(x => x.Name).ToList();
+            parentCategories = dataService.GetCategories().Where(x => x.Parent == null && !x.IsNew).ToList();
+            newCategoriesParent = new() { Id = 999999, Name = "New categories" };
+            parentCategories.Add(newCategoriesParent);
+        }
+    }
+
+    private async Task ItemPUpdated(MudItemDropInfo<CategoryDropItem> dropItem)
+    {
+        dropItem.Item.ParentCategory = dropItem.DropzoneIdentifier;
+        await dataService.MakeParent(dropItem.Item);
+    }
+
+    private async Task ItemUpdated(MudItemDropInfo<CategoryDropItem> dropItem)
+    {
+        dropItem.Item.ParentCategory = dropItem.DropzoneIdentifier;
+        await dataService.SaveCategory(dropItem.Item);
+    }
+
+    private void OpenAddNewCategory()
+    {
+        _addCategoryOpen = true;
+    }
+
+    NewCategoryForm newCategoryModel = new();
+
+    public class NewCategoryForm
+    {
+        [Required] public string Name { get; set; }
+    }
+
+    private async Task OnValidSectionSubmit(EditContext context)
+    {
+        var newCategory = await dataService.ChangeCategory(new Category { Name = newCategoryModel.Name, IsNew = false });
+        parentCategories.Add(newCategory);
+        newCategoryModel.Name = string.Empty;
+        _addCategoryOpen = false;
+    }
+
+}

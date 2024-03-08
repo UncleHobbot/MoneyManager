@@ -1,0 +1,86 @@
+﻿@page "/accounts"
+@inject DataService dataService 
+
+<h3>Accounts</h3>
+
+<MudDataGrid T="Account" Items="@accounts" ReadOnly="false" Dense="true"
+             Filterable="true" FilterMode="DataGridFilterMode.Simple" SortMode="SortMode.Multiple"
+             EditDialogOptions="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }"
+             EditMode="DataGridEditMode.Form" EditTrigger="DataGridEditTrigger.Manual" CommittedItemChanges="@CommittedItemChanges">
+    <ToolBarContent>
+        <MudButton Icon="MudIcons.Add" Variant="Variant.Filled" Color="Color.Primary">Add</MudButton>
+    </ToolBarContent>
+    <Columns>
+        <TemplateColumn CellClass="d-flex justify-start">
+            <CellTemplate>
+                <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" OnClick="@context.Actions.StartEditingItemAsync"/>
+            </CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn Title="Type">
+            <CellTemplate>
+                <MudIcon Icon="@GetTypeIcon(context.Item)"/>
+            </CellTemplate>
+            <EditTemplate>
+                <MudSelect @bind-Value="context.Item.Type" Required RequiredError="You must select a Position!!!">
+                    <MudSelectItem Value="0">
+                        <MudIcon Icon="@GetTypeIcon(0)"/> Chequing/Savings
+                    </MudSelectItem>
+                    <MudSelectItem Value="1">
+                        <MudIcon Icon="@GetTypeIcon(1)"/> Credit Card
+                    </MudSelectItem>
+                    <MudSelectItem Value="2">
+                        <MudIcon Icon="@GetTypeIcon(2)"/> Investment
+                    </MudSelectItem>
+                    <MudSelectItem Value="99">
+                        <MudIcon Icon="@GetTypeIcon(99)"/> Other
+                    </MudSelectItem>
+                </MudSelect>
+            </EditTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="x => x.ShownName" Title="Name"/>
+        <PropertyColumn Property="x => x.Description" Required="false"/>
+        <PropertyColumn Property="x => x.Name" Title="Name in list 1"/>
+        <PropertyColumn Property="x => x.AlternativeName1" Title="Name in list 2" Required="false"/>
+        <PropertyColumn Property="x => x.AlternativeName2" Title="Name in list 3" Required="false"/>
+        <PropertyColumn Property="x => x.Number" Required="false"/>
+        <TemplateColumn Title="Hidden">
+            <CellTemplate>
+                @if (context.Item.IsHideFromGraph)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.HideSource"/>
+                }
+            </CellTemplate>
+            <EditTemplate>
+                <MudSwitch @bind-Value="@context.Item.IsHideFromGraph"/>
+            </EditTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+
+@code {
+    List<Account> accounts = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await dataService.InitStaticStorage();
+        accounts = dataService.GetAccounts();
+    }
+
+    void CommittedItemChanges(Account item)
+    {
+        accounts = dataService.ChangeAccount(item).GetAwaiter().GetResult();
+    }
+
+    private string GetTypeIcon(Account item) => GetTypeIcon(item.Type);
+
+    private string GetTypeIcon(int accountType) => accountType switch
+    {
+        0 => Icons.Material.Filled.AttachMoney, //Cash
+        1 => Icons.Material.Filled.CreditCard, //CreditCard
+        2 => Icons.Material.Filled.SsidChart, // Investment
+        _ => Icons.Material.Filled.AccountBalance
+    };
+
+
+}

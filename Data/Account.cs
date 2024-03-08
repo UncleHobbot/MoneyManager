@@ -11,4 +11,6 @@ public class Account
     public int Type { get; set; }
     public string Number { get; set; }
     public bool IsHideFromGraph { get; set; }
+    public string AlternativeName1 { get; set; }  
+    public string AlternativeName2 { get; set; }
 }

@@ -5,7 +5,10 @@
     <MudNavLink Href="transactions" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Transactions</MudNavLink>
     <MudNavLink Href="spending" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Payments">Spending</MudNavLink>
     <MudNavLink Href="income" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.BarChart">Net Income</MudNavLink>
-    <MudNavLink Href="settings" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Settings">Settings</MudNavLink>
+    <MudNavGroup Title="Settings" Expanded="true" Icon="@Icons.Material.Filled.Settings">
+        <MudNavLink Href="accounts" Match="NavLinkMatch.Prefix">Accounts</MudNavLink>
+        <MudNavLink Href="categories" Match="NavLinkMatch.Prefix">Categories</MudNavLink>
+    </MudNavGroup>
 
 </MudNavMenu>
 
