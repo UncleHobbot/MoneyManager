@@ -1,47 +1,52 @@
 ﻿@inject TransactionService TransactionService
-@using MudBlazor
+@using Microsoft.FluentUI.AspNetCore.Components
+@implements IDialogContentComponent<ImportFileParams>
 
-<MudDialog Style="width:700px;height:400px;">
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-3 mb-n1"/>
-            Delete server?
-        </MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText>File Type @ImportFileType</MudText>
-        <MudText>File @ImportFile</MudText>
-        <MudProgressLinear Color="Color.Success" Rounded="true" Size="Size.Large" Value="@progress"/>
-    </DialogContent>
-    <DialogActions>
-        <MudButton Color="Color.Error" OnClick="Import">Import</MudButton>
-        <MudButton OnClick="Close">Close</MudButton>
-    </DialogActions>
-</MudDialog>
+<!-- Header -->
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.BuildingBank())"/>
+        <FluentLabel Typo="Typography.PaneHeader"> Import transaction file </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<!-- Body -->
+<FluentDialogBody>
+    File Type: <b>@Content.ImportType</b><br/>
+    File: <b>@Content.FileName</b><br/>
+    <FluentProgress Min="0" Max="100" Value="@progress" Stroke="ProgressStroke.Large" Style="margin-top: 20px"/><br/>
+    <b>@Status</b>
+</FluentDialogBody>
+
+<!-- Footer -->
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" OnClick="@Import" Disabled="@(string.IsNullOrWhiteSpace(Content.FileName) && !IsComplete)"> Import </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Close </FluentButton>
+</FluentDialogFooter>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
 
-    [Parameter] public ImportTypeEnum ImportFileType { get; set; }
-    [Parameter] public string ImportFile { get; set; }
+    [Parameter] public ImportFileParams Content { get; set; } = default!;
 
-    private void Close()
-    {
-        MudDialog.Cancel();
-    }
+    private async Task CancelAsync() => await Dialog.CancelAsync();
 
     int progress;
+    string Status;
+    bool IsComplete = false;
 
     private async Task Import()
     {
         var actionProgress = void (int p) => progress = p;
 
-        switch (ImportFileType)
+        switch (Content.ImportType)
         {
             case ImportTypeEnum.MintCSV:
-                await TransactionService.ImportMintCSV(ImportFile, actionProgress);
+                await TransactionService.ImportMintCSV(Content.FileName, actionProgress);
                 break;
         }
-    }
 
+        Status = "Import complete";
+        IsComplete = true;
+    }
 }

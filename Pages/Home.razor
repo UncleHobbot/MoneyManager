@@ -1,88 +1,85 @@
 ﻿@page "/"
 @inject FolderPicker folderPicker
-@inject  MudBlazor.IDialogService DialogService
-@using MudBlazor
+@inject IDialogService DialogService
+@using Microsoft.FluentUI.AspNetCore.Components
 
 <h3>Home</h3>
 
-<MudGrid>
-    <MudItem xs="4" Class="mb-3">
-        <MudCard Style="height:300px;">
-            <MudCardHeader>
-                <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.UploadFile"/>
-                    </MudAvatar>
-                </CardHeaderAvatar>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Import transaction file</MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudSelect @bind-Value="@importFileType" Label="Select file type">
-                    <MudSelectItem T="ImportTypeEnum" Value="ImportTypeEnum.MintCSV">Mint csv</MudSelectItem>
-                    <MudSelectItem T="ImportTypeEnum" Value="ImportTypeEnum.RBCCSV">RBC csv</MudSelectItem>
-                </MudSelect>
-                <MudTextField @bind-Value="importFile" Label="Select file to import" Variant="Variant.Text"
-                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.InsertDriveFile" OnAdornmentClick="SelectImportFile" AdornmentAriaLabel="Select File"/>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="ImportFile">Import</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
+<FluentGrid Spacing="2">
+    <FluentGridItem xs="4">
+        <FluentCard Height="350px">
+            <FluentGrid Spacing="1">
+                <FluentGridItem xs="1">
+                    <FluentIcon Value="@(new Icons.Filled.Size24.ArrowUpload())"/>
+                </FluentGridItem>
+                <FluentGridItem xs="11">
+                    <FluentLabel Typo="Typography.PaneHeader"> Import transaction file </FluentLabel>
+                </FluentGridItem>
+                <FluentGridItem xs="12">
+                    <FluentSelect TOption="string" @bind-Value="@importFileType" Label="Select file type">
+                        <FluentOption Value="@ImportTypeEnum.MintCSV.ToString()">Mint csv</FluentOption>
+                        <FluentOption Value="@ImportTypeEnum.RBCCSV.ToString()">RBC csv</FluentOption>
+                    </FluentSelect>
+                </FluentGridItem>
+                <FluentGridItem xs="12" >
+                    <FluentTextField @bind-Value="importFile" Label="Select file to import" Style="width: 100%">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.FolderSearch())" Color="@Color.Neutral" Slot="end" OnClick="SelectImportFile"/>
+                    </FluentTextField>
+                </FluentGridItem>
+                <FluentGridItem xs="8"/>
+                <FluentGridItem xs="4">
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFile" W>Import</FluentButton>
+                </FluentGridItem>
+            </FluentGrid>
+        </FluentCard>
+    </FluentGridItem>
 
-    <MudItem xs="4" Class="mb-3">
-        <MudCard Style="height:300px;">
-            <MudCardHeader>
-                <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.Category"/>
-                    </MudAvatar>
-                </CardHeaderAvatar>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Uncategorized transactions</MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary">Go to transactions</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
+    <FluentGridItem xs="4">
+        <FluentCard Height="350px">
+            <FluentGrid Spacing="1">
+                <FluentGridItem xs="1">
+                    <FluentIcon Value="@(new Icons.Filled.Size24.TagQuestionMark())"/>
+                </FluentGridItem>
+                <FluentGridItem xs="11">
+                    <FluentLabel Typo="Typography.PaneHeader"> Uncategorized transactions </FluentLabel>
+                </FluentGridItem>
+                <FluentGridItem xs="12"/>
+                <FluentGridItem xs="8" style="margin-top: auto;"/>
+                <FluentGridItem xs="4">
+                    <FluentButton Appearance="Appearance.Accent">Go to transactions</FluentButton>
+                </FluentGridItem>
+            </FluentGrid>
+        </FluentCard>
+    </FluentGridItem>
 
-    <MudItem xs="4" Class="mb-3">
-        <MudCard Style="height:300px;">
-            <MudCardHeader>
-                <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.NewReleases"/>
-                    </MudAvatar>
-                </CardHeaderAvatar>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Recent transactions</MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-            </MudCardContent>
-            <MudCardActions>
-                <MudButton Variant="Variant.Text" Color="Color.Primary">Go to transactions</MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
-</MudGrid>
-
+    <FluentGridItem xs="4">
+        <FluentCard Height="350px">
+            <FluentGrid Spacing="1">
+                <FluentGridItem xs="1">
+                    <FluentIcon Value="@(new Icons.Filled.Size24.New())"/>
+                </FluentGridItem>
+                <FluentGridItem xs="11">
+                    <FluentLabel Typo="Typography.PaneHeader"> Recent transactions </FluentLabel>
+                </FluentGridItem>
+                <FluentGridItem xs="12"/>
+                <FluentGridItem xs="8"/>
+                <FluentGridItem xs="4">
+                    <FluentButton Appearance="Appearance.Accent">Go to transactions</FluentButton>
+                </FluentGridItem>
+            </FluentGrid>
+        </FluentCard>
+    </FluentGridItem>
+</FluentGrid>
 
 @code {
-    ImportTypeEnum importFileType = ImportTypeEnum.MintCSV;
+    string importFileType = ImportTypeEnum.MintCSV.ToString();
     string importFile;
 
     void SelectImportFile()
     {
         string filterName = null;
         string filterExt = null;
-        if (importFileType == ImportTypeEnum.MintCSV)
+        if (importFileType == ImportTypeEnum.MintCSV.ToString())
         {
             filterName = "CSV file";
             filterExt = "csv";
@@ -93,13 +90,27 @@
 
     async Task ImportFile()
     {
-        var parameters = new DialogParameters<ImportFileDialog>
+        if (Enum.TryParse(importFileType, out ImportTypeEnum importTypeEnum) && !string.IsNullOrWhiteSpace(importFile))
         {
-            { x => x.ImportFileType, importFileType },
-            { x => x.ImportFile, importFile }
-        };
+            var dialog = await DialogService.ShowDialogAsync<ImportFileDialog>(new ImportFileParams(importTypeEnum, importFile), new DialogParameters
+            {
+                Height = "300px",
+                Width = "600px",
+                Title = "Import File",
+                PreventDismissOnOverlayClick = true,
+                PreventScroll = true,
+            });
 
-        var dialog = await DialogService.ShowAsync<ImportFileDialog>("Import file", parameters);
-        var result = await dialog.Result;
+            var result = await dialog.Result;
+        }
+        // var parameters = new DialogParameters<ImportFileDialog>
+        // {
+        //     { x => x.ImportFileType, importFileType },
+        //     { x => x.ImportFile, importFile }
+        // };
+        //
+        // var dialog = await DialogService.ShowAsync<ImportFileDialog>("Import file", parameters);
+        // var result = await dialog.Result;
     }
+
 }
