@@ -10,16 +10,19 @@
 
     <ItemGroup>
       <PackageReference Include="CsvHelper" Version="31.0.2" />
-      <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.7" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.2">
+      <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.10" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.3">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.2" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.2">
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.3" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.3">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.5.1-preview.24071.8" />
+      <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.DataGrid.EntityFrameworkAdapter" Version="4.5.0" />
+      <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.5.0" />
 	  <PackageReference Include="MudBlazor" Version="6.17.0" />
 	  <PackageReference Include="WindowsAPICodePack-Shell" Version="1.1.1" />
     </ItemGroup>

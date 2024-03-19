@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components.WebView.WindowsForms;
 using Microsoft.Extensions.DependencyInjection;
-using MoneyManager.Services;
 
 namespace MoneyManager;
 
@@ -12,6 +11,8 @@ public partial class MainForm : Form
         var services = new ServiceCollection();
         services.AddWindowsFormsBlazorWebView();
         services.AddMudServices();
+        services.AddFluentUIComponents();
+        services.AddDataGridEntityFrameworkAdapter();
 
         services.AddTransient<FolderPicker>();
         services.AddSingleton<SettingsService>();

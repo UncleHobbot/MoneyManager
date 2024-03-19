@@ -1,0 +1,76 @@
+﻿@page "/categoriessimple"
+@inject DataService dataService
+@inject IToastService ToastService
+
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentLabel Typo="Typography.H3"> Categories </FluentLabel>
+
+<FluentStack>
+    <FluentTreeView @bind-CurrentSelected="selected" Style="width: 600px;height: 85vh;overflow: auto;margin-right: 100px">
+        @foreach (var category in TreeCategories)
+        {
+            <FluentTreeItem @key="category.Id" Data="category">
+                <FluentIcon Value="@GetIcon(category.Icon)" Color="@Color.Neutral" Slot="start"/>
+                @category.Name
+                @foreach (var subcategory in category.Children)
+                {
+                    <FluentTreeItem Data="subcategory">@subcategory.Name</FluentTreeItem>
+                }
+            </FluentTreeItem>
+        }
+    </FluentTreeView>
+
+    <FluentCard Width="400px" Height="200px" AreaRestricted="false">
+        <FluentTextField @bind-Value="SelectedCategory.Name" Label="Name"/>
+        <FluentSelect Items=@categoryIcons Width="300px" Height="500px"
+                      OptionText="@(i => i.Text)"
+                      OptionValue="@(i => i.Value)"
+                      @bind-Value="@SelectedCategory.Icon"
+                      Disabled="@(SelectedCategory.Children.Count == 0)"/>
+
+        <p/>
+        <FluentButton Appearance="Appearance.Accent" OnClick="@SaveAsync"> Save </FluentButton>
+    </FluentCard>
+
+
+</FluentStack>
+
+@code {
+    private HashSet<CategoryTree> TreeCategories { get; set; } = [];
+    List<Option<string>> categoryIcons = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await dataService.InitStaticStorage();
+        TreeCategories = dataService.GetCategoriesTree();
+        categoryIcons = CategoryHelper.CategoryIcons.OrderBy(x => x).Select(x => new Option<string> { Value = x, Text = x, Icon = (CategoryHelper.CategoryIcon(x), Color.Neutral, "start") }).ToList();
+    }
+
+    Icon GetIcon(string icon) => CategoryHelper.CategoryIcon(icon);
+
+    CategoryTree SelectedCategory = new();
+    FluentTreeItem _selected;
+
+    FluentTreeItem selected
+    {
+        get => _selected;
+        set
+        {
+            if (_selected != value)
+            {
+                _selected = value;
+                SelectedCategory = _selected.Data as CategoryTree;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        await dataService.SaveCategory(SelectedCategory);
+        ToastService.ShowSuccess($"Category \"{SelectedCategory.Name}\" saved");
+        //TreeCategories = dataService.GetCategoriesTree();
+    }
+
+}

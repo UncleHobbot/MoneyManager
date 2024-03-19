@@ -83,4 +83,16 @@ public class DataService(IDbContextFactory<DataContext> contextFactory)
             await ChangeCategory(cat);
         }
     }
+    
+    public async Task SaveCategory(CategoryTree category)
+    {
+        var ctx = await contextFactory.CreateDbContextAsync();
+        var cat = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == category.Id);
+        if (cat != null)
+        {
+            cat.Name = category.Name;
+            cat.Icon = category.Icon;
+            await ChangeCategory(cat);
+        }
+    }
 }

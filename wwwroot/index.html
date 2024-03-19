@@ -6,11 +6,10 @@
     <title>Money Manager</title>
     <base href="/" />
     <link href="css/app.css" rel="stylesheet" />
-    <link href="WinFormsBlazor.styles.css" rel="stylesheet" />
-
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-
+    <link href="_content/Microsoft.FluentUI.AspNetCore.Components/css/reboot.css" rel="stylesheet" />
+    <link href="MoneyManager.styles.css" rel="stylesheet"/>
 </head>
 
 <body>
@@ -23,8 +22,12 @@
     <a class="dismiss">🗙</a>
 </div>
 
+<script app-name="MoneyManager" src="./_content/Microsoft.FluentUI.AspNetCore.Components/js/initializersLoader.webview.js"></script>
 <script src="_framework/blazor.webview.js"></script>
 <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+<script src="_content/Microsoft.FluentUI.AspNetCore.Components/Microsoft.FluentUI.AspNetCore.Components.lib.module.js" type="module" async></script>
+<fluent-design-theme mode="dark" primary-color="word" />
+<loading-theme storage-name="theme"></loading-theme>
 
 </body>
 

@@ -1,8 +1,50 @@
 ﻿@page "/accounts"
-@inject DataService dataService 
+@inject DataService dataService
+@inject IDialogService DialogService
+@using Microsoft.FluentUI.AspNetCore.Components
 
-<h3>Accounts</h3>
+<FluentLabel Typo="Typography.H3"> Accounts </FluentLabel>
 
+<FluentToolbar id="toolbar-fluent-components">
+    <FluentButton Appearance="Appearance.Stealth">Add Account</FluentButton>
+</FluentToolbar>
+<br/>
+
+<FluentDataGrid Items="@FilteredItems" ResizableColumns=true Pagination="@pagination"
+                GridTemplateColumns="1fr 5fr 10fr 10fr 5fr 5fr 5fr 2fr 1fr" Style="height: 80vh;overflow:auto;">
+    <TemplateColumn Align="Align.Center" InitialSortDirection="SortDirection.Ascending" IsDefaultSortColumn=true>
+        <FluentIcon Value="@(context.TypeIcon)"/>
+    </TemplateColumn>
+
+    <PropertyColumn Property="c => c.ShownName" Sortable="true" Filtered="!string.IsNullOrWhiteSpace(nameFilter)" Title="Name">
+        <ColumnOptions>
+            <div class="search-box">
+                <FluentSearch type="search" Autofocus=true @bind-Value=nameFilter @oninput="HandleShownNameFilter" @bind-Value:after="HandleShownNameClear" Placeholder="Account name..."/>
+            </div>
+        </ColumnOptions>
+    </PropertyColumn>
+
+    <PropertyColumn Property="x => x.Description" Title="Description"/>
+    <PropertyColumn Property="x => x.Name" Title="Name in list 1"/>
+    <PropertyColumn Property="x => x.AlternativeName1" Title="Name in list 2"/>
+    <PropertyColumn Property="x => x.AlternativeName2" Title="Name in list 3"/>
+    <PropertyColumn Property="x => x.Number"/>
+    <TemplateColumn Align="Align.Center" Title="Hidden">
+        @if (context.IsHideFromGraph)
+        {
+            <FluentIcon Value="@(new Icons.Regular.Size20.EyeOff())"/>
+        }
+    </TemplateColumn>
+
+    <TemplateColumn Title="Actions" Align="@Align.End">
+        <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" OnClick="@(() => EditAccount(context))"/>
+    </TemplateColumn>
+</FluentDataGrid>
+
+
+<FluentPaginator State="@pagination"/>
+
+@*
 <MudDataGrid T="Account" Items="@accounts" ReadOnly="false" Dense="true"
              Filterable="true" FilterMode="DataGridFilterMode.Simple" SortMode="SortMode.Multiple"
              EditDialogOptions="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }"
@@ -11,11 +53,11 @@
         <MudButton Icon="MudIcons.Add" Variant="Variant.Filled" Color="Color.Primary">Add</MudButton>
     </ToolBarContent>
     <Columns>
-        <TemplateColumn CellClass="d-flex justify-start">
+        <MudBlazor.TemplateColumn CellClass="d-flex justify-start">
             <CellTemplate>
                 <MudIconButton Size="@Size.Small" Icon="@Icons.Material.Outlined.Edit" OnClick="@context.Actions.StartEditingItemAsync"/>
             </CellTemplate>
-        </TemplateColumn>
+        </MudBlazor.TemplateColumn>
         <TemplateColumn Title="Type">
             <CellTemplate>
                 <MudIcon Icon="@GetTypeIcon(context.Item)"/>
@@ -56,31 +98,45 @@
         </TemplateColumn>
     </Columns>
 </MudDataGrid>
+*@
 
 
 @code {
-    List<Account> accounts = [];
+    IQueryable<Account> accounts;
+    IQueryable<Account> FilteredItems => accounts?.Where(x => x.ShownName.Contains(nameFilter, StringComparison.CurrentCultureIgnoreCase));
+    readonly PaginationState pagination = new() { ItemsPerPage = 20 };
+    string nameFilter = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         await dataService.InitStaticStorage();
-        accounts = dataService.GetAccounts();
+        accounts = dataService.GetAccounts().AsQueryable();
     }
 
-    void CommittedItemChanges(Account item)
+  private void HandleShownNameFilter(ChangeEventArgs args)
     {
-        accounts = dataService.ChangeAccount(item).GetAwaiter().GetResult();
+        if (args.Value is string value)
+            nameFilter = value;
     }
 
-    private string GetTypeIcon(Account item) => GetTypeIcon(item.Type);
-
-    private string GetTypeIcon(int accountType) => accountType switch
+    private void HandleShownNameClear()
     {
-        0 => Icons.Material.Filled.AttachMoney, //Cash
-        1 => Icons.Material.Filled.CreditCard, //CreditCard
-        2 => Icons.Material.Filled.SsidChart, // Investment
-        _ => Icons.Material.Filled.AccountBalance
-    };
+        if (string.IsNullOrWhiteSpace(nameFilter))
+            nameFilter = string.Empty;
+    }
 
+    private async Task EditAccount(Account account)
+    {
+        var dialog = await DialogService.ShowDialogAsync<EditAccountDialog>(account, new DialogParameters
+        {
+            Height = "600px",
+            Title = $"Edit Account",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+        });
 
+        var result = await dialog.Result;
+        if (!result.Cancelled && result.Data != null)
+            accounts = (dataService.ChangeAccount((Account)result.Data).GetAwaiter().GetResult())?.AsQueryable();
+    }
 }

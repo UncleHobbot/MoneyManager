@@ -1,0 +1,88 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@implements IDialogContentComponent<Account>
+
+<style>
+    fluent-option {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+</style>
+
+<!-- Header -->
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.BuildingBank())"/>
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<!-- Body -->
+<FluentDialogBody>
+    <EditForm EditContext="@_editContext" FormName="simple_register">
+        <DataAnnotationsValidator/>
+
+        <FluentStack>
+            <FluentSelect Items=@accountTypes
+                          OptionText="@(i => i.Text)"
+                          OptionValue="@(i => i.Value)"
+                          @bind-Value="@stringAccountType"/>
+            <FluentSwitch @bind-Value="@Content.IsHideFromGraph" Label="Hidden"/>
+        </FluentStack>
+
+        <FluentTextField Name="shownName" @bind-Value="@Content.ShownName" Label="Name" Required style="width: 100%;"/>
+        <FluentTextField Name="description" @bind-Value="@Content.Description" Label="Description" style="width: 100%;"/>
+        <FluentTextField Name="name1" @bind-Value="@Content.Name" Label="Name in list 1" style="width: 100%;"/>
+        <FluentTextField Name="name2" @bind-Value="@Content.AlternativeName1" Label="Name in list 2" style="width: 100%;"/>
+        <FluentTextField Name="name3" @bind-Value="@Content.AlternativeName2" Label="Name in list 2" style="width: 100%;"/>
+        <FluentTextField Name="number" @bind-Value="@Content.Number" Label="Number" style="width: 100%;"/>
+    </EditForm>
+</FluentDialogBody>
+
+<!-- Footer -->
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" Disabled="@(!_editContext.Validate())" OnClick="@SaveAsync"> Save </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Cancel </FluentButton>
+</FluentDialogFooter>
+
+@code
+{
+    private EditContext _editContext = default!;
+
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+
+    [Parameter] public Account Content { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(Content);
+    }
+
+    protected override void OnParametersSet()
+    {
+        stringAccountType = Content.Type.ToString();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_editContext.Validate())
+        {
+            Content.Type = int.Parse(stringAccountType);
+            await Dialog.CloseAsync(Content);
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+
+    string stringAccountType;
+
+    static List<Option<string>> accountTypes =
+    [
+        new Option<string> { Value = "0", Text = "Chequing/Savings", Icon = (AccountHelper.TypeIcon(0), Color.Neutral, "start") },
+        new Option<string> { Value = "1", Text = "Credit Card", Icon = (AccountHelper.TypeIcon(1), Color.Neutral, "start") },
+        new Option<string> { Value = "2", Text = "Investment", Icon = (AccountHelper.TypeIcon(2), Color.Neutral, "start") },
+        new Option<string> { Value = "99", Text = "Other", Icon = (AccountHelper.TypeIcon(99), Color.Neutral, "start") }
+    ];
+}

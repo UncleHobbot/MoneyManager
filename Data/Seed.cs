@@ -4,6 +4,7 @@ public class Seed(IDbContextFactory<DataContext> contextFactory)
 {
     public async Task SeedData()
     {
+        /*
         var context = await contextFactory.CreateDbContextAsync();
 
         var categories = new HashSet<Category>();
@@ -33,6 +34,7 @@ public class Seed(IDbContextFactory<DataContext> contextFactory)
                 await context.Categories.AddAsync(category);
 
         await context.SaveChangesAsync();
+    */
     }
 
 }
