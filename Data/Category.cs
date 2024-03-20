@@ -12,6 +12,9 @@ public class Category
     public string Name { get; set; }
     public string Icon { get; set; }
     public bool IsNew { get; set; }
+
+    public string pIcon => Parent == null ? Icon : Parent.Icon;
+    public Icon objIcon => CategoryHelper.CategoryIcon(Parent == null ? Icon : Parent.Icon);
 }
 
 public class CategoryTree
@@ -37,10 +40,10 @@ public static class CategoryHelper
         ? new Icons.Regular.Size20.BorderNone()
         : CategoryIcon(Enum.TryParse(icon, out CategoryIconEnum categoryIcon) ? categoryIcon : CategoryIconEnum.Uncategorized);
 
-    public static Icon CategoryIcon(CategoryIconEnum icon) => icon switch
+    private static Icon CategoryIcon(CategoryIconEnum icon) => icon switch
     {
-        CategoryIconEnum.Auto => new Icons.Regular.Size20.VehicleCarProfile(),
-        CategoryIconEnum.Bills => new Icons.Regular.Size20.Lightbulb(),
+        CategoryIconEnum.Auto => new Icons.Filled.Size20.VehicleCarProfile(),
+        CategoryIconEnum.Bills => new Icons.Filled.Size20.Lightbulb(),
         CategoryIconEnum.Business => new Icons.Regular.Size20.Briefcase(),
         CategoryIconEnum.Education => new Icons.Regular.Size20.HatGraduation(),
         CategoryIconEnum.Entertainment => new Icons.Regular.Size20.MoviesAndTv(),
@@ -50,17 +53,17 @@ public static class CategoryHelper
         CategoryIconEnum.Gifts => new Icons.Regular.Size20.Gift(),
         CategoryIconEnum.Health => new Icons.Regular.Size20.Doctor(),
         CategoryIconEnum.Home => new Icons.Regular.Size20.Home(),
-        CategoryIconEnum.Income => new Icons.Regular.Size20.Money(),
-        CategoryIconEnum.Investment => new Icons.Regular.Size20.ArrowTrendingLines(),
-        CategoryIconEnum.Kids => new Icons.Regular.Size20.PersonRunning(),
-        CategoryIconEnum.Loans => new Icons.Regular.Size20.Handshake(),
-        CategoryIconEnum.Misc => new Icons.Regular.Size20.PuzzlePiece(),
+        CategoryIconEnum.Income => new Icons.Filled.Size20.Money(),
+        CategoryIconEnum.Investment => new Icons.Filled.Size20.ArrowTrendingLines(),
+        CategoryIconEnum.Kids => new Icons.Filled.Size20.PersonRunning(),
+        CategoryIconEnum.Loans => new Icons.Filled.Size20.Handshake(),
+        CategoryIconEnum.Misc => new Icons.Filled.Size20.PuzzlePiece(),
         CategoryIconEnum.Personal => new Icons.Filled.Size20.PersonHeart(),
-        CategoryIconEnum.Pets => new Icons.Regular.Size20.AnimalCat(),
-        CategoryIconEnum.Shopping => new Icons.Regular.Size20.Cart(),
-        CategoryIconEnum.Taxes => new Icons.Regular.Size20.DocumentPercent(),
-        CategoryIconEnum.Transfer => new Icons.Filled.Size24.ArrowSwap(),
-        CategoryIconEnum.Travel => new Icons.Regular.Size20.AirplaneTakeOff(),
+        CategoryIconEnum.Pets => new Icons.Filled.Size20.AnimalCat(),
+        CategoryIconEnum.Shopping => new Icons.Filled.Size20.Cart(),
+        CategoryIconEnum.Taxes => new Icons.Filled.Size20.DocumentPercent(),
+        CategoryIconEnum.Transfer => new Icons.Filled.Size20.ArrowSwap(),
+        CategoryIconEnum.Travel => new Icons.Filled.Size20.AirplaneTakeOff(),
         _ => new Icons.Regular.Size20.StackStar()
     };
 }

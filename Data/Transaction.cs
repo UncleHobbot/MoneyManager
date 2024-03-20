@@ -10,6 +10,7 @@ public class Transaction
     public string Description { get; set; }
     public string OriginalDescription { get; set; }
     public decimal Amount { get; set; }
+    public decimal AmountExt => IsDebit ? -Amount : Amount;
     public bool IsDebit { get; set; }
     public Category Category { get; set; }
     public bool IsRuleApplied { get; set; }

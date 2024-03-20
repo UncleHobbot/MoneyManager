@@ -20,11 +20,23 @@
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.5.1-preview.24071.8" />
+      <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.5.1-preview.24073.1" />
       <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.DataGrid.EntityFrameworkAdapter" Version="4.5.0" />
       <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.5.0" />
 	  <PackageReference Include="MudBlazor" Version="6.17.0" />
 	  <PackageReference Include="WindowsAPICodePack-Shell" Version="1.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Services\DataService.Account.cs">
+        <DependentUpon>DataService.cs</DependentUpon>
+      </Compile>
+      <Compile Update="Services\DataService.Category.cs">
+        <DependentUpon>DataService.cs</DependentUpon>
+      </Compile>
+      <Compile Update="Services\DataService.Transaction.cs">
+        <DependentUpon>DataService.cs</DependentUpon>
+      </Compile>
     </ItemGroup>
 
 </Project>
