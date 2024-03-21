@@ -71,4 +71,6 @@ public partial class DataService
             await ChangeCategory(cat);
         }
     }
+
+    public Category GetCategoryById(int id) => Categories.FirstOrDefault(x=>x.Id == id);
 }

@@ -1,4 +1,5 @@
 ﻿@page "/transactions"
+@inject IDialogService DialogService
 @inject DataService dataService
 @using Microsoft.FluentUI.AspNetCore.Components
 
@@ -9,7 +10,8 @@
                 GridTemplateColumns="100px 150px 100px 300px 500px"
                 Style="height: 80vh;width: 100%;overflow:auto;">
 
-    <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true" InitialSortDirection="SortDirection.Descending"/>
+    <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
+                    InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
     <PropertyColumn Property="x => x.Account.ShownName" Title="Account" Sortable="true"/>
     <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount"/>
 
@@ -32,12 +34,16 @@
         </ColumnOptions>
     </PropertyColumn>
 
+    <TemplateColumn Title="Actions" Align="@Align.End">
+        <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
+    </TemplateColumn>
+
 </FluentDataGrid>
 
 <FluentPaginator State="@pagination"/>
 
 @code {
-    readonly PaginationState pagination = new() { ItemsPerPage = 35 };
+    readonly PaginationState pagination = new() { ItemsPerPage = 30 };
 
     IQueryable<Transaction> alltransactions;
 
@@ -50,7 +56,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        alltransactions = (await dataService.GetTransactions()).OrderByDescending(x => x.Date);
+        alltransactions = await dataService.GetTransactions();
     }
 
     private void FilterByCategory(Transaction transaction, bool isSet) => filterCategory = isSet ? transaction.Category.Id : 0;
@@ -65,6 +71,22 @@
     {
         if (string.IsNullOrWhiteSpace(filterDescription))
             filterDescription = string.Empty;
+    }
+
+    private async Task EditTransaction(Transaction transaction)
+    {
+        var dialog = await DialogService.ShowDialogAsync<EditTransactionDialog>(transaction, new DialogParameters
+        {
+            Height = "600px",
+            Width = "800px",
+            Title = "Edit Transaction",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+        });
+
+        var result = await dialog.Result;
+        if (!result.Cancelled && result.Data != null)
+            alltransactions = await dataService.ChangeTransaction((Transaction)result.Data);
     }
 
 }

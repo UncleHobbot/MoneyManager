@@ -1,0 +1,109 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+@implements IDialogContentComponent<Transaction>
+@inject IDialogService DialogService
+@inject DataService dataService
+
+<!-- Header -->
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Apps())"/>
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<!-- Body -->
+<FluentDialogBody>
+    <EditForm EditContext="@_editContext" FormName="simple_register">
+        <DataAnnotationsValidator/>
+
+        <FluentStack>
+            <FluentDatePicker Value="@Content.Date" ReadOnly Label="Date"/>
+            <FluentTextField Value="@Content.Account.ShownName" ReadOnly Label="Account"/>
+            <FluentNumberField Value="@Content.AmountExt" ReadOnly Label="Amount"/>
+        </FluentStack>
+
+        <FluentSelect ValueChanged="@(e => selectedCategory = e)" TOption="string" Height="250px" Label="Category">
+            @foreach (var pCat in TreeCategories.OrderBy(x => x.Name))
+            {
+                <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
+                    @pCat.Name
+                    <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start" Style="margin-right:5px; margin-left: 5px"/>
+                </FluentOption>
+
+                @if (pCat.Children.Count > 0)
+                {
+                    foreach (var cCat in pCat.Children.OrderBy((x => x.Name)))
+                    {
+                        <FluentOption Value="@cCat.Id.ToString()" Selected="@(cCat.Id.ToString() == selectedCategory)">&nbsp;&nbsp;&nbsp;&nbsp; @cCat.Name</FluentOption>
+                    }
+                }
+            }
+        </FluentSelect>
+
+        @*</FluentStack>*@
+
+        <FluentTextField @bind-Value="@Content.Description" Label="Description" style="width: 100%;"/>
+
+        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => CreateRule(Content))">Create a new Rule</FluentButton>
+        
+    </EditForm>
+</FluentDialogBody>
+
+<!-- Footer -->
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" Disabled="@(!_editContext.Validate())" OnClick="@SaveAsync"> Save </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Cancel </FluentButton>
+</FluentDialogFooter>
+
+@code {
+    private EditContext _editContext = default!;
+
+    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] public Transaction Content { get; set; } = default!;
+
+    private HashSet<CategoryTree> TreeCategories { get; set; } = [];
+    string selectedCategory = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _editContext = new EditContext(Content);
+        await dataService.InitStaticStorage();
+        TreeCategories = dataService.GetCategoriesTree();
+        selectedCategory = Content.Category.Id.ToString();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_editContext.Validate())
+        {
+            Content.Category = dataService.GetCategoryById(int.Parse(selectedCategory));
+            await Dialog.CloseAsync(Content);
+        }
+    }
+
+    private async Task CancelAsync() => await Dialog.CancelAsync();
+
+    private async Task CreateRule(Transaction transaction)
+    {
+        var rule = new Rule
+        {
+            OriginalDescription = transaction.OriginalDescription,
+            CompareType = RuleCompareType.Contains,
+            Category = transaction.Category,
+        };
+
+        var dialog = await DialogService.ShowDialogAsync<EditRuleDialog>(rule, new DialogParameters
+        {
+            Alignment = HorizontalAlignment.Right,
+            Title = "New Rule",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+        });
+
+        var result = await dialog.Result;
+    }
+
+}
