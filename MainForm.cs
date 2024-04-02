@@ -10,6 +10,7 @@ public partial class MainForm : Form
         InitializeComponent();
         var services = new ServiceCollection();
         services.AddWindowsFormsBlazorWebView();
+        services.AddBlazorWebViewDeveloperTools();
         services.AddMudServices();
         services.AddFluentUIComponents();
         services.AddDataGridEntityFrameworkAdapter();
@@ -25,7 +26,5 @@ public partial class MainForm : Form
         blazorWebView.HostPage = "wwwroot\\index.html";
         blazorWebView.Services = services.BuildServiceProvider();
         blazorWebView.RootComponents.Add<Main>("#app");
-        
-        
     }
 }

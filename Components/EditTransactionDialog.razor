@@ -30,7 +30,8 @@
             {
                 <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
                     @pCat.Name
-                    <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start" Style="margin-right:5px; margin-left: 5px"/>
+                    <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start"
+                                Style="margin-right:5px; margin-left: 5px"/>
                 </FluentOption>
 
                 @if (pCat.Children.Count > 0)
@@ -46,16 +47,82 @@
         @*</FluentStack>*@
 
         <FluentTextField @bind-Value="@Content.Description" Label="Description" style="width: 100%;"/>
+        <FluentTextField @bind-Value="@Content.OriginalDescription" Label="Original Description" ReadOnly
+                         style="width: 100%;"/>
+        <FluentCheckbox @bind-Value="@Content.IsRuleApplied" Label="Rule was applied" ReadOnly/>
+        @*<FluentButton Appearance="Appearance.Accent" OnClick="@(() => CreateRule(Content))">Create a new Rule</FluentButton>*@
 
-        <FluentButton Appearance="Appearance.Accent" OnClick="@(() => CreateRule(Content))">Create a new Rule</FluentButton>
-        
     </EditForm>
+
+    <FluentTabs @bind-ActiveTabId="@activeTabId" Style="border: 1px solid">
+        @if (!Content.IsRuleApplied)
+        {
+            <FluentTab Label="Apply rule" Icon="@(new Icons.Filled.Size24.TagMultiple())" Id="rule-apply">
+                <FluentDataGrid Items="@rules" ResizableColumns=true Style="height: 200px;width: 100%;overflow:auto;">
+                    <PropertyColumn Property="x => x.NewDescription" Title="New Description" Sortable="true"/>
+                    <PropertyColumn Property="x => x.Category.Name" Title="Category" Sortable="true"/>
+                    <TemplateColumn Title="Actions" Align="@Align.End">
+                        <FluentButton IconEnd="@(new Icons.Filled.Size16.PlayCircle())" Style="height: 20px" OnClick="@(() => ApplyRule(context))"/>
+                    </TemplateColumn>
+
+                </FluentDataGrid>
+            </FluentTab>
+        }
+
+        <FluentTab Label="Create rule" Icon="@(new Icons.Filled.Size24.TagError())" Id="rule-new">
+            <FluentSelect TOption="string" @bind-Value="@newRuleType" Label="Comparison type">
+                <FluentOption Value="@RuleCompareType.Contains.ToString()">
+                    Contains
+                    <FluentIcon Value="@(new Icons.Regular.Size20.CenterHorizontal())" Color="@Color.Neutral"
+                                Slot="start"/>
+                </FluentOption>
+                <FluentOption Value="@RuleCompareType.StartsWith.ToString()">
+                    Starts With
+                    <FluentIcon Value="@(new Icons.Regular.Size20.AlignStartHorizontal())" Color="@Color.Neutral"
+                                Slot="start"/>
+                </FluentOption>
+                <FluentOption Value="@RuleCompareType.EndsWith.ToString()">
+                    Ends With
+                    <FluentIcon Value="@(new Icons.Regular.Size20.AlignEndHorizontal())" Color="@Color.Neutral"
+                                Slot="start"/>
+                </FluentOption>
+                <FluentOption Value="@RuleCompareType.Equals.ToString()">
+                    Equals
+                    <FluentIcon Value="@(new Icons.Regular.Size20.EqualCircle())" Color="@Color.Neutral" Slot="start"/>
+                </FluentOption>
+            </FluentSelect>
+            <FluentTextField @bind-Value="@newRule.OriginalDescription" Label="Description" style="width: 100%;"/>
+            <FluentTextField @bind-Value="@newRule.NewDescription" Label="New description" style="width: 100%;"/>
+
+            <FluentSelect ValueChanged="@(e => newRuleCategory = e)" TOption="string" Height="250px" Label="Category">
+                @foreach (var pCat in TreeCategories.OrderBy(x => x.Name))
+                {
+                    <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
+                        @pCat.Name
+                        <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start"
+                                    Style="margin-right:5px; margin-left: 5px"/>
+                    </FluentOption>
+
+                    @if (pCat.Children.Count > 0)
+                    {
+                        foreach (var cCat in pCat.Children.OrderBy((x => x.Name)))
+                        {
+                            <FluentOption Value="@cCat.Id.ToString()" Selected="@(cCat.Id.ToString() == selectedCategory)">&nbsp;&nbsp;&nbsp;&nbsp; @cCat.Name</FluentOption>
+                        }
+                    }
+                }
+            </FluentSelect>
+            <FluentButton Appearance="Appearance.Accent" OnClick="@SaveRuleAsync"> Save New Rule</FluentButton>
+        </FluentTab>
+    </FluentTabs>
 </FluentDialogBody>
 
 <!-- Footer -->
 <FluentDialogFooter>
-    <FluentButton Appearance="Appearance.Accent" Disabled="@(!_editContext.Validate())" OnClick="@SaveAsync"> Save </FluentButton>
-    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Cancel </FluentButton>
+    <FluentButton Appearance="Appearance.Accent" Disabled="@(!_editContext.Validate())" OnClick="@SaveAsync">
+        Save
+    </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Cancel</FluentButton>
 </FluentDialogFooter>
 
 @code {
@@ -67,12 +134,25 @@
     private HashSet<CategoryTree> TreeCategories { get; set; } = [];
     string selectedCategory = "";
 
+
+    IQueryable<Rule> rules;
+    string activeTabId = "rule-apply";
+    Rule newRule = new();
+    string newRuleType = RuleCompareType.Contains.ToString();
+    string newRuleCategory;
+
     protected override async Task OnInitializedAsync()
     {
         _editContext = new EditContext(Content);
         await dataService.InitStaticStorage();
         TreeCategories = dataService.GetCategoriesTree();
         selectedCategory = Content.Category.Id.ToString();
+        rules = await dataService.GetRules(Content);
+        if (rules == null || !rules.Any())
+            activeTabId = "rule-new";
+        newRule.OriginalDescription = Content.OriginalDescription;
+        newRule.Category = Content.Category;
+        newRuleCategory = Content.Category.Id.ToString();
     }
 
     private async Task SaveAsync()
@@ -86,24 +166,20 @@
 
     private async Task CancelAsync() => await Dialog.CancelAsync();
 
-    private async Task CreateRule(Transaction transaction)
+    private async Task SaveRuleAsync()
     {
-        var rule = new Rule
-        {
-            OriginalDescription = transaction.OriginalDescription,
-            CompareType = RuleCompareType.Contains,
-            Category = transaction.Category,
-        };
+        newRule.CompareType = Enum.Parse<RuleCompareType>(newRuleType);
+        newRule.Category = dataService.GetCategoryById(int.Parse(newRuleCategory));
+        await dataService.SaveNewRule(newRule);
+        rules = await dataService.GetRules(Content);
+        if (rules.Any())
+            activeTabId = "rule-apply";
+    }
 
-        var dialog = await DialogService.ShowDialogAsync<EditRuleDialog>(rule, new DialogParameters
-        {
-            Alignment = HorizontalAlignment.Right,
-            Title = "New Rule",
-            PreventDismissOnOverlayClick = true,
-            PreventScroll = true,
-        });
-
-        var result = await dialog.Result;
+    private async Task ApplyRule(Rule rule)
+    {
+        var changedTran = await dataService.ApplyRule(Content, rule);
+        await Dialog.CloseAsync(changedTran);
     }
 
 }

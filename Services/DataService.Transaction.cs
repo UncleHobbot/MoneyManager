@@ -20,4 +20,11 @@ public partial class DataService
 
         return await GetTransactions();
     }
+
+    public async Task DeleteAllTransactions()
+    {
+        var ctx = await contextFactory.CreateDbContextAsync();
+        ctx.Transactions.RemoveRange(ctx.Transactions);
+        await ctx.SaveChangesAsync();
+    }
 }

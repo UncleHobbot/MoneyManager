@@ -3,47 +3,64 @@
 @inject DataService dataService
 @using Microsoft.FluentUI.AspNetCore.Components
 
-<FluentLabel Typo="Typography.H3"> Transactions </FluentLabel>
-<br/>
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Bottom" Style="margin: 10px 0;">
+    <FluentLabel Typo="Typography.H3"> Transactions</FluentLabel>
+    <FluentToolbar id="toolbar" aria-labelledby="toolbar-label">
+        <FluentButton Appearance="Appearance.Stealth" OnClick="DeleteAll">Delete All</FluentButton>
+    </FluentToolbar>
+</FluentStack>
 
-<FluentDataGrid Items="@transactions" ResizableColumns=true Pagination="@pagination"
-                GridTemplateColumns="100px 150px 100px 300px 500px"
-                Style="height: 80vh;width: 100%;overflow:auto;">
+<FluentDesignSystemProvider Density="-1">
+    <FluentDataGrid Items="@transactions" ResizableColumns=true Pagination="@pagination"
+                    GridTemplateColumns="100px 150px 100px 300px 500px"
+                    Style="height: 80vh;width: 100%;overflow:auto;">
 
-    <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
-                    InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
-    <PropertyColumn Property="x => x.Account.ShownName" Title="Account" Sortable="true"/>
-    <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount"/>
+        <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
+                        InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
+        <PropertyColumn Property="x => x.Account.ShownName" Title="Account" Sortable="true"/>
+        <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount"/>
 
-    <TemplateColumn Align="Align.Center" Title="Category">
-        <div style="display:flex;width:290px">
-            <FluentIcon Value="@(context.Category.objIcon)"/>
-            <div style="display:flex;align-items: center"> @context.Category.Name </div>
-            <FluentSpacer/>
-            <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px" OnClick="@(() => FilterByCategory(context, true))"/>
-            <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px" OnClick="@(() => FilterByCategory(context, false))"/>
-            <div style="display:flex;align-items: center"> </div>
-        </div>
-    </TemplateColumn>
-
-    <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true">
-        <ColumnOptions>
-            <div class="search-box">
-                <FluentSearch type="search" Autofocus=true @bind-Value=filterDescription @oninput="FilterByDescription" @bind-Value:after="FilterByDescriptionClear" Placeholder="Description..."/>
+        <TemplateColumn Align="Align.Center" Title="Category">
+            <div style="display:flex;width:290px">
+                <FluentIcon Value="@(context.Category.objIcon)"/>
+                <div style="display:flex;align-items: center"> @context.Category.Name </div>
+                <FluentSpacer/>
+                <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
+                              OnClick="@(() => FilterByCategory(context, true))"/>
+                <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
+                              OnClick="@(() => FilterByCategory(context, false))"/>
+                <div style="display:flex;align-items: center"></div>
             </div>
-        </ColumnOptions>
-    </PropertyColumn>
+        </TemplateColumn>
 
-    <TemplateColumn Title="Actions" Align="@Align.End">
-        <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
-    </TemplateColumn>
+        <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true">
+            <ColumnOptions>
+                <div class="search-box">
+                    <FluentSearch type="search" Autofocus=true @bind-Value=filterDescription @oninput="FilterByDescription"
+                                  @bind-Value:after="FilterByDescriptionClear" Placeholder="Description..."/>
+                </div>
+            </ColumnOptions>
+        </PropertyColumn>
 
-</FluentDataGrid>
+        <TemplateColumn Align="Align.Center" Title="Rule applied">
+            @if (context.IsRuleApplied)
+            {
+            <FluentIcon Value="@(new Icons.Regular.Size20.Tag())"/>
+            }
+        </TemplateColumn>
 
-<FluentPaginator State="@pagination"/>
+
+        <TemplateColumn Title="Actions" Align="@Align.End">
+            <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
+        </TemplateColumn>
+
+    </FluentDataGrid>
+
+    <FluentPaginator State="@pagination"/>
+</FluentDesignSystemProvider>
 
 @code {
-    readonly PaginationState pagination = new() { ItemsPerPage = 30 };
+    readonly PaginationState pagination = new() { ItemsPerPage = 19 };
 
     IQueryable<Transaction> alltransactions;
 
@@ -73,11 +90,20 @@
             filterDescription = string.Empty;
     }
 
+    async Task DeleteAll()
+    {
+        var dialog = await DialogService.ShowConfirmationAsync("Do you want to delete all transactions?", "Yes", "No", "Transactions");
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+            await dataService.DeleteAllTransactions();
+    }
+
+
     private async Task EditTransaction(Transaction transaction)
     {
         var dialog = await DialogService.ShowDialogAsync<EditTransactionDialog>(transaction, new DialogParameters
         {
-            Height = "600px",
+            Height = "700px",
             Width = "800px",
             Title = "Edit Transaction",
             PreventDismissOnOverlayClick = true,
