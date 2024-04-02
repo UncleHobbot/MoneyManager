@@ -40,6 +40,12 @@
       <Compile Update="Services\DataService.Rule.cs">
         <DependentUpon>DataService.cs</DependentUpon>
       </Compile>
+      <Compile Update="Services\TransactionService.Mint.cs">
+        <DependentUpon>TransactionService.cs</DependentUpon>
+      </Compile>
+      <Compile Update="Services\TransactionService.RBC.cs">
+        <DependentUpon>TransactionService.cs</DependentUpon>
+      </Compile>
     </ItemGroup>
 
 </Project>

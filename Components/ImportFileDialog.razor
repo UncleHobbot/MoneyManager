@@ -44,9 +44,13 @@
             case ImportTypeEnum.MintCSV:
                 await TransactionService.ImportMintCSV(Content.FileName, actionProgress);
                 break;
+            case ImportTypeEnum.RBCCSV:
+                await TransactionService.ImportRBCCSV(Content.FileName, actionProgress);
+                break;
         }
 
         Status = "Import complete";
         IsComplete = true;
     }
+
 }

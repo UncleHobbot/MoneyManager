@@ -12,13 +12,13 @@ public partial class DataService
                 switch (x.CompareType)
                 {
                     case RuleCompareType.Contains:
-                        return transaction.Description.Contains(x.OriginalDescription);
+                        return transaction.Description.Contains(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
                     case RuleCompareType.StartsWith:
-                        return transaction.Description.StartsWith(x.OriginalDescription);
+                        return transaction.Description.StartsWith(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
                     case RuleCompareType.EndsWith:
-                        return transaction.Description.EndsWith(x.OriginalDescription);
+                        return transaction.Description.EndsWith(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
                     case RuleCompareType.Equals:
-                        return transaction.Description.Equals(x.OriginalDescription);
+                        return transaction.Description.Equals(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
                     default:
                         return false;
                 }
@@ -43,5 +43,17 @@ public partial class DataService
         tran.IsRuleApplied = true;
         await ctx.SaveChangesAsync();
         return tran;
+    }
+
+    public async Task ApplyRule(Transaction transaction, DataContext ctx)
+    {
+        var rules = await GetRules(transaction);
+        if (rules.Count() == 1)
+        {
+            var rule = rules.First();
+            transaction.Description = rule.NewDescription;
+            transaction.Category = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == rule.Category.Id);
+            transaction.IsRuleApplied = true;
+        }
     }
 }
