@@ -19,6 +19,8 @@ public class Account
 
     [NotMapped]
     public Icon TypeIcon => AccountHelper.TypeIcon(Type);
+
+    public override string ToString() => ShownName;
 }
 
 public static class AccountHelper

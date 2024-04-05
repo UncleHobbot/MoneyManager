@@ -10,7 +10,8 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
         if (Accounts.TryGetValue(name, out var existingAccount))
             return existingAccount;
 
-        var accountInDB = await ctx.Accounts.FirstOrDefaultAsync(c => c.Name == name || c.Number == name.Replace("-", ""));
+        var accountInDB = await ctx.Accounts.FirstOrDefaultAsync(c => c.Name == name || c.Number == name.Replace("-", "")
+                                                                                     || c.AlternativeName1.ToUpper() == name.ToUpper() || c.AlternativeName2.ToUpper() == name.ToUpper());
         if (accountInDB != null)
         {
             Accounts.Add(name, accountInDB);
@@ -48,7 +49,18 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
         return category;
     }
 
-    private bool IsTransactionExists(DateTime date, decimal amount, bool isDebit, string originalDescription, Account account, DataContext ctx)
-        => ctx.Transactions.Any(t => t.Date == date && t.Amount == amount && t.IsDebit == isDebit
-                                     && t.Account.Id == account.Id && (t.OriginalDescription == originalDescription || originalDescription.Contains(t.OriginalDescription)));
+    private bool IsTransactionExists(DateTime date, decimal amount, bool isDebit, string originalDescription, Account account, DataContext ctx, bool isDateFuzzy = false)
+    {
+        if (isDateFuzzy)
+        {
+            var lowDate = date.AddDays(-5);
+            var highDate = date.AddDays(5);
+            return ctx.Transactions.Any(t => (t.Date >= lowDate && t.Date <= highDate)
+                                             && t.Amount == amount && t.IsDebit == isDebit
+                                             && t.Account.Id == account.Id && (t.OriginalDescription == originalDescription || originalDescription.Contains(t.OriginalDescription)));
+        }
+
+        return ctx.Transactions.Any(t => t.Date == date && t.Amount == amount && t.IsDebit == isDebit
+                                         && t.Account.Id == account.Id && (t.OriginalDescription == originalDescription || originalDescription.Contains(t.OriginalDescription)));
+    }
 }

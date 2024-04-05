@@ -5,20 +5,39 @@ public partial class DataService
     public async Task<IQueryable<Rule>> GetRules(Transaction transaction)
     {
         var ctx = await contextFactory.CreateDbContextAsync();
-        return (await ctx.Rules.Where(x => transaction.Description.ToUpper().Contains(x.OriginalDescription.ToUpper()))
+
+        /*var r1 = ctx.Rules.Where(x => transaction.OriginalDescription.ToUpper().Contains(x.OriginalDescription.ToUpper())).ToList();
+        var r2 = r1.Where(x =>
+        {
+            switch (x.CompareType)
+            {
+                case RuleCompareType.Contains:
+                    return transaction.OriginalDescription.Contains(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
+                case RuleCompareType.StartsWith:
+                    return transaction.OriginalDescription.StartsWith(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
+                case RuleCompareType.EndsWith:
+                    return transaction.OriginalDescription.EndsWith(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
+                case RuleCompareType.Equals:
+                    return transaction.OriginalDescription.Equals(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
+                default:
+                    return false;
+            }
+        }).ToList();*/
+        
+        return (await ctx.Rules.Where(x => transaction.OriginalDescription.ToUpper().Contains(x.OriginalDescription.ToUpper()))
                 .Include(x => x.Category).ToListAsync())
             .Where(x =>
             {
                 switch (x.CompareType)
                 {
                     case RuleCompareType.Contains:
-                        return transaction.Description.Contains(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
+                        return transaction.OriginalDescription.Contains(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
                     case RuleCompareType.StartsWith:
-                        return transaction.Description.StartsWith(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
+                        return transaction.OriginalDescription.StartsWith(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
                     case RuleCompareType.EndsWith:
-                        return transaction.Description.EndsWith(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
+                        return transaction.OriginalDescription.EndsWith(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
                     case RuleCompareType.Equals:
-                        return transaction.Description.Equals(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
+                        return transaction.OriginalDescription.Equals(x.OriginalDescription, StringComparison.OrdinalIgnoreCase);
                     default:
                         return false;
                 }

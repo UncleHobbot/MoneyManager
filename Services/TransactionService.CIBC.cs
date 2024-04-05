@@ -1,12 +1,13 @@
 ﻿using System.Globalization;
 using CsvHelper;
+using CsvHelper.Configuration;
 using MoneyManager.Model.Import;
 
 namespace MoneyManager.Services;
 
 public partial class TransactionService
 {
-    public async Task ImportRBCCSV(string filePath, Action<int> progress)
+    public async Task ImportCIBCCSV(string filePath, Action<int> progress)
     {
         // init global cache
         Accounts = [];
@@ -18,13 +19,16 @@ public partial class TransactionService
         var uCategory = await GetCategory("Uncategorized", context);
 
         var transactions = new List<Transaction>();
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture) { HasHeaderRecord = false};
         using (var reader = new StreamReader(filePath))
-        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+        using (var csv = new CsvReader(reader, config))
         {
             var current = 0;
             var lastReportedProgress = 0;
+            // Limit the date to January 1st 2024 and older
+            var dateLimit = new DateTime(2024, 1, 1);
 
-            var record = new RBCCSV();
+            var record = new CIBCCSV();
             var records = csv.EnumerateRecords(record);
             foreach (var r in records)
             {
@@ -38,17 +42,17 @@ public partial class TransactionService
 
                 //Console.WriteLine($"{current}/{total} - {p}: {r.Date}");
 
+                if (r.Date < dateLimit)
+                    continue;
+
                 var account = await GetAccount(r.AccountNumber, context, false);
 
                 if (account == null)
                     continue;
-                if (r.AmountCAD == null)
-                    continue;
-                var isDebit = r.AmountCAD < 0;
-                var amount = Math.Abs(r.AmountCAD.Value);
-                var description = $"{r.Description1} {r.Description2}";
+                var isDebit = r.AmountDebit.HasValue;
+                var amount = r.AmountDebit ?? r.AmountCredit ?? 0;
 
-                var isExist = IsTransactionExists(r.Date, amount, isDebit, r.Description1, account, context);
+                var isExist = IsTransactionExists(r.Date, amount, isDebit, r.Description, account, context, true);
                 if (isExist)
                     continue;
 
@@ -56,8 +60,8 @@ public partial class TransactionService
                 {
                     Account = account,
                     Date = r.Date,
-                    Description = description,
-                    OriginalDescription = description,
+                    Description = r.Description,
+                    OriginalDescription = r.Description,
                     Amount = amount,
                     IsDebit = isDebit,
                     Category = uCategory,
@@ -75,4 +79,5 @@ public partial class TransactionService
             await context.SaveChangesAsync();
         }
     }
+       
 }

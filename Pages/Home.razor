@@ -17,8 +17,9 @@
                 </FluentGridItem>
                 <FluentGridItem xs="12">
                     <FluentSelect TOption="string" @bind-Value="@importFileType" Label="Select file type">
-                        <FluentOption Value="@ImportTypeEnum.MintCSV.ToString()">Mint csv</FluentOption>
-                        <FluentOption Value="@ImportTypeEnum.RBCCSV.ToString()">RBC csv</FluentOption>
+                        <FluentOption Value="@ImportTypeEnum.Mint_CSV.ToString()">Mint csv</FluentOption>
+                        <FluentOption Value="@ImportTypeEnum.RBC_CSV.ToString()">RBC csv</FluentOption>
+                        <FluentOption Value="@ImportTypeEnum.CIBC_CSV.ToString()">CIBC csv</FluentOption>
                     </FluentSelect>
                 </FluentGridItem>
                 <FluentGridItem xs="12" >
@@ -72,14 +73,14 @@
 </FluentGrid>
 
 @code {
-    string importFileType = ImportTypeEnum.MintCSV.ToString();
+    string importFileType = ImportTypeEnum.Mint_CSV.ToString();
     string importFile;
 
     void SelectImportFile()
     {
         string filterName = null;
         string filterExt = null;
-        if (importFileType == ImportTypeEnum.MintCSV.ToString())
+        if (importFileType == ImportTypeEnum.Mint_CSV.ToString() || importFileType == ImportTypeEnum.RBC_CSV.ToString() || importFileType == ImportTypeEnum.CIBC_CSV.ToString())
         {
             filterName = "CSV file";
             filterExt = "csv";

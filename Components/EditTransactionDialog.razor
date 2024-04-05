@@ -1,7 +1,6 @@
 ﻿@using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
 @implements IDialogContentComponent<Transaction>
-@inject IDialogService DialogService
 @inject DataService dataService
 
 <!-- Header -->
@@ -181,5 +180,4 @@
         var changedTran = await dataService.ApplyRule(Content, rule);
         await Dialog.CloseAsync(changedTran);
     }
-
 }

@@ -15,6 +15,7 @@ public class Category
 
     public string pIcon => Parent == null ? Icon : Parent.Icon;
     public Icon objIcon => CategoryHelper.CategoryIcon(Parent == null ? Icon : Parent.Icon);
+    public override string ToString() => Name;
 }
 
 public class CategoryTree

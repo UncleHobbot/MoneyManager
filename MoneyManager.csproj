@@ -9,7 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="CsvHelper" Version="31.0.2" />
+      <PackageReference Include="CsvHelper" Version="31.0.3" />
       <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" Version="8.0.14" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.3">
         <PrivateAssets>all</PrivateAssets>
@@ -44,6 +44,9 @@
         <DependentUpon>TransactionService.cs</DependentUpon>
       </Compile>
       <Compile Update="Services\TransactionService.RBC.cs">
+        <DependentUpon>TransactionService.cs</DependentUpon>
+      </Compile>
+      <Compile Update="Services\TransactionService.CIBC.cs">
         <DependentUpon>TransactionService.cs</DependentUpon>
       </Compile>
     </ItemGroup>

@@ -12,12 +12,24 @@
 
 <FluentDesignSystemProvider Density="-1">
     <FluentDataGrid Items="@transactions" ResizableColumns=true Pagination="@pagination"
-                    GridTemplateColumns="100px 150px 100px 300px 500px"
+                    GridTemplateColumns="100px 200px 100px 300px 500px"
                     Style="height: 80vh;width: 100%;overflow:auto;">
 
         <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
                         InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
-        <PropertyColumn Property="x => x.Account.ShownName" Title="Account" Sortable="true"/>
+        @*<PropertyColumn Property="x => x.Account.ShownName" Title="Account" Sortable="true"/>*@
+        <TemplateColumn Align="Align.Center" Title="Account">
+            <div style="display:flex;width:190px">
+                <div style="display:flex;align-items: center">@context.Account.ShownName</div>
+                <FluentSpacer/>
+                <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
+                              OnClick="@(() => FilterByAccount(context, true))"/>
+                <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
+                              OnClick="@(() => FilterByAccount(context, false))"/>
+                <div style="display:flex;align-items: center"></div>
+            </div>
+        </TemplateColumn>
+
         <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount"/>
 
         <TemplateColumn Align="Align.Center" Title="Category">
@@ -45,7 +57,7 @@
         <TemplateColumn Align="Align.Center" Title="Rule applied">
             @if (context.IsRuleApplied)
             {
-            <FluentIcon Value="@(new Icons.Regular.Size20.Tag())"/>
+                <FluentIcon Value="@(new Icons.Regular.Size20.Tag())"/>
             }
         </TemplateColumn>
 
@@ -66,9 +78,11 @@
 
     IQueryable<Transaction> transactions => alltransactions?
         .Where(x => filterCategory == 0 || x.Category.Id == filterCategory || (x.Category.Parent != null && x.Category.Parent.Id == filterCategory))
+        .Where(x => filterAccount == 0 || x.Account.Id == filterAccount)
         .Where(x => string.IsNullOrWhiteSpace(filterDescription) || x.Description.ToUpper().Contains(filterDescription.ToUpper()));
 
     int filterCategory = 0;
+    int filterAccount = 0;
     string filterDescription = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -77,6 +91,7 @@
     }
 
     private void FilterByCategory(Transaction transaction, bool isSet) => filterCategory = isSet ? transaction.Category.Id : 0;
+    private void FilterByAccount(Transaction transaction, bool isSet) => filterAccount = isSet ? transaction.Account.Id : 0;
 
     private void FilterByDescription(ChangeEventArgs args)
     {

@@ -41,11 +41,14 @@
 
         switch (Content.ImportType)
         {
-            case ImportTypeEnum.MintCSV:
+            case ImportTypeEnum.Mint_CSV:
                 await TransactionService.ImportMintCSV(Content.FileName, actionProgress);
                 break;
-            case ImportTypeEnum.RBCCSV:
+            case ImportTypeEnum.RBC_CSV:
                 await TransactionService.ImportRBCCSV(Content.FileName, actionProgress);
+                break;
+            case ImportTypeEnum.CIBC_CSV:
+                await TransactionService.ImportCIBCCSV(Content.FileName, actionProgress);
                 break;
         }
 

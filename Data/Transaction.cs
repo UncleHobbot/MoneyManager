@@ -14,4 +14,6 @@ public class Transaction
     public bool IsDebit { get; set; }
     public Category Category { get; set; }
     public bool IsRuleApplied { get; set; }
+    
+    public override string ToString() => $"{Date:d}: {Amount:C} {Description}";
 }
