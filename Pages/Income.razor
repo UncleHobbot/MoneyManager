@@ -1,0 +1,122 @@
+﻿@page "/income"
+@using ApexCharts
+@using Microsoft.FluentUI.AspNetCore.Components
+@using MoneyManager.Model.Chart
+@using Align = Microsoft.FluentUI.AspNetCore.Components.Align
+@using Orientation = Microsoft.FluentUI.AspNetCore.Components.Orientation
+@inject DataService dataService
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Top" Width="100%" HorizontalGap="20">
+    <ApexChart TItem="BalanceChart" Title="Net Income" Width="1000" Height="800" Options=options @ref=chart>
+
+        <ApexPointSeries TItem="BalanceChart" Items="DataChart" Name="Income"
+                         SeriesType="SeriesType.Bar"
+                         XValue="e => e.Month"
+                         YValue="e => e.Income"/>
+
+        <ApexPointSeries TItem="BalanceChart" Items="DataChart" Name="Expenses"
+                         SeriesType="SeriesType.Bar"
+                         XValue="e => e.Month"
+                         YValue="e => e.Expenses"/>
+
+        <ApexPointSeries TItem="BalanceChart" Items="DataChart" Name="Net income"
+                         SeriesType="SeriesType.Line"
+                         XValue="e => e.Month"
+                         YValue="e => e.Balance"/>
+    </ApexChart>
+
+    @if (isLoading)
+    {
+        <FluentProgressRing/>
+    }
+
+    <FluentStack Orientation="Orientation.Vertical">
+        <FluentSelect TOption="string" @bind-Value="@chartPeriod" Label="Select period" SelectedOptionChanged="UpdateChart">
+            <FluentOption Value="12">Last 12 months</FluentOption>
+            <FluentOption Value="1">This year</FluentOption>
+            <FluentOption Value="2">Last year</FluentOption>
+            <FluentOption Value="3">This + Last year</FluentOption>
+        </FluentSelect>
+
+        @if (!isLoading)
+        {
+            <FluentDataGrid Items="@DataQ">
+                <TemplateColumn Title="Month">
+                    @if (context.MonthKey == "t")
+                    {
+                        <b>@context.MonthLabel</b>
+                    }
+                    else
+                    {
+                        <NavLink href="@($"/month/{context.MonthKey}")">@context.MonthLabel</NavLink>
+                    }
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.Income" Format="c" Align="Align.End" Title="Income"/>
+                <PropertyColumn Property="x => -1 * x.Expenses" Format="c" Align="Align.End" Title="Expense"/>
+                <TemplateColumn Title="Net" Align="Align.End">
+                    @if (context.Balance >= 0)
+                    {
+                        <span>@(context.Balance.ToString("c"))</span>
+                    }
+                    else
+                    {
+                        <span style='color:red'>@(context.Balance.ToString("c"))</span>
+                    }
+                </TemplateColumn>
+            </FluentDataGrid>
+        }
+    </FluentStack>
+</FluentStack>
+
+@code {
+    private List<BalanceChart> DataChart { get; set; } = [];
+    private List<BalanceChart> DataGrid { get; set; } = [];
+    private IQueryable<BalanceChart> DataQ => DataGrid.AsQueryable();
+    private ApexChartOptions<BalanceChart> options;
+    private ApexChart<BalanceChart> chart;
+    private bool isLoading;
+
+    string chartPeriod = "12";
+
+    protected override async Task OnInitializedAsync()
+    {
+        options = new ApexChartOptions<BalanceChart>
+        {
+            Theme = new Theme { Mode = Mode.Dark, Palette = PaletteType.Palette1 },
+            Chart = new Chart { Stacked = true },
+            Colors = ["#5cb85c", "#d9534f", "#545454"],
+            //DataLabels = new DataLabels { Formatter = @"function(value, opts) { return '$' + Number(value).toLocaleString();}" },
+            Yaxis = [new YAxis { Labels = new YAxisLabels { Formatter = @"function (value) { return '$' + Number(value).toLocaleString();}" } }],
+            NoData = new NoData { Text = "Calculating..." }
+        };
+
+        isLoading = true;
+        await LoadData();
+        isLoading = false;
+    }
+
+    async Task UpdateChart()
+    {
+        isLoading = true;
+        await LoadData();
+        StateHasChanged();
+        await chart.UpdateSeriesAsync(true);
+        isLoading = false;
+    }
+
+    async Task LoadData()
+    {
+        DataChart = await dataService.ChartNetIncome(chartPeriod);
+        DataGrid= DataChart.ToList();
+        DataGrid.Add(new BalanceChart
+        {
+            Month = "Total",
+            FirstDate = DateTime.Today.AddYears(100),
+            MonthLabel = "Total",
+            MonthKey = "t",
+            Income = DataGrid.Sum(x => x.Income),
+            Expenses = DataGrid.Sum(x => x.Expenses)
+        });
+    }
+
+}

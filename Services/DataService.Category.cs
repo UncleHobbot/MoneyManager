@@ -73,4 +73,9 @@ public partial class DataService
     }
 
     public Category GetCategoryById(int id) => Categories.FirstOrDefault(x=>x.Id == id);
+    public async Task<Category> GetCategoryByName(string name)
+    {
+        var ctx = await contextFactory.CreateDbContextAsync();
+        return await ctx.Categories.FirstOrDefaultAsync(x => x.Name.ToUpper() == name.ToUpper());
+    }
 }

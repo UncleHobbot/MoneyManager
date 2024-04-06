@@ -87,7 +87,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        alltransactions = await dataService.GetTransactions();
+        alltransactions = await dataService.ChartGetTransactions();
     }
 
     private void FilterByCategory(Transaction transaction, bool isSet) => filterCategory = isSet ? transaction.Category.Id : 0;

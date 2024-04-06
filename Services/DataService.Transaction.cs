@@ -2,7 +2,7 @@
 
 public partial class DataService
 {
-    public async Task<IQueryable<Transaction>> GetTransactions()
+    public async Task<IQueryable<Transaction>> ChartGetTransactions()
     {
         var ctx = await contextFactory.CreateDbContextAsync();
         return ctx.Transactions.Include(x => x.Account).Include(x => x.Category).Include(x => x.Category.Parent)
@@ -18,7 +18,7 @@ public partial class DataService
             await ctx.SaveChangesAsync();
         }
 
-        return await GetTransactions();
+        return await ChartGetTransactions();
     }
 
     public async Task DeleteAllTransactions()
