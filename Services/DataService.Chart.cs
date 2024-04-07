@@ -60,4 +60,55 @@ public partial class DataService
 
         return result;
     }
+
+    //public async Task<(List<CumulativeSpendingChart> LastMonth, List<CumulativeSpendingChart> ThisMonth)> ChartCumulativeSpending()
+    public async Task<List<CumulativeSpendingChart>> ChartCumulativeSpending()
+    {
+        var lastMonthResult = new List<CumulativeSpendingChart>();
+        var thisMonthResult = new List<CumulativeSpendingChart>();
+        var result = new List<CumulativeSpendingChart>();
+
+        var monthNum = DateTime.Today.Month;
+        var lastMonthStart = new DateTime(DateTime.Today.Year, monthNum - 1, 1);
+        var thisMonthStart = new DateTime(DateTime.Today.Year, monthNum, 1);
+
+        var catIncome = await GetCategoryByName("Income");
+        var trans = (await ChartGetTransactions(new DateTime(DateTime.Today.Year, monthNum - 1, 1), DateTime.Today))
+            .Where(x => (x.Category.Parent ?? x.Category).Id != catIncome.Id).ToList();
+
+        for (var day = 1; day <= 31; day++)
+        {
+            var dayValue = new CumulativeSpendingChart { DayNumber = day };
+
+            try
+            {
+                var lastMonthDate = new DateTime(DateTime.Today.Year, monthNum - 1, day).AddDays(1);
+                var lastMonth = trans.Where(x => x.Date >= lastMonthStart && x.Date < lastMonthDate).Sum(x => (x.IsDebit ? 1 : -1) * x.Amount);
+                lastMonthResult.Add(new CumulativeSpendingChart { DayNumber = day, Expenses = lastMonth });
+                dayValue.LastMonthExpenses = lastMonth;
+                result.Add(dayValue);
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+            }
+
+            try
+            {
+                var thisMonthDate = new DateTime(DateTime.Today.Year, monthNum, day);
+                if (thisMonthDate <= DateTime.Today)
+                {
+                    thisMonthDate = thisMonthDate.AddDays(1);
+                    var thisMonth = trans.Where(x => x.Date >= thisMonthStart && x.Date < thisMonthDate).Sum(x => (x.IsDebit ? 1 : -1) * x.Amount);
+                    thisMonthResult.Add(new CumulativeSpendingChart { DayNumber = day, Expenses = thisMonth });
+                    dayValue.ThisMonthExpenses = thisMonth;
+                }
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+            }
+        }
+
+        //return (lastMonthResult, thisMonthResult);
+        return result;
+    }
 }

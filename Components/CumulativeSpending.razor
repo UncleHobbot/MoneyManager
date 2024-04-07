@@ -1,0 +1,49 @@
+﻿@using ApexCharts
+@inject DataService dataService
+
+<ApexChart TItem="CumulativeSpendingChart" Title="@(ShowCaption ? "Cumulative spending" : null)"
+           Height="Height" @ref=chart Options=options>
+
+    <ApexPointSeries TItem="CumulativeSpendingChart" Items="spending" Name="Last month"
+                     SeriesType="SeriesType.Area"
+                     XValue="e => e.DayNumber"
+                     YValue="e => e.LastMonthExpenses"/>
+
+    <ApexPointSeries TItem="CumulativeSpendingChart" Items="spending" Name="This month"
+                     SeriesType="SeriesType.Area"
+                     XValue="e => e.DayNumber"
+                     YValue="e => e.ThisMonthExpenses"/>
+
+</ApexChart>
+
+@code {
+    [Parameter] public int Width { get; set; } = 0;
+    [Parameter] public int Height { get; set; } = 800;
+    [Parameter] public bool ShowCaption { get; set; } = true;
+    [Parameter] public bool ShowToolbar { get; set; } = true;
+
+    private ApexChart<CumulativeSpendingChart> chart;
+    private ApexChartOptions<CumulativeSpendingChart> options;
+    List<CumulativeSpendingChart> lastMonth;
+    List<CumulativeSpendingChart> thisMonth;
+    List<CumulativeSpendingChart> spending;
+
+    protected override async Task OnInitializedAsync()
+    {
+        options = new ApexChartOptions<CumulativeSpendingChart>
+        {
+            Theme = new Theme { Mode = Mode.Dark, Palette = PaletteType.Palette1 },
+            Yaxis = [new YAxis { Labels = new YAxisLabels { Formatter = @"function (value) { return '$' + Number(value).toLocaleString();}" } }],
+            NoData = new NoData { Text = "Calculating..." },
+            Chart = new Chart {  Background = "transparent", Toolbar = new Toolbar { Show = ShowToolbar } }
+        };
+
+        if (Width>0)
+            options.Chart.Width = Width;
+
+        spending = await dataService.ChartCumulativeSpending();
+        //lastMonth = res.LastMonth;
+        //thisMonth = res.ThisMonth;
+    }
+
+}

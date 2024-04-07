@@ -7,7 +7,7 @@
 
 <FluentGrid Spacing="2">
     <FluentGridItem xs="4">
-        <FluentCard Height="350px">
+        <FluentCard Height="400px">
             <FluentGrid Spacing="1">
                 <FluentGridItem xs="1">
                     <FluentIcon Value="@(new Icons.Filled.Size24.ArrowUpload())"/>
@@ -22,7 +22,7 @@
                         <FluentOption Value="@ImportTypeEnum.CIBC_CSV.ToString()">CIBC csv</FluentOption>
                     </FluentSelect>
                 </FluentGridItem>
-                <FluentGridItem xs="12" >
+                <FluentGridItem xs="12">
                     <FluentTextField @bind-Value="importFile" Label="Select file to import" Style="width: 100%">
                         <FluentIcon Value="@(new Icons.Regular.Size16.FolderSearch())" Color="@Color.Neutral" Slot="end" OnClick="SelectImportFile"/>
                     </FluentTextField>
@@ -36,7 +36,7 @@
     </FluentGridItem>
 
     <FluentGridItem xs="4">
-        <FluentCard Height="350px">
+        <FluentCard Height="400px">
             <FluentGrid Spacing="1">
                 <FluentGridItem xs="1">
                     <FluentIcon Value="@(new Icons.Filled.Size24.TagQuestionMark())"/>
@@ -54,7 +54,7 @@
     </FluentGridItem>
 
     <FluentGridItem xs="4">
-        <FluentCard Height="350px">
+        <FluentCard Height="400px">
             <FluentGrid Spacing="1">
                 <FluentGridItem xs="1">
                     <FluentIcon Value="@(new Icons.Filled.Size24.New())"/>
@@ -70,7 +70,24 @@
             </FluentGrid>
         </FluentCard>
     </FluentGridItem>
-</FluentGrid>
+
+    <FluentGridItem xs="4">
+        <FluentCard Height="400px">
+            <FluentGrid Spacing="1">
+                <FluentGridItem xs="1">
+                    <FluentIcon Value="@(new Icons.Filled.Size24.DataArea())"/>
+                </FluentGridItem>
+                <FluentGridItem xs="11">
+                    <FluentLabel Typo="Typography.PaneHeader"> Cumulative spending </FluentLabel>
+                </FluentGridItem>
+                <FluentGridItem xs="12">
+                    <CumulativeSpending Height="320" ShowCaption="false" ShowToolbar="false"/>
+                </FluentGridItem>
+            </FluentGrid>
+        </FluentCard>
+    </FluentGridItem>
+
+    </FluentGrid>
 
 @code {
     string importFileType = ImportTypeEnum.Mint_CSV.ToString();
