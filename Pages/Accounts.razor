@@ -3,11 +3,10 @@
 @inject IDialogService DialogService
 @using Microsoft.FluentUI.AspNetCore.Components
 
-<FluentLabel Typo="Typography.H3"> Accounts </FluentLabel>
-
-<FluentToolbar id="toolbar-fluent-components" Style="margin: 50px 0;">
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
+    <FluentLabel Typo="Typography.H3"> Accounts </FluentLabel>
     <FluentButton Appearance="Appearance.Stealth">Add Account</FluentButton>
-</FluentToolbar>
+</FluentStack>
 
 <FluentDataGrid Items="@FilteredItems" ResizableColumns=true Pagination="@pagination"
                 GridTemplateColumns="1fr 5fr 10fr 10fr 5fr 5fr 5fr 2fr 1fr" Style="height: 80vh;overflow:auto;">
@@ -54,7 +53,7 @@
         accounts = dataService.GetAccounts().AsQueryable();
     }
 
-  private void HandleShownNameFilter(ChangeEventArgs args)
+    private void HandleShownNameFilter(ChangeEventArgs args)
     {
         if (args.Value is string value)
             nameFilter = value;

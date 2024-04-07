@@ -6,7 +6,7 @@
 <!-- Header -->
 <FluentDialogHeader ShowDismiss="true">
     <FluentStack VerticalAlignment="VerticalAlignment.Center">
-        <FluentIcon Value="@(new Icons.Regular.Size24.Apps())"/>
+        <FluentIcon Value="@(new Icons.Regular.Size24.Tag())"/>
         <FluentLabel Typo="Typography.PaneHeader">
             @Dialog.Instance.Parameters.Title
         </FluentLabel>
@@ -18,22 +18,39 @@
     <EditForm EditContext="@_editContext" FormName="edit_rule">
         <DataAnnotationsValidator/>
 
-        <FluentSelect ValueChanged="@(e => selectedType = e)" TOption="string" Label="Compare Type">
-            <FluentOption Value="@RuleCompareType.Contains.ToString()" Selected="@(Content.CompareType == RuleCompareType.Contains)">Contains</FluentOption>
-            <FluentOption Value="@RuleCompareType.StartsWith.ToString()" Selected="@(Content.CompareType == RuleCompareType.StartsWith)">Starts With</FluentOption>
-            <FluentOption Value="@RuleCompareType.EndsWith.ToString()" Selected="@(Content.CompareType == RuleCompareType.EndsWith)">Ends With</FluentOption>
-            <FluentOption Value="@RuleCompareType.Equals.ToString()" Selected="@(Content.CompareType == RuleCompareType.Equals)">Equals</FluentOption>
+        <FluentSelect TOption="string" Label="Compare Type" Width="100%"
+                      Value="@selectedType" ValueChanged="@(e => selectedType = e)">
+            <FluentOption Value="@RuleCompareType.Contains.ToString()">
+                Contains
+                <FluentIcon Value="@(new Icons.Regular.Size20.CenterHorizontal())" Color="@Color.Neutral"
+                            Slot="start"/>
+            </FluentOption>
+            <FluentOption Value="@RuleCompareType.StartsWith.ToString()" Selected="@(selectedCategory == RuleCompareType.StartsWith.ToString())">
+                Starts With
+                <FluentIcon Value="@(new Icons.Regular.Size20.AlignStartHorizontal())" Color="@Color.Neutral"
+                            Slot="start"/>
+            </FluentOption>
+            <FluentOption Value="@RuleCompareType.EndsWith.ToString()" Selected="@(selectedCategory == RuleCompareType.EndsWith.ToString())">
+                Ends With
+                <FluentIcon Value="@(new Icons.Regular.Size20.AlignEndHorizontal())" Color="@Color.Neutral"
+                            Slot="start"/>
+            </FluentOption>
+            <FluentOption Value="@RuleCompareType.Equals.ToString()">
+                Equals
+                <FluentIcon Value="@(new Icons.Regular.Size20.EqualCircle())" Color="@Color.Neutral" Slot="start"/>
+            </FluentOption>
         </FluentSelect>
 
-        <FluentTextField Value="@Content.OriginalDescription" style="width: 100%;" Required Label="Original description"/>
-        <FluentTextField Value="@Content.NewDescription" style="width: 100%;" Required Label="Change to"/>
+        <FluentTextField @bind-Value="@Content.OriginalDescription" style="width: 100%;" Required Label="Original description"/>
+        <FluentTextField @bind-Value="@Content.NewDescription" style="width: 100%;" Required Label="Change to"/>
 
-        <FluentSelect ValueChanged="@(e => selectedCategory = e)" TOption="string" Height="250px" Label="Category">
+        <FluentSelect ValueChanged="@(e => selectedCategory = e)" TOption="string" Height="250px" Label="Category" Width="100%">
             @foreach (var pCat in TreeCategories.OrderBy(x => x.Name))
             {
                 <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
                     @pCat.Name
-                    <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start" Style="margin-right:5px; margin-left: 5px"/>
+                    <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start"
+                                Style="margin-right:5px; margin-left: 5px"/>
                 </FluentOption>
 
                 @if (pCat.Children.Count > 0)
@@ -67,6 +84,7 @@
     protected override async Task OnInitializedAsync()
     {
         _editContext = new EditContext(Content);
+        await dataService.InitStaticStorage();
         TreeCategories = dataService.GetCategoriesTree();
         selectedCategory = Content.Category.Id.ToString();
         selectedType = Content.CompareType.ToString();
@@ -76,10 +94,11 @@
     {
         if (_editContext.Validate())
         {
+            Content.CompareType = Enum.Parse<RuleCompareType>(selectedType);
+            Content.Category = dataService.GetCategoryById(int.Parse(selectedCategory));
             await Dialog.CloseAsync(Content);
         }
     }
 
     private async Task CancelAsync() => await Dialog.CancelAsync();
-
 }

@@ -3,16 +3,15 @@
 @inject DataService dataService
 @using Microsoft.FluentUI.AspNetCore.Components
 
-<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Bottom" Style="margin: 10px 0;">
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
     <FluentLabel Typo="Typography.H3"> Transactions</FluentLabel>
-    <FluentToolbar id="toolbar" aria-labelledby="toolbar-label">
-        <FluentButton Appearance="Appearance.Stealth" OnClick="DeleteAll">Delete All</FluentButton>
-    </FluentToolbar>
+    <FluentButton Appearance="Appearance.Stealth" OnClick="DeleteAll">Delete All</FluentButton>
 </FluentStack>
 
-<TransactionsList />
+<TransactionsList/>
 
 @code {
+
     async Task DeleteAll()
     {
         var dialog = await DialogService.ShowConfirmationAsync("Do you want to delete all transactions?", "Yes", "No", "Transactions");
@@ -20,4 +19,5 @@
         if (!result.Cancelled)
             await dataService.DeleteAllTransactions();
     }
+
 }

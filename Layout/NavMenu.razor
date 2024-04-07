@@ -2,17 +2,26 @@
 @inject NavigationManager NavigationManager
 
 <div class="navmenu">
-    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
-    <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill" /></label>
+    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon"/>
+    <label for="navmenu-toggle" class="navmenu-icon">
+        <FluentIcon Value="@(new Icons.Regular.Size20.Navigation())" Color="Color.Fill"/>
+    </label>
     <nav class="sitenav" aria-labelledby="main-menu" onclick="document.getElementById('navmenu-toggle').click();">
         <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded">
             <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size24.Home())" IconColor="Color.Accent">Home</FluentNavLink>
             <FluentNavLink Href="transactions" Icon="@(new Icons.Regular.Size24.AppsList())" IconColor="Color.Accent">Transactions</FluentNavLink>
-            <FluentNavLink Href="income" Icon="@(new Icons.Regular.Size24.ChartMultiple())" IconColor="Color.Accent">Net Income</FluentNavLink>
+
+            <FluentNavGroup Title="Trends" Icon="@(new Icons.Regular.Size24.ChartMultiple())" Expanded="true">
+                <ChildContent>
+                    <FluentNavLink Href="income" Icon="@(new Icons.Regular.Size24.CalendarDataBar())" IconColor="Color.Accent">Net Income by month</FluentNavLink>
+                </ChildContent>
+            </FluentNavGroup>
+
             <FluentNavGroup Title="Settings" Icon="@(new Icons.Regular.Size24.Settings())" Expanded="true">
                 <ChildContent>
                     <FluentNavLink Href="accounts" Icon="@(new Icons.Regular.Size24.BuildingBank())" IconColor="Color.Accent">Accounts</FluentNavLink>
-                    <FluentNavLink Href="categoriessimple" Icon="@(new Icons.Regular.Size24.TagMultiple())" IconColor="Color.Accent">Categories</FluentNavLink>
+                    <FluentNavLink Href="categoriessimple" Icon="@(new Icons.Regular.Size24.BoxMultiple())" IconColor="Color.Accent">Categories</FluentNavLink>
+                    <FluentNavLink Href="rules" Icon="@(new Icons.Regular.Size24.TagMultiple())" IconColor="Color.Accent">Rules</FluentNavLink>
                 </ChildContent>
             </FluentNavGroup>
         </FluentNavMenu>
@@ -22,4 +31,3 @@
 @code {
     private bool expanded = true;
 }
-

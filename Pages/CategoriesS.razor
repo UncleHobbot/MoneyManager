@@ -4,7 +4,9 @@
 
 @using Microsoft.FluentUI.AspNetCore.Components
 
-<FluentLabel Typo="Typography.H3"> Categories </FluentLabel>
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
+    <FluentLabel Typo="Typography.H3"> Categories </FluentLabel>
+</FluentStack>
 
 <FluentStack>
     <FluentTreeView @bind-CurrentSelected="selected" Style="width: 600px;height: 85vh;overflow: auto;margin-right: 100px">

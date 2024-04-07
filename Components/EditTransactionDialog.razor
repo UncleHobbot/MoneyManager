@@ -133,7 +133,6 @@
     private HashSet<CategoryTree> TreeCategories { get; set; } = [];
     string selectedCategory = "";
 
-
     IQueryable<Rule> rules;
     string activeTabId = "rule-apply";
     Rule newRule = new();
@@ -146,9 +145,11 @@
         await dataService.InitStaticStorage();
         TreeCategories = dataService.GetCategoriesTree();
         selectedCategory = Content.Category.Id.ToString();
-        rules = await dataService.GetRules(Content);
+        rules = await dataService.GetPossibleRules(Content);
         if (rules == null || !rules.Any())
             activeTabId = "rule-new";
+
+        newRule.CompareType = RuleCompareType.StartsWith;
         newRule.OriginalDescription = Content.OriginalDescription;
         newRule.Category = Content.Category;
         newRuleCategory = Content.Category.Id.ToString();
@@ -170,7 +171,7 @@
         newRule.CompareType = Enum.Parse<RuleCompareType>(newRuleType);
         newRule.Category = dataService.GetCategoryById(int.Parse(newRuleCategory));
         await dataService.SaveNewRule(newRule);
-        rules = await dataService.GetRules(Content);
+        rules = await dataService.GetPossibleRules(Content);
         if (rules.Any())
             activeTabId = "rule-apply";
     }

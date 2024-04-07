@@ -2,10 +2,17 @@
 
 public partial class DataService
 {
-    public async Task<IQueryable<Rule>> GetRules(Transaction transaction)
+    public async Task<IQueryable<Rule>> GetRules()
+    {
+        var ctx = await contextFactory.CreateDbContextAsync();
+        return ctx.Rules.Include(x => x.Category).Include(x => x.Category.Parent).AsQueryable();
+    }
+
+    public async Task<IQueryable<Rule>> GetPossibleRules(Transaction transaction)
     {
         var ctx = await contextFactory.CreateDbContextAsync();
 
+        /*
         var r1 = ctx.Rules.Where(x => transaction.OriginalDescription.ToUpper().Contains(x.OriginalDescription.ToUpper())).ToList();
         var r2 = r1.Where(x =>
         {
@@ -23,7 +30,8 @@ public partial class DataService
                     return false;
             }
         }).ToList();
-        
+        */
+
         return (await ctx.Rules.Where(x => transaction.OriginalDescription.ToUpper().Contains(x.OriginalDescription.ToUpper()))
                 .Include(x => x.Category).ToListAsync())
             .Where(x =>
@@ -53,6 +61,27 @@ public partial class DataService
         return rule;
     }
 
+    public async Task<IQueryable<Rule>> ChangeRule(Rule rule)
+    {
+        var ctx = await contextFactory.CreateDbContextAsync();
+        if (rule.Id == 0)
+            ctx.Rules.Add(rule);
+        else
+            ctx.Rules.Update(rule);
+        await ctx.SaveChangesAsync();
+
+        return await GetRules();
+    }
+
+    public async Task<IQueryable<Rule>> DeleteRule(Rule rule)
+    {
+        var ctx = await contextFactory.CreateDbContextAsync();
+        ctx.Rules.Remove(rule);
+        await ctx.SaveChangesAsync();
+
+        return await GetRules();
+    }
+
     public async Task<Transaction> ApplyRule(Transaction transaction, Rule rule)
     {
         var ctx = await contextFactory.CreateDbContextAsync();
@@ -66,7 +95,7 @@ public partial class DataService
 
     public async Task ApplyRule(Transaction transaction, DataContext ctx)
     {
-        var rules = await GetRules(transaction);
+        var rules = await GetPossibleRules(transaction);
         if (rules.Count() == 1)
         {
             var rule = rules.First();

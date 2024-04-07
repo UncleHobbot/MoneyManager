@@ -1,0 +1,78 @@
+﻿@page "/rules"
+@inject DataService dataService
+@inject IDialogService DialogService
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
+    <FluentLabel Typo="Typography.H3"> Rules </FluentLabel>
+    <FluentButton Appearance="Appearance.Stealth">Add Account</FluentButton>
+</FluentStack>
+
+<FluentDataGrid Items="@rules" ResizableColumns=true Pagination="@pagination" Style="height: 80vh;overflow:auto;">
+
+    <TemplateColumn Align="Align.Start">
+        @if (context.CompareType == RuleCompareType.Contains)
+        {
+            <FluentIcon Value="@(new Icons.Regular.Size20.CenterHorizontal())"/>
+            <span>Contains</span>
+        }
+        else if (context.CompareType == RuleCompareType.StartsWith)
+        {
+            <FluentIcon Value="@(new Icons.Regular.Size20.AlignStartHorizontal())"/>
+            <span>Starts with</span>
+        }
+        else if (context.CompareType == RuleCompareType.EndsWith)
+        {
+            <FluentIcon Value="@(new Icons.Regular.Size20.AlignEndHorizontal())"/>
+            <span>Ends with</span>
+        }
+        else if (context.CompareType == RuleCompareType.Equals)
+        {
+            <FluentIcon Value="@(new Icons.Regular.Size20.EqualCircle())"/>
+            <span>Equals</span>
+        }
+    </TemplateColumn>
+
+    <PropertyColumn Property="x => x.OriginalDescription" Title="Original Description" Sortable="true"
+                    IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Ascending"/>
+
+    <PropertyColumn Property="x => x.NewDescription" Title="New Description" Sortable="true"/>
+
+    <TemplateColumn Align="Align.Start">
+        <FluentIcon Value="@(context.Category.objIcon)" Style="margin-right: 10px"/> @context.Category.Name
+    </TemplateColumn>
+
+    <TemplateColumn Align="@Align.End" Title="Actions" Sortable="false">
+        <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditRule(context))"/>
+    </TemplateColumn>
+
+</FluentDataGrid>
+
+<FluentPaginator State="@pagination"/>
+
+@code {
+    readonly PaginationState pagination = new() { ItemsPerPage = 19 };
+    IQueryable<Rule> rules;
+
+    protected override async Task OnInitializedAsync()
+    {
+        rules = await dataService.GetRules();
+    }
+
+    private async Task EditRule(Rule rule)
+    {
+        var dialog = await DialogService.ShowDialogAsync<EditRuleDialog>(rule, new DialogParameters
+        {
+            Height = "400px",
+            Width = "500px",
+            Title = "Edit Rule",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+        });
+
+        var result = await dialog.Result;
+        if (!result.Cancelled && result.Data != null)
+            rules = await dataService.ChangeRule((Rule)result.Data);
+    }
+
+}
