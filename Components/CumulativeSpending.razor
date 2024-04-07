@@ -24,8 +24,6 @@
 
     private ApexChart<CumulativeSpendingChart> chart;
     private ApexChartOptions<CumulativeSpendingChart> options;
-    List<CumulativeSpendingChart> lastMonth;
-    List<CumulativeSpendingChart> thisMonth;
     List<CumulativeSpendingChart> spending;
 
     protected override async Task OnInitializedAsync()
@@ -42,8 +40,5 @@
             options.Chart.Width = Width;
 
         spending = await dataService.ChartCumulativeSpending();
-        //lastMonth = res.LastMonth;
-        //thisMonth = res.ThisMonth;
     }
-
 }

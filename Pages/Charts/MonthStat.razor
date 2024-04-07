@@ -140,7 +140,7 @@
         var catIncome = await dataService.GetCategoryByName("Income");
 
         income = transactions.Where(x => (x.Category.Parent ?? x.Category).Id == catIncome.Id)
-            .GroupBy(x => x.Category.Parent ?? x.Category)
+            .GroupBy(x => x.Category)
             .Select(x => new CategoryChart
             {
                 Category = x.Key,

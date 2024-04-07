@@ -26,10 +26,10 @@ public partial class DataService
         return await ChartGetTransactions(startDate, endDate);
     }
 
-    public async Task<List<BalanceChart>> ChartNetIncome(string chartPeriod)
+    private void GetDates(string chartPeriod, out DateTime startDate, out DateTime endDate)
     {
-        var startDate = new DateTime(DateTime.Today.Year, 1, 1);
-        var endDate = DateTime.Today.AddMonths(1).StartOfMonth(Thread.CurrentThread.CurrentCulture);
+         startDate = new DateTime(DateTime.Today.Year, 1, 1);
+         endDate = DateTime.Today.AddMonths(1).StartOfMonth(Thread.CurrentThread.CurrentCulture);
 
         if (chartPeriod == "12")
             startDate = DateTime.Today.AddMonths(-12).StartOfMonth(Thread.CurrentThread.CurrentCulture);
@@ -42,6 +42,24 @@ public partial class DataService
         }
         else if (chartPeriod == "3")
             startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
+        else if (chartPeriod == "m1")
+            startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        else if (chartPeriod == "m2")
+        {
+            startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+            endDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        }
+    }
+    
+    public async Task<List<Transaction>> ChartGetTransactionsP(string chartPeriod)
+    {
+        GetDates(chartPeriod, out var startDate, out var endDate);
+        return await ChartGetTransactions(startDate, endDate);
+    }
+    
+    public async Task<List<BalanceChart>> ChartNetIncome(string chartPeriod)
+    {
+        GetDates(chartPeriod, out var startDate, out var endDate);
 
         var catIncome = await GetCategoryByName("Income");
         var trans = await ChartGetTransactions(startDate, endDate);
@@ -61,11 +79,8 @@ public partial class DataService
         return result;
     }
 
-    //public async Task<(List<CumulativeSpendingChart> LastMonth, List<CumulativeSpendingChart> ThisMonth)> ChartCumulativeSpending()
     public async Task<List<CumulativeSpendingChart>> ChartCumulativeSpending()
     {
-        var lastMonthResult = new List<CumulativeSpendingChart>();
-        var thisMonthResult = new List<CumulativeSpendingChart>();
         var result = new List<CumulativeSpendingChart>();
 
         var monthNum = DateTime.Today.Month;
@@ -84,7 +99,6 @@ public partial class DataService
             {
                 var lastMonthDate = new DateTime(DateTime.Today.Year, monthNum - 1, day).AddDays(1);
                 var lastMonth = trans.Where(x => x.Date >= lastMonthStart && x.Date < lastMonthDate).Sum(x => (x.IsDebit ? 1 : -1) * x.Amount);
-                lastMonthResult.Add(new CumulativeSpendingChart { DayNumber = day, Expenses = lastMonth });
                 dayValue.LastMonthExpenses = lastMonth;
                 result.Add(dayValue);
             }
@@ -99,7 +113,6 @@ public partial class DataService
                 {
                     thisMonthDate = thisMonthDate.AddDays(1);
                     var thisMonth = trans.Where(x => x.Date >= thisMonthStart && x.Date < thisMonthDate).Sum(x => (x.IsDebit ? 1 : -1) * x.Amount);
-                    thisMonthResult.Add(new CumulativeSpendingChart { DayNumber = day, Expenses = thisMonth });
                     dayValue.ThisMonthExpenses = thisMonth;
                 }
             }
@@ -108,7 +121,6 @@ public partial class DataService
             }
         }
 
-        //return (lastMonthResult, thisMonthResult);
         return result;
     }
 }

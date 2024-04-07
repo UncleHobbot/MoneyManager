@@ -10,4 +10,6 @@ public partial class DataService(IDbContextFactory<DataContext> contextFactory)
         if (Categories.Count == 0)
             Categories = (await ctx.Categories.ToListAsync()).ToHashSet();
     }
+    
+    public static string NetIncomeChartPeriod { get; set; } = "12";
 }
