@@ -6,7 +6,7 @@ public partial class DataService
     {
         var ctx = await contextFactory.CreateDbContextAsync();
 
-        /*var r1 = ctx.Rules.Where(x => transaction.OriginalDescription.ToUpper().Contains(x.OriginalDescription.ToUpper())).ToList();
+        var r1 = ctx.Rules.Where(x => transaction.OriginalDescription.ToUpper().Contains(x.OriginalDescription.ToUpper())).ToList();
         var r2 = r1.Where(x =>
         {
             switch (x.CompareType)
@@ -22,7 +22,7 @@ public partial class DataService
                 default:
                     return false;
             }
-        }).ToList();*/
+        }).ToList();
         
         return (await ctx.Rules.Where(x => transaction.OriginalDescription.ToUpper().Contains(x.OriginalDescription.ToUpper()))
                 .Include(x => x.Category).ToListAsync())

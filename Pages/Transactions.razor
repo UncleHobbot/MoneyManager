@@ -10,101 +10,9 @@
     </FluentToolbar>
 </FluentStack>
 
-<FluentDesignSystemProvider Density="-1">
-    <FluentDataGrid Items="@transactions" ResizableColumns=true Pagination="@pagination"
-                    GridTemplateColumns="100px 200px 100px 300px 500px"
-                    Style="height: 80vh;width: 100%;overflow:auto;">
-
-        <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
-                        InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
-        @*<PropertyColumn Property="x => x.Account.ShownName" Title="Account" Sortable="true"/>*@
-        <TemplateColumn Align="Align.Center" Title="Account">
-            <div style="display:flex;width:190px">
-                <div style="display:flex;align-items: center">@context.Account.ShownName</div>
-                <FluentSpacer/>
-                <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
-                              OnClick="@(() => FilterByAccount(context, true))"/>
-                <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
-                              OnClick="@(() => FilterByAccount(context, false))"/>
-                <div style="display:flex;align-items: center"></div>
-            </div>
-        </TemplateColumn>
-
-        <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount"/>
-
-        <TemplateColumn Align="Align.Center" Title="Category">
-            <div style="display:flex;width:290px">
-                <FluentIcon Value="@(context.Category.objIcon)"/>
-                <div style="display:flex;align-items: center"> @context.Category.Name </div>
-                <FluentSpacer/>
-                <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
-                              OnClick="@(() => FilterByCategory(context, true))"/>
-                <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
-                              OnClick="@(() => FilterByCategory(context, false))"/>
-                <div style="display:flex;align-items: center"></div>
-            </div>
-        </TemplateColumn>
-
-        <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true">
-            <ColumnOptions>
-                <div class="search-box">
-                    <FluentSearch type="search" Autofocus=true @bind-Value=filterDescription @oninput="FilterByDescription"
-                                  @bind-Value:after="FilterByDescriptionClear" Placeholder="Description..."/>
-                </div>
-            </ColumnOptions>
-        </PropertyColumn>
-
-        <TemplateColumn Align="Align.Center" Title="Rule applied">
-            @if (context.IsRuleApplied)
-            {
-                <FluentIcon Value="@(new Icons.Regular.Size20.Tag())"/>
-            }
-        </TemplateColumn>
-
-
-        <TemplateColumn Title="Actions" Align="@Align.End">
-            <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
-        </TemplateColumn>
-
-    </FluentDataGrid>
-
-    <FluentPaginator State="@pagination"/>
-</FluentDesignSystemProvider>
+<TransactionsList />
 
 @code {
-    readonly PaginationState pagination = new() { ItemsPerPage = 19 };
-
-    IQueryable<Transaction> alltransactions;
-
-    IQueryable<Transaction> transactions => alltransactions?
-        .Where(x => filterCategory == 0 || x.Category.Id == filterCategory || (x.Category.Parent != null && x.Category.Parent.Id == filterCategory))
-        .Where(x => filterAccount == 0 || x.Account.Id == filterAccount)
-        .Where(x => string.IsNullOrWhiteSpace(filterDescription) || x.Description.ToUpper().Contains(filterDescription.ToUpper()));
-
-    int filterCategory = 0;
-    int filterAccount = 0;
-    string filterDescription = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        alltransactions = await dataService.ChartGetTransactions();
-    }
-
-    private void FilterByCategory(Transaction transaction, bool isSet) => filterCategory = isSet ? transaction.Category.Id : 0;
-    private void FilterByAccount(Transaction transaction, bool isSet) => filterAccount = isSet ? transaction.Account.Id : 0;
-
-    private void FilterByDescription(ChangeEventArgs args)
-    {
-        if (args.Value is string value)
-            filterDescription = value;
-    }
-
-    private void FilterByDescriptionClear()
-    {
-        if (string.IsNullOrWhiteSpace(filterDescription))
-            filterDescription = string.Empty;
-    }
-
     async Task DeleteAll()
     {
         var dialog = await DialogService.ShowConfirmationAsync("Do you want to delete all transactions?", "Yes", "No", "Transactions");
@@ -112,22 +20,4 @@
         if (!result.Cancelled)
             await dataService.DeleteAllTransactions();
     }
-
-
-    private async Task EditTransaction(Transaction transaction)
-    {
-        var dialog = await DialogService.ShowDialogAsync<EditTransactionDialog>(transaction, new DialogParameters
-        {
-            Height = "700px",
-            Width = "800px",
-            Title = "Edit Transaction",
-            PreventDismissOnOverlayClick = true,
-            PreventScroll = true,
-        });
-
-        var result = await dialog.Result;
-        if (!result.Cancelled && result.Data != null)
-            alltransactions = await dataService.ChangeTransaction((Transaction)result.Data);
-    }
-
 }

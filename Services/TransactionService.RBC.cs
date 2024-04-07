@@ -56,8 +56,8 @@ public partial class TransactionService
                 {
                     Account = account,
                     Date = r.Date,
-                    Description = description,
-                    OriginalDescription = description,
+                    Description = description.Trim(),
+                    OriginalDescription = description.Trim(),
                     Amount = amount,
                     IsDebit = isDebit,
                     Category = uCategory,

@@ -1,0 +1,181 @@
+﻿@inject IDialogService DialogService
+@inject DataService dataService
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentDesignSystemProvider Density="-1">
+    <FluentDataGrid Items="@transactions" ResizableColumns=true Pagination="@pagination"
+                    GridTemplateColumns="@gridTemplateColumns" Style="@gridStyle">
+
+        @*Column 1 - Date*@
+        <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
+                        InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
+
+        @*Column 2 - Account*@
+        <TemplateColumn Title="Account" Align="Align.Center" Sortable="true" SortBy="@accountSort">
+            <div style="display:flex;width:190px">
+                <div style="display:flex;align-items: center">@context.Account.ShownName</div>
+                <FluentSpacer/>
+                <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
+                              OnClick="@(() => FilterByAccount(context, true))"/>
+                <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
+                              OnClick="@(() => FilterByAccount(context, false))"/>
+                <div style="display:flex;align-items: center"></div>
+            </div>
+        </TemplateColumn>
+
+        @*Column 3 - Amount*@
+        <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount" />
+
+        @*Column 4 - Category*@
+        <TemplateColumn Align="Align.Center" Title="Category" Sortable="true" SortBy="@categorySort">
+            @if (CategoryFilters)
+            {
+                <div style="display:flex;width:290px">
+                    <FluentIcon Value="@(context.Category.objIcon)"/>
+                    <div style="display:flex;align-items: center"> @context.Category.Name </div>
+                    <FluentSpacer/>
+                    <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
+                                  OnClick="@(() => FilterByCategory(context, true))"/>
+                    <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
+                                  OnClick="@(() => FilterByCategory(context, false))"/>
+                    <div style="display:flex;align-items: center"></div>
+                </div>
+            }
+            else
+            {
+                <FluentIcon Value="@(context.Category.objIcon)" Style="margin-right: 15px"/> @context.Category.Name 
+            }
+        </TemplateColumn>
+
+        @*Column 5 - Description*@
+        <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true">
+            <ColumnOptions>
+                <div class="search-box">
+                    <FluentSearch type="search" Autofocus=true @bind-Value=filterDescription @oninput="FilterByDescription"
+                                  @bind-Value:after="FilterByDescriptionClear" Placeholder="Description..."/>
+                </div>
+            </ColumnOptions>
+        </PropertyColumn>
+
+        @*Column 6 - Rule applied*@
+        <TemplateColumn Align="Align.Center" Title="Rule applied" Sortable="true" SortBy="@ruleSort">
+            @if (context.IsRuleApplied)
+            {
+                <FluentIcon Value="@(new Icons.Regular.Size20.Tag())"/>
+            }
+        </TemplateColumn>
+
+        @*Column 7 - Actions*@
+        <TemplateColumn Align="@Align.End" Title="Actions" Sortable="false">
+            <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
+        </TemplateColumn>
+
+    </FluentDataGrid>
+
+    <FluentPaginator State="@pagination"/>
+</FluentDesignSystemProvider>
+
+@code {
+    [Parameter] public TransactionListModeEnum Mode { get; set; }= TransactionListModeEnum.Simple;
+    [Parameter] public int HeightVH { get; set; } = 80;
+    [Parameter] public DateTime? DateStart { get; set; }
+    [Parameter] public DateTime? DateEnd { get; set; }
+    [Parameter] public int PageSize { get; set; } = 19;
+    [Parameter] public int? Category { get; set; }
+    [Parameter] public bool CategoryFilters { get; set; } = true;
+    [Parameter] public bool OnlyVisibleAccounts { get; set; } = false;
+    
+    [Parameter]
+    public EventCallback Changed { get; set; }
+
+    readonly PaginationState pagination = new();
+    string gridStyle;
+    string gridTemplateColumns = "100px 200px 100px 300px 500px";
+
+    GridSort<Transaction> accountSort = GridSort<Transaction>.ByAscending(x => x.Account.Name);
+    GridSort<Transaction> amountSort = GridSort<Transaction>.ByAscending(x => x.Amount);
+
+    GridSort<Transaction> categorySort = GridSort<Transaction>
+        .ByAscending(x => x.Category.Parent == null ? x.Category.Name : x.Category.Parent.Name)
+        .ThenAscending(x => x.Category.Name);
+
+    GridSort<Transaction> ruleSort = GridSort<Transaction>.ByAscending(x => x.IsRuleApplied);
+
+    IQueryable<Transaction> allTransactions;
+
+    IQueryable<Transaction> transactions
+    {
+        get
+        {
+            if (allTransactions == null)
+                return null;
+            var result = allTransactions;
+            // external date filter
+            if (DateStart.HasValue) result = result.Where(x => x.Date >= DateStart);
+            if (DateEnd.HasValue) result = result.Where(x => x.Date < DateEnd);
+            // custom category filter
+            result = result.Where(x => filterCategory == 0 || x.Category.Id == filterCategory || (x.Category.Parent != null && x.Category.Parent.Id == filterCategory));
+            // external category filter   
+            if (Category.HasValue)
+                result = result.Where(x => x.Category.Id == Category || (x.Category.Parent != null && x.Category.Parent.Id == Category));
+            // custom account filter
+            result = result.Where(x => filterAccount == 0 || x.Account.Id == filterAccount);
+            // external account filter
+            if (OnlyVisibleAccounts)
+                result = result.Where(x => !x.Account.IsHideFromGraph);
+            result = result.Where(x => string.IsNullOrWhiteSpace(filterDescription) || x.Description.ToUpper().Contains(filterDescription.ToUpper()));
+            return result;
+        }
+    }
+
+    int filterCategory = 0;
+    int filterAccount = 0;
+    string filterDescription = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        allTransactions = await dataService.GetTransactions();
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        pagination.ItemsPerPage = PageSize;
+        gridStyle = $"height: {HeightVH}vh;width: 100%;overflow:auto;";
+        return base.OnParametersSetAsync();
+    }
+
+    private void FilterByCategory(Transaction transaction, bool isSet) => filterCategory = isSet ? transaction.Category.Id : 0;
+    private void FilterByAccount(Transaction transaction, bool isSet) => filterAccount = isSet ? transaction.Account.Id : 0;
+
+    private void FilterByDescription(ChangeEventArgs args)
+    {
+        if (args.Value is string value)
+            filterDescription = value;
+    }
+
+    private void FilterByDescriptionClear()
+    {
+        if (string.IsNullOrWhiteSpace(filterDescription))
+            filterDescription = string.Empty;
+    }
+
+    private async Task EditTransaction(Transaction transaction)
+    {
+        var dialog = await DialogService.ShowDialogAsync<EditTransactionDialog>(transaction, new DialogParameters
+        {
+            Height = "700px",
+            Width = "800px",
+            Title = "Edit Transaction",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+        });
+
+        var result = await dialog.Result;
+        if (!result.Cancelled && result.Data != null)
+        {
+            allTransactions = await dataService.ChangeTransaction((Transaction)result.Data);
+            await Changed.InvokeAsync();
+        }
+    }
+
+}

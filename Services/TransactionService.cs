@@ -57,10 +57,10 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
             var highDate = date.AddDays(5);
             return ctx.Transactions.Any(t => (t.Date >= lowDate && t.Date <= highDate)
                                              && t.Amount == amount && t.IsDebit == isDebit
-                                             && t.Account.Id == account.Id && (t.OriginalDescription == originalDescription || originalDescription.Contains(t.OriginalDescription)));
+                                             && t.Account.Id == account.Id && (t.OriginalDescription.Trim() == originalDescription.Trim() || originalDescription.Contains(t.OriginalDescription.Trim())));
         }
 
         return ctx.Transactions.Any(t => t.Date == date && t.Amount == amount && t.IsDebit == isDebit
-                                         && t.Account.Id == account.Id && (t.OriginalDescription == originalDescription || originalDescription.Contains(t.OriginalDescription)));
+                                         && t.Account.Id == account.Id && (t.OriginalDescription.Trim() == originalDescription.Trim() || originalDescription.Contains(t.OriginalDescription.Trim())));
     }
 }

@@ -5,13 +5,13 @@
 @inject IJSRuntime JSRuntime
 @inject DataService dataService
 
-<FluentButton IconStart="@(new Icons.Filled.Size28.ArrowCircleLeft())" OnClick="GoBack"> Back </FluentButton>
-
-<h3>MonthStat for @Month</h3>
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
+    <FluentButton IconStart="@(new Icons.Filled.Size28.ArrowCircleLeft())" OnClick="GoBack"> Back </FluentButton>
+    <h3>@(dateStart.ToString("MMMM yyyy"))</h3>
+</FluentStack>
 
 <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Top" Width="100%" HorizontalGap="20">
-
-    <ApexChart TItem="CategoryChart" Title="Income" Options="optionsI" Width="600" Height="600">
+    <ApexChart @ref=chartI TItem="CategoryChart" Title="Income" Options="optionsI" Width="600" Height="600" OnDataPointSelection=DataPointsSelected>
         <ApexPointSeries TItem="CategoryChart" Items="income" Name="Value"
                          SeriesType="SeriesType.Donut"
                          XValue="@(e => e.Category.Name)"
@@ -19,7 +19,7 @@
                          OrderByDescending="e => e.Y"/>
     </ApexChart>
 
-    <ApexChart TItem="CategoryChart" Title="Expense" Options="optionsE" Width="600" Height="600">
+    <ApexChart @ref=chartE TItem="CategoryChart" Title="Expense" Options="optionsE" Width="650" Height="650" OnDataPointSelection=DataPointsSelected>
         <ApexPointSeries TItem="CategoryChart" Items="expense" Name="Value"
                          SeriesType="SeriesType.Donut"
                          XValue="@(e => e.Category.Name)"
@@ -28,6 +28,11 @@
     </ApexChart>
 </FluentStack>
 
+<div style="margin-top: 10px">
+    <TransactionsList Mode="TransactionListModeEnum.FromChart" DateStart="dateStart" DateEnd="dateEnd" Category="@selectedCategory?.Id" PageSize="7" HeightVH="32"
+                      Changed="TransactionChanged"/>
+</div>
+
 @code {
     [Parameter] public string Month { get; set; }
 
@@ -35,10 +40,101 @@
     List<CategoryChart> income = [];
     List<CategoryChart> expense = [];
 
+    private ApexChart<CategoryChart> chartI, chartE;
     private ApexChartOptions<CategoryChart> optionsI { get; set; } = new();
     private ApexChartOptions<CategoryChart> optionsE { get; set; } = new();
 
+    DateTime dateStart, dateEnd;
+    Category selectedCategory;
+
     protected override async Task OnInitializedAsync()
+    {
+        optionsI = new ApexChartOptions<CategoryChart>
+        {
+            Theme = new Theme { Mode = Mode.Dark, Palette = PaletteType.Palette1},
+            PlotOptions = new PlotOptions
+            {
+                Pie = new PlotOptionsPie
+                {
+                    Donut = new PlotOptionsDonut
+                    {
+                        Labels = new DonutLabels
+                        {
+                            Total = new DonutLabelTotal
+                            {
+                                FontSize = "24px", Color = "#D807B8",
+                                Formatter = @"function (w) {return (w.globals.seriesTotals.reduce((a, b) => { return (a + b) }, 0)).toLocaleString('en-US', {style: 'currency', currency: 'USD'})}"
+                            }
+                        }
+                    }
+                }
+            },
+            Tooltip = new Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = @"function(value, opts) {
+                    if (value === undefined) {return '';}
+                    return Number(value).toLocaleString('en-US', {style: 'currency', currency: 'USD'});}"
+                }
+            },
+            Legend = new Legend { Formatter = @"function(seriesName, opts) { return [seriesName, ': ', Number(opts.w.globals.series[opts.seriesIndex]).toLocaleString('en-US', {style: 'currency', currency: 'USD'})] }" }
+        };
+        optionsI.Chart.Background = "transparent";
+
+        optionsE = new ApexChartOptions<CategoryChart>
+        {
+            Theme = new Theme { Mode = Mode.Dark, Palette = PaletteType.Palette1 },
+            PlotOptions = new PlotOptions
+            {
+                Pie = new PlotOptionsPie
+                {
+                    Donut = new PlotOptionsDonut
+                    {
+                        Labels = new DonutLabels
+                        {
+                            Total = new DonutLabelTotal
+                            {
+                                FontSize = "24px", Color = "#D807B8",
+                                Formatter = @"function (w) {return (w.globals.seriesTotals.reduce((a, b) => { return (a + b) }, 0)).toLocaleString('en-US', {style: 'currency', currency: 'USD'})}"
+                            }
+                        }
+                    }
+                }
+            },
+            Tooltip = new Tooltip
+            {
+                Y = new TooltipY
+                {
+                    Formatter = @"function(value, opts) {
+                    if (value === undefined) {return '';}
+                    return Number(value).toLocaleString('en-US', {style: 'currency', currency: 'USD'});}"
+                }
+            },
+            Legend = new Legend { Formatter = @"function(seriesName, opts) { return [seriesName, ': ', Number(opts.w.globals.series[opts.seriesIndex]).toLocaleString('en-US', {style: 'currency', currency: 'USD'})] }" }
+        };
+        optionsE.Chart.Background = "transparent";
+
+        await LoadData();
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        dateStart = DateTime.ParseExact(Month, "yyMM", Thread.CurrentThread.CurrentCulture);
+        dateEnd = dateStart.AddMonths(1).StartOfMonth(Thread.CurrentThread.CurrentCulture);
+
+        return base.OnParametersSetAsync();
+    }
+
+    private async Task GoBack() => await JSRuntime.InvokeVoidAsync("history.back");
+
+    private void DataPointsSelected(SelectedData<CategoryChart> selectedData)
+    {
+        if (selectedData?.DataPoint?.Items != null && selectedData?.DataPoint?.Items?.Count() > 0)
+            selectedCategory = selectedData.DataPoint.Items.First().Category;
+    }
+
+    private async Task LoadData()
     {
         transactions = await dataService.ChartGetTransactions(Month);
         var catIncome = await dataService.GetCategoryByName("Income");
@@ -58,63 +154,13 @@
                 Category = x.Key,
                 Amount = x.Sum(x => (x.IsDebit ? 1 : -1) * x.Amount)
             }).OrderBy(x => x.Category.Name).ToList();
-
-        optionsI = new ApexChartOptions<CategoryChart>
-        {
-            Theme = new Theme { Mode = Mode.Dark, Palette = PaletteType.Palette1 },
-            PlotOptions = new PlotOptions
-            {
-                Pie = new PlotOptionsPie
-                {
-                    Donut = new PlotOptionsDonut
-                    {
-                        Labels = new DonutLabels
-                        {
-                            Total = new DonutLabelTotal { FontSize = "24px", Color = "#D807B8", 
-                                Formatter = @"function (w) {return (w.globals.seriesTotals.reduce((a, b) => { return (a + b) }, 0)).toLocaleString('en-US', {style: 'currency', currency: 'USD'})}" }
-                        }
-                    }
-                }
-            },
-            Tooltip = new Tooltip
-            {
-                Y = new TooltipY
-                {
-                    Formatter = @"function(value, opts) {
-                    if (value === undefined) {return '';}
-                    return Number(value).toLocaleString('en-US', {style: 'currency', currency: 'USD'});}"
-                }
-            }
-        };
-
-        optionsE = new ApexChartOptions<CategoryChart>
-        {
-            Theme = new Theme { Mode = Mode.Dark, Palette = PaletteType.Palette1 },
-            PlotOptions = new PlotOptions
-            {
-                Pie = new PlotOptionsPie
-                {
-                    Donut = new PlotOptionsDonut
-                    {
-                        Labels = new DonutLabels
-                        {
-                            Total = new DonutLabelTotal { FontSize = "24px", Color = "#D807B8", 
-                                Formatter = @"function (w) {return (w.globals.seriesTotals.reduce((a, b) => { return (a + b) }, 0)).toLocaleString('en-US', {style: 'currency', currency: 'USD'})}" }
-                        }
-                    }
-                }
-            },
-            Tooltip = new Tooltip
-            {
-                Y = new TooltipY
-                {
-                    Formatter = @"function(value, opts) {
-                    if (value === undefined) {return '';}
-                    return  Number(value).toLocaleString('en-US', {style: 'currency', currency: 'USD'});}"
-                }
-            }
-        };
+    }
+    
+    private async Task TransactionChanged()
+    {
+        await LoadData();
+        await chartI.UpdateSeriesAsync(true);
+        await chartE.UpdateSeriesAsync(true);
     }
 
-    private async Task GoBack() => await JSRuntime.InvokeVoidAsync("history.back");
 }

@@ -15,5 +15,5 @@ public class Transaction
     public Category Category { get; set; }
     public bool IsRuleApplied { get; set; }
     
-    public override string ToString() => $"{Date:d}: {Amount:C} {Description}";
+    public override string ToString() => $"{Date:d}: {Amount:C} {(IsRuleApplied?"[x] ":"")}{Description}";
 }
