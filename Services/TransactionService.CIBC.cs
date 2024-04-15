@@ -16,10 +16,10 @@ public partial class TransactionService
         var total = File.ReadLines(filePath).Count() - 1;
 
         var context = await contextFactory.CreateDbContextAsync();
-        var uCategory = await GetCategory("Uncategorized", context);
+        var uCategory = await GetDefaultCategory(context);
 
         var transactions = new List<Transaction>();
-        var config = new CsvConfiguration(CultureInfo.InvariantCulture) { HasHeaderRecord = false};
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture) { HasHeaderRecord = false };
         using (var reader = new StreamReader(filePath))
         using (var csv = new CsvReader(reader, config))
         {
@@ -79,5 +79,4 @@ public partial class TransactionService
             await context.SaveChangesAsync();
         }
     }
-       
 }

@@ -2,6 +2,7 @@
 @using Microsoft.FluentUI.AspNetCore.Components
 @inject DataService dataService
 @inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 
 <ApexChart @ref=chart TItem="CategoryChart" Title="@(ShowCaption ? "Expenses" : null)" Options="options"
            Height="Height" OnDataPointSelection=DataPointsSelected>
@@ -79,8 +80,7 @@
         if (selectedData?.DataPoint?.Items != null && selectedData?.DataPoint?.Items?.Count() > 0)
         {
             var selectedCategory = selectedData.DataPoint.Items.First().Category;
-            var dialog = await DialogService.ShowInfoAsync($"Select category {selectedCategory.Name}, period {ChartPeriod}");
-            await dialog.Result;
+            NavigationManager.NavigateTo($"transactions/{ChartPeriod}/{selectedCategory.Id}/true");
         }
     }
 

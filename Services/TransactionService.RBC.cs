@@ -15,7 +15,7 @@ public partial class TransactionService
         var total = File.ReadLines(filePath).Count() - 1;
 
         var context = await contextFactory.CreateDbContextAsync();
-        var uCategory = await GetCategory("Uncategorized", context);
+        var uCategory = await GetDefaultCategory(context);
 
         var transactions = new List<Transaction>();
         using (var reader = new StreamReader(filePath))

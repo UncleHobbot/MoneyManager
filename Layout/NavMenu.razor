@@ -9,7 +9,7 @@
     <nav class="sitenav" aria-labelledby="main-menu" onclick="document.getElementById('navmenu-toggle').click();">
         <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded">
             <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Icons.Regular.Size24.Home())" IconColor="Color.Accent">Home</FluentNavLink>
-            <FluentNavLink Href="transactions" Icon="@(new Icons.Regular.Size24.AppsList())" IconColor="Color.Accent">Transactions</FluentNavLink>
+            <FluentNavLink Href="transactions/true" Icon="@(new Icons.Regular.Size24.AppsList())" IconColor="Color.Accent">Transactions</FluentNavLink>
 
             <FluentNavGroup Title="Trends" Icon="@(new Icons.Regular.Size24.ChartMultiple())" Expanded="true">
                 <ChildContent>

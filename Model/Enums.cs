@@ -2,5 +2,5 @@
 
 public enum TransactionListModeEnum
 {
-    Simple, FromChart
+    Full, Short
 }

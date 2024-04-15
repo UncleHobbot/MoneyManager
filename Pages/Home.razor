@@ -1,6 +1,8 @@
 ﻿@page "/"
 @inject FolderPicker folderPicker
 @inject IDialogService DialogService
+@inject TransactionService TransactionService
+
 @using Microsoft.FluentUI.AspNetCore.Components
 
 <h3>Home</h3>
@@ -31,6 +33,10 @@
                 <FluentGridItem xs="4">
                     <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFile">Import</FluentButton>
                 </FluentGridItem>
+                <FluentGridItem xs="12">
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFileRBC">RBC csv</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFileCIBC">CIBC csv</FluentButton>
+                </FluentGridItem>
             </FluentGrid>
         </FluentCard>
     </FluentGridItem>
@@ -48,7 +54,9 @@
                         </ChildContent>
                     </FluentNavLink>
                 </FluentGridItem>
-                <FluentGridItem xs="12"/>
+                <FluentGridItem xs="12">
+                    <TransactionsList Mode="TransactionListModeEnum.Short" ChartPeriod="1" RuleApplied="false" HeightPx="320"/>
+                </FluentGridItem>
             </FluentGrid>
         </FluentCard>
     </FluentGridItem>
@@ -66,7 +74,9 @@
                         </ChildContent>
                     </FluentNavLink>
                 </FluentGridItem>
-                <FluentGridItem xs="12"/>
+                <FluentGridItem xs="12">
+                    <TransactionsList Mode="TransactionListModeEnum.Short" ChartPeriod="m1" HeightPx="320"/>
+                </FluentGridItem>
             </FluentGrid>
         </FluentCard>
     </FluentGridItem>
@@ -185,6 +195,28 @@
 
             var result = await dialog.Result;
         }
+    }
+
+    async Task ImportFileRBC()
+    {
+        importFile = folderPicker.DisplayFilePicker("RBC CSV file", "csv");
+        if (string.IsNullOrWhiteSpace(importFile))
+            return;
+        await TransactionService.ImportRBCCSV(importFile, void (int p) => { });
+        var dialog = await DialogService.ShowSuccessAsync("RBC file imported");
+        await dialog.Result;
+        StateHasChanged();
+    }
+
+    async Task ImportFileCIBC()
+    {
+        importFile = folderPicker.DisplayFilePicker("CIBC CSV file", "csv");
+        if (string.IsNullOrWhiteSpace(importFile))
+            return;
+        await TransactionService.ImportCIBCCSV(importFile, void (int p) => { });
+        var dialog = await DialogService.ShowSuccessAsync("CIBC file imported");
+        await dialog.Result;
+        StateHasChanged();
     }
 
 }

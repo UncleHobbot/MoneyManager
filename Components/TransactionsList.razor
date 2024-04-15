@@ -3,90 +3,112 @@
 @using Microsoft.FluentUI.AspNetCore.Components
 
 <FluentDesignSystemProvider Density="-1">
-    <FluentDataGrid Items="@transactions" ResizableColumns=true Pagination="@pagination"
-                    GridTemplateColumns="@gridTemplateColumns" Style="@gridStyle">
 
-        @*Column 1 - Date*@
-        <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
-                        InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
+    @if (Mode == TransactionListModeEnum.Full)
+    {
+        <FluentDataGrid Items="@transactions" ResizableColumns=true Pagination="@pagination"
+                        GridTemplateColumns="@gridTemplateColumns" Style="@gridStyle">
 
-        @*Column 2 - Account*@
-        <TemplateColumn Title="Account" Align="Align.Center" Sortable="true" SortBy="@accountSort">
-            <div style="display:flex;width:190px">
-                <div style="display:flex;align-items: center">@context.Account.ShownName</div>
-                <FluentSpacer/>
-                <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
-                              OnClick="@(() => FilterByAccount(context, true))"/>
-                <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
-                              OnClick="@(() => FilterByAccount(context, false))"/>
-                <div style="display:flex;align-items: center"></div>
-            </div>
-        </TemplateColumn>
+            @*Column 1 - Date*@
+            <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
+                            InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
 
-        @*Column 3 - Amount*@
-        <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount" />
-
-        @*Column 4 - Category*@
-        <TemplateColumn Align="Align.Center" Title="Category" Sortable="true" SortBy="@categorySort">
-            @if (CategoryFilters)
-            {
-                <div style="display:flex;width:290px">
-                    <FluentIcon Value="@(context.Category.objIcon)"/>
-                    <div style="display:flex;align-items: center"> @context.Category.Name </div>
+            @*Column 2 - Account*@
+            <TemplateColumn Title="Account" Align="Align.Center" Sortable="true" SortBy="@accountSort">
+                <div style="display:flex;width:190px">
+                    <div style="display:flex;align-items: center">@context.Account.ShownName</div>
                     <FluentSpacer/>
                     <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
-                                  OnClick="@(() => FilterByCategory(context, true))"/>
+                                  OnClick="@(() => FilterByAccount(context, true))"/>
                     <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
-                                  OnClick="@(() => FilterByCategory(context, false))"/>
+                                  OnClick="@(() => FilterByAccount(context, false))"/>
                     <div style="display:flex;align-items: center"></div>
                 </div>
-            }
-            else
-            {
-                <FluentIcon Value="@(context.Category.objIcon)" Style="margin-right: 15px"/> @context.Category.Name 
-            }
-        </TemplateColumn>
+            </TemplateColumn>
 
-        @*Column 5 - Description*@
-        <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true">
-            <ColumnOptions>
-                <div class="search-box">
-                    <FluentSearch type="search" Autofocus=true @bind-Value=filterDescription @oninput="FilterByDescription"
-                                  @bind-Value:after="FilterByDescriptionClear" Placeholder="Description..."/>
+            @*Column 3 - Amount*@
+            <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount"/>
+
+            @*Column 4 - Category*@
+            <TemplateColumn Align="Align.Center" Title="Category" Sortable="true" SortBy="@categorySort">
+                @if (CategoryFilters)
+                {
+                    <div style="display:flex;width:290px">
+                        <FluentIcon Value="@(context.Category.objIcon)"/>
+                        <div style="display:flex;align-items: center"> @context.Category.Name </div>
+                        <FluentSpacer/>
+                        <FluentButton IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
+                                      OnClick="@(() => FilterByCategory(context, true))"/>
+                        <FluentButton IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
+                                      OnClick="@(() => FilterByCategory(context, false))"/>
+                        <div style="display:flex;align-items: center"></div>
+                    </div>
+                }
+                else
+                {
+                    <FluentIcon Value="@(context.Category.objIcon)" Style="margin-right: 15px"/>
+                    @context.Category.Name
+                }
+            </TemplateColumn>
+
+            @*Column 5 - Description*@
+            <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true">
+                <ColumnOptions>
+                    <div class="search-box">
+                        <FluentSearch type="search" Autofocus=true @bind-Value=filterDescription @oninput="FilterByDescription"
+                                      @bind-Value:after="FilterByDescriptionClear" Placeholder="Description..."/>
+                    </div>
+                </ColumnOptions>
+            </PropertyColumn>
+
+            @*Column 6 - Rule applied*@
+            <TemplateColumn Align="Align.Center" Title="Rule applied" Sortable="true" SortBy="@ruleSort">
+                @if (context.IsRuleApplied)
+                {
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Tag())"/>
+                }
+            </TemplateColumn>
+
+            @*Column 7 - Actions*@
+            <TemplateColumn Align="@Align.End" Title="Actions" Sortable="false">
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
+            </TemplateColumn>
+
+        </FluentDataGrid>
+
+        <FluentPaginator State="@pagination"/>
+    }
+    else if (Mode == TransactionListModeEnum.Short)
+    {
+        <FluentDataGrid Items="@transactions" GridTemplateColumns="1fr 6fr 1fr" Style="@gridStyle">
+            <PropertyColumn Property="x => x.Date" Format="MMM dd" Align="Align.Center" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending"/>
+            <TemplateColumn Align="Align.Start">
+                <div style="display:flex;align-items: center">
+                    @context.Description<br/>
+                    @context.Account.ShownName
                 </div>
-            </ColumnOptions>
-        </PropertyColumn>
+            </TemplateColumn>
+            <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End"/>
+        </FluentDataGrid>
+    }
 
-        @*Column 6 - Rule applied*@
-        <TemplateColumn Align="Align.Center" Title="Rule applied" Sortable="true" SortBy="@ruleSort">
-            @if (context.IsRuleApplied)
-            {
-                <FluentIcon Value="@(new Icons.Regular.Size20.Tag())"/>
-            }
-        </TemplateColumn>
-
-        @*Column 7 - Actions*@
-        <TemplateColumn Align="@Align.End" Title="Actions" Sortable="false">
-            <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
-        </TemplateColumn>
-
-    </FluentDataGrid>
-
-    <FluentPaginator State="@pagination"/>
 </FluentDesignSystemProvider>
 
 @code {
-    [Parameter] public TransactionListModeEnum Mode { get; set; }= TransactionListModeEnum.Simple;
+    [Parameter] public TransactionListModeEnum Mode { get; set; } = TransactionListModeEnum.Full;
     [Parameter] public int HeightVH { get; set; } = 80;
+    [Parameter] public int HeightPx { get; set; } = 0;
+
+    [Parameter] public string ChartPeriod { get; set; } = "a";
     [Parameter] public DateTime? DateStart { get; set; }
     [Parameter] public DateTime? DateEnd { get; set; }
     [Parameter] public int PageSize { get; set; } = 19;
     [Parameter] public int? Category { get; set; }
     [Parameter] public bool CategoryFilters { get; set; } = true;
-    [Parameter] public bool OnlyVisibleAccounts { get; set; } = false;
-    
-    [Parameter]
-    public EventCallback Changed { get; set; }
+    [Parameter] public bool OnlyVisibleAccounts { get; set; }
+    [Parameter] public bool? RuleApplied { get; set; }
+
+    [Parameter] public EventCallback Changed { get; set; }
 
     readonly PaginationState pagination = new();
     string gridStyle;
@@ -123,6 +145,12 @@
             // external account filter
             if (OnlyVisibleAccounts)
                 result = result.Where(x => !x.Account.IsHideFromGraph);
+            if (RuleApplied.HasValue)
+            {
+                var uCategory = dataService.GetCategoryByNameFromCache("Uncategorized");
+                result = result.Where(x => x.Category.Id == uCategory.Id);
+            }
+
             result = result.Where(x => string.IsNullOrWhiteSpace(filterDescription) || x.Description.ToUpper().Contains(filterDescription.ToUpper()));
             return result;
         }
@@ -134,13 +162,24 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await dataService.InitStaticStorage();
         allTransactions = await dataService.GetTransactions();
     }
 
     protected override Task OnParametersSetAsync()
     {
         pagination.ItemsPerPage = PageSize;
-        gridStyle = $"height: {HeightVH}vh;width: 100%;overflow:auto;";
+        var height = $"{HeightVH}vh";
+        if (HeightPx > 0)
+            height = $"{HeightPx}px";
+        gridStyle = $"height: {height};width: 100%;overflow:auto;";
+        if (ChartPeriod != "a")
+        {
+            dataService.GetDates(ChartPeriod, out var startDate, out var endDate);
+            DateStart = startDate;
+            DateEnd = endDate;
+        }
+
         return base.OnParametersSetAsync();
     }
 

@@ -78,4 +78,6 @@ public partial class DataService
         var ctx = await contextFactory.CreateDbContextAsync();
         return await ctx.Categories.FirstOrDefaultAsync(x => x.Name.ToUpper() == name.ToUpper());
     }
+    
+    public Category GetCategoryByNameFromCache(string name)=> Categories.FirstOrDefault(x => x.Name.ToUpper() == name.ToUpper());
 }
