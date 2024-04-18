@@ -76,19 +76,32 @@
 
         </FluentDataGrid>
 
-        <FluentPaginator State="@pagination"/>
+        <FluentPaginator State="@pagination">
+            <SummaryTemplate>
+                Total <strong>@(Math.Abs(transactions.ToList().Sum(x => x.AmountExt)).ToString("C"))</strong> in <strong>@pagination.TotalItemCount</strong> items
+            </SummaryTemplate>
+        </FluentPaginator>
     }
     else if (Mode == TransactionListModeEnum.Short)
     {
         <FluentDataGrid Items="@transactions" GridTemplateColumns="1fr 6fr 1fr" Style="@gridStyle">
             <PropertyColumn Property="x => x.Date" Format="MMM dd" Align="Align.Center" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending"/>
             <TemplateColumn Align="Align.Start">
-                <div style="display:flex;align-items: center">
-                    @context.Description<br/>
-                    @context.Account.ShownName
-                </div>
+                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Width="100%" HorizontalGap="10">
+                    <FluentIcon Value="@(context.Category.objIcon)"/>
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Left" VerticalGap="0">
+                        <FluentLabel Color="Color.Neutral">@context.Description</FluentLabel>
+                        <FluentLabel Color="Color.Info">@context.Account.ShownName</FluentLabel>
+                    </FluentStack>
+                </FluentStack>
             </TemplateColumn>
-            <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End"/>
+            <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amnt"/>
+            @if (EditEnable)
+            {
+                <TemplateColumn Align="@Align.End" Sortable="false">
+                    <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
+                </TemplateColumn>
+            }
         </FluentDataGrid>
     }
 
@@ -107,6 +120,7 @@
     [Parameter] public bool CategoryFilters { get; set; } = true;
     [Parameter] public bool OnlyVisibleAccounts { get; set; }
     [Parameter] public bool? RuleApplied { get; set; }
+    [Parameter] public bool EditEnable { get; set; }
 
     [Parameter] public EventCallback Changed { get; set; }
 
@@ -173,6 +187,9 @@
         if (HeightPx > 0)
             height = $"{HeightPx}px";
         gridStyle = $"height: {height};width: 100%;overflow:auto;";
+        if (string.IsNullOrEmpty(ChartPeriod))
+            ChartPeriod = "a";
+
         if (ChartPeriod != "a")
         {
             dataService.GetDates(ChartPeriod, out var startDate, out var endDate);

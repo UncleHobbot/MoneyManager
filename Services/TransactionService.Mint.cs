@@ -6,8 +6,10 @@ namespace MoneyManager.Services;
 
 public partial class TransactionService
 {
-    public async Task ImportMintCSV(string filePath, Action<int> progress)
+    public async Task<int> ImportMintCSV(string filePath, Action<int> progress)
     {
+        Backup();
+
         // init global cache
         Accounts = [];
         Categories = [];
@@ -61,6 +63,7 @@ public partial class TransactionService
                 };
                 transactions.Add(transaction);
             }
+            reader.Close();
         }
 
         if (transactions.Any())
@@ -68,5 +71,14 @@ public partial class TransactionService
             context.Transactions.AddRange(transactions);
             await context.SaveChangesAsync();
         }
+        
+        var folder = Path.GetDirectoryName(filePath);
+        var file = Path.GetFileName(filePath);
+        var importedFolder = Path.Combine(folder, "Imported");
+        if (!Directory.Exists(importedFolder))
+            Directory.CreateDirectory(importedFolder);
+        File.Copy(filePath, Path.Combine(importedFolder, file), true);
+        File.Delete(filePath);
+        return transactions.Count;
     }
 }

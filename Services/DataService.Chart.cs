@@ -49,8 +49,10 @@ public partial class DataService
             startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
             endDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         }
-        else if (chartPeriod == "w") // Last 7 dayes
+        else if (chartPeriod is "w" or "w1") // Last 7 dayes
             startDate = DateTime.Today.AddDays(-7);
+        else if (chartPeriod == "w2") // Last 14 dayes
+            startDate = DateTime.Today.AddDays(-14);
         else if (chartPeriod == "a") // All
             startDate = DateTime.MinValue;
 

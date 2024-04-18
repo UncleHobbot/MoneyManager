@@ -45,10 +45,10 @@
                 await TransactionService.ImportMintCSV(Content.FileName, actionProgress);
                 break;
             case ImportTypeEnum.RBC_CSV:
-                await TransactionService.ImportRBCCSV(Content.FileName, actionProgress);
+                await TransactionService.ImportRBCCSV(Content.FileName, false, actionProgress);
                 break;
             case ImportTypeEnum.CIBC_CSV:
-                await TransactionService.ImportCIBCCSV(Content.FileName, actionProgress);
+                await TransactionService.ImportCIBCCSV(Content.FileName, false, actionProgress);
                 break;
         }
 

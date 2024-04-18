@@ -5,8 +5,6 @@
 
 @using Microsoft.FluentUI.AspNetCore.Components
 
-<h3>Home</h3>
-
 <FluentGrid Spacing="2">
     <FluentGridItem xs="4">
         <FluentCard Height="400px">
@@ -17,7 +15,7 @@
                 <FluentGridItem xs="11">
                     <FluentLabel Typo="Typography.PaneHeader"> Import transaction file </FluentLabel>
                 </FluentGridItem>
-                <FluentGridItem xs="12">
+                @*<FluentGridItem xs="12">
                     <FluentSelect TOption="string" @bind-Value="@importFileType" Label="Select file type">
                         <FluentOption Value="@ImportTypeEnum.Mint_CSV.ToString()">Mint csv</FluentOption>
                         <FluentOption Value="@ImportTypeEnum.RBC_CSV.ToString()">RBC csv</FluentOption>
@@ -32,10 +30,30 @@
                 <FluentGridItem xs="8"/>
                 <FluentGridItem xs="4">
                     <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFile">Import</FluentButton>
+                </FluentGridItem>*@
+                <FluentGridItem xs="12">
+                    <FluentSwitch @bind-Value=@isCreateAccounts Label=" Create accounts during import"/>
                 </FluentGridItem>
                 <FluentGridItem xs="12">
-                    <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFileRBC">RBC csv</FluentButton>
-                    <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFileCIBC">CIBC csv</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFileRBC" IconStart="@(Icon.FromImageUrl("/img/logo_rbc32.png"))">RBC csv</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFileCIBC" IconStart="@(Icon.FromImageUrl("/img/logo_cibc32.png"))">CIBC csv</FluentButton>
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@ImportFileMint" IconStart="@(Icon.FromImageUrl("/img/logo_mint.png"))">Mint.com</FluentButton>
+                </FluentGridItem>
+
+                <FluentGridItem xs="12">
+                    <FluentLabel>  </FluentLabel>
+                    <hr/>
+                </FluentGridItem>
+                
+                <FluentGridItem xs="1">
+                    <FluentIcon Value="@(new Icons.Filled.Size24.Flash())"/>
+                </FluentGridItem>
+                <FluentGridItem xs="11">
+                    <FluentLabel Typo="Typography.PaneHeader"> Operations </FluentLabel>
+                </FluentGridItem>
+
+                <FluentGridItem xs="12">
+                    <FluentButton Appearance="Appearance.Accent" OnClick="@Backup" IconStart="@(new Icons.Filled.Size20.DatabaseArrowUp())"> Backup DB </FluentButton>
                 </FluentGridItem>
             </FluentGrid>
         </FluentCard>
@@ -55,7 +73,7 @@
                     </FluentNavLink>
                 </FluentGridItem>
                 <FluentGridItem xs="12">
-                    <TransactionsList Mode="TransactionListModeEnum.Short" ChartPeriod="1" RuleApplied="false" HeightPx="320"/>
+                    <TransactionsList Mode="TransactionListModeEnum.Short" ChartPeriod="1" RuleApplied="false" HeightPx="320" EditEnable="true"/>
                 </FluentGridItem>
             </FluentGrid>
         </FluentCard>
@@ -75,7 +93,7 @@
                     </FluentNavLink>
                 </FluentGridItem>
                 <FluentGridItem xs="12">
-                    <TransactionsList Mode="TransactionListModeEnum.Short" ChartPeriod="m1" HeightPx="320"/>
+                    <TransactionsList Mode="TransactionListModeEnum.Short" ChartPeriod="w2" HeightPx="320"/>
                 </FluentGridItem>
             </FluentGrid>
         </FluentCard>
@@ -159,11 +177,26 @@
         </FluentCard>
     </FluentGridItem>
 
+
+    @*<FluentGridItem xs="4">
+        <FluentCard Height="400px" AreaRestricted="false">
+            <FluentLabel Typo="Typography.Body" Color="Color.Accent"> Color.Accent </FluentLabel>
+            <FluentLabel Typo="Typography.Body" Color="Color.Neutral"> Color.Neutral </FluentLabel>
+            <FluentLabel Typo="Typography.Body" Color="Color.Warning"> Color.Warning </FluentLabel>
+            <FluentLabel Typo="Typography.Body" Color="Color.Info"> Color.Info </FluentLabel>
+            <FluentLabel Typo="Typography.Body" Color="Color.Error"> Color.Error </FluentLabel>
+            <FluentLabel Typo="Typography.Body" Color="Color.Success"> Color.Success </FluentLabel>
+            <FluentLabel Typo="Typography.Body" Color="Color.Fill"> Color.Fill </FluentLabel>
+            <FluentLabel Typo="Typography.Body" Color="Color.Lightweight"> Color.Lightweight </FluentLabel>
+        </FluentCard>
+    </FluentGridItem>*@
+
 </FluentGrid>
 
 @code {
     string importFileType = ImportTypeEnum.Mint_CSV.ToString();
     string importFile;
+    bool isCreateAccounts = false;
     string incomeChartPeriod = "1";
     string spendingChartPeriod = "m1";
 
@@ -202,8 +235,8 @@
         importFile = folderPicker.DisplayFilePicker("RBC CSV file", "csv");
         if (string.IsNullOrWhiteSpace(importFile))
             return;
-        await TransactionService.ImportRBCCSV(importFile, void (int p) => { });
-        var dialog = await DialogService.ShowSuccessAsync("RBC file imported");
+        var records = await TransactionService.ImportRBCCSV(importFile, isCreateAccounts, void (int p) => { });
+        var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from RBC file {importFile}");
         await dialog.Result;
         StateHasChanged();
     }
@@ -213,10 +246,26 @@
         importFile = folderPicker.DisplayFilePicker("CIBC CSV file", "csv");
         if (string.IsNullOrWhiteSpace(importFile))
             return;
-        await TransactionService.ImportCIBCCSV(importFile, void (int p) => { });
-        var dialog = await DialogService.ShowSuccessAsync("CIBC file imported");
+        var records = await TransactionService.ImportCIBCCSV(importFile, isCreateAccounts, void (int p) => { });
+        var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from CIBC file {importFile}");
         await dialog.Result;
         StateHasChanged();
+    }
+
+    async Task ImportFileMint()
+    {
+        importFile = folderPicker.DisplayFilePicker("Mint.com CSV file", "csv");
+        if (string.IsNullOrWhiteSpace(importFile))
+            return;
+        var records = await TransactionService.ImportMintCSV(importFile, void (int p) => { });
+        var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from CIBC file {importFile}");
+        await dialog.Result;
+        StateHasChanged();
+    }
+
+    void Backup()
+    {
+        TransactionService.Backup();
     }
 
 }

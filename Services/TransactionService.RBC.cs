@@ -6,8 +6,9 @@ namespace MoneyManager.Services;
 
 public partial class TransactionService
 {
-    public async Task ImportRBCCSV(string filePath, Action<int> progress)
+    public async Task<int> ImportRBCCSV(string filePath, bool isCreateAccounts, Action<int> progress)
     {
+        Backup();
         // init global cache
         Accounts = [];
         Categories = [];
@@ -38,7 +39,7 @@ public partial class TransactionService
 
                 //Console.WriteLine($"{current}/{total} - {p}: {r.Date}");
 
-                var account = await GetAccount(r.AccountNumber, context, false);
+                var account = await GetAccount(r.AccountNumber, context, isCreateAccounts);
 
                 if (account == null)
                     continue;
@@ -48,7 +49,7 @@ public partial class TransactionService
                 var amount = Math.Abs(r.AmountCAD.Value);
                 var description = $"{r.Description1} {r.Description2}";
 
-                var isExist = IsTransactionExists(r.Date, amount, isDebit, r.Description1, account, context);
+                var isExist = IsTransactionExists(r.Date, amount, isDebit, description, account, context);
                 if (isExist)
                     continue;
 
@@ -67,12 +68,22 @@ public partial class TransactionService
                 await dataService.ApplyRule(transaction, context);
                 transactions.Add(transaction);
             }
+            reader.Close();
         }
-
+        
         if (transactions.Any())
         {
             context.Transactions.AddRange(transactions);
             await context.SaveChangesAsync();
         }
+
+        var folder = Path.GetDirectoryName(filePath);
+        var file = Path.GetFileName(filePath);
+        var importedFolder = Path.Combine(folder, "Imported");
+        if (!Directory.Exists(importedFolder))
+            Directory.CreateDirectory(importedFolder);
+        File.Copy(filePath, Path.Combine(importedFolder, file), true);
+        File.Delete(filePath);
+        return transactions.Count;
     }
 }

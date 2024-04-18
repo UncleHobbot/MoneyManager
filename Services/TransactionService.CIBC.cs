@@ -7,8 +7,9 @@ namespace MoneyManager.Services;
 
 public partial class TransactionService
 {
-    public async Task ImportCIBCCSV(string filePath, Action<int> progress)
+    public async Task<int> ImportCIBCCSV(string filePath, bool isCreateAccounts, Action<int> progress)
     {
+        Backup();
         // init global cache
         Accounts = [];
         Categories = [];
@@ -45,7 +46,7 @@ public partial class TransactionService
                 if (r.Date < dateLimit)
                     continue;
 
-                var account = await GetAccount(r.AccountNumber, context, false);
+                var account = await GetAccount(r.AccountNumber, context, isCreateAccounts);
 
                 if (account == null)
                     continue;
@@ -71,6 +72,8 @@ public partial class TransactionService
                 await dataService.ApplyRule(transaction, context);
                 transactions.Add(transaction);
             }
+
+            reader.Close();
         }
 
         if (transactions.Any())
@@ -78,5 +81,14 @@ public partial class TransactionService
             context.Transactions.AddRange(transactions);
             await context.SaveChangesAsync();
         }
+
+        var folder = Path.GetDirectoryName(filePath);
+        var file = Path.GetFileName(filePath);
+        var importedFolder = Path.Combine(folder, "Imported");
+        if (!Directory.Exists(importedFolder))
+            Directory.CreateDirectory(importedFolder);
+        File.Copy(filePath, Path.Combine(importedFolder, file), true);
+        File.Delete(filePath);
+        return transactions.Count;
     }
 }
