@@ -55,4 +55,15 @@
       </Compile>
     </ItemGroup>
 
+    <ItemGroup>
+      <None Remove="Data\MoneyManagerBackup_20240417174050.db" />
+      <None Remove="Data\MoneyManagerBackup_20240417174101.db" />
+      <None Remove="Data\MoneyManagerBackup_20240417175301.db" />
+      <None Remove="Data\MoneyManagerBackup_20240417175917.db" />
+      <None Remove="Data\MoneyManagerBackup_20240417180211.db" />
+      <None Remove="Data\MoneyManagerBackup_20240417180412.db" />
+      <None Remove="Data\MoneyManagerBackup_20240417180822.db" />
+      <None Remove="Data\MoneyManagerBackup_20240417181040.db" />
+    </ItemGroup>
+
 </Project>

@@ -362,3 +362,20 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /Data/MoneyManager.db
+/Data/MoneyManagerBackup_20240417174050.db
+/Data/MoneyManagerBackup_20240417174101.db
+/Data/MoneyManagerBackup_20240417175301.db
+/Data/MoneyManagerBackup_20240417175917.db
+/Data/MoneyManagerBackup_20240417180211.db
+/Data/MoneyManagerBackup_20240417180412.db
+/Data/MoneyManagerBackup_20240417180822.db
+/Data/MoneyManagerBackup_20240417181040.db
+/Data/MoneyManagerBackup_20240417181949.db
+/Data/MoneyManagerBackup_20240417182443.db
+/Data/MoneyManagerBackup_20240417182614.db
+/Data/MoneyManagerBackup_20240417182721.db
+/Data/MoneyManagerBackup_20240417182820.db
+/Data/MoneyManagerBackup_20240417182854.db
+/Data/MoneyManagerBackup_20240417183501.db
+/Data/MoneyManagerBackup_20240417183508.db
+/Data/MoneyManagerBackup_20240417183514.db
