@@ -49,7 +49,7 @@
         categoryIcons = CategoryHelper.CategoryIcons.OrderBy(x => x).Select(x => new Option<string> { Value = x, Text = x, Icon = (CategoryHelper.CategoryIcon(x), Color.Neutral, "start") }).ToList();
     }
 
-    Icon GetIcon(string icon) => CategoryHelper.CategoryIcon(icon);
+    Icon GetIcon(string? icon) => CategoryHelper.CategoryIcon(icon);
 
     CategoryTree SelectedCategory = new();
     FluentTreeItem _selected;

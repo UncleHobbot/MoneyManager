@@ -8,12 +8,12 @@ public class Category
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int Id { get; set; }
 
-    public Category Parent { get; set; }
-    public string Name { get; set; }
-    public string Icon { get; set; }
+    public Category? Parent { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Icon { get; set; }
     public bool IsNew { get; set; }
 
-    public string pIcon => Parent == null ? Icon : Parent.Icon;
+    public string? pIcon => Parent == null ? Icon : Parent.Icon;
     public Icon objIcon => CategoryHelper.CategoryIcon(Parent == null ? Icon : Parent.Icon);
     public override string ToString() => Name;
 }
@@ -21,8 +21,8 @@ public class Category
 public class CategoryTree
 {
     public int Id { get; set; }
-    public string Name { get; set; }
-    public string Icon { get; set; }
+    public string Name { get; set; } = null!;
+    public string? Icon { get; set; }
     public HashSet<CategoryTree> Children { get; set; } = [];
 }
 
@@ -37,7 +37,7 @@ public static class CategoryHelper
 {
     public static List<string> CategoryIcons => Enum.GetNames(typeof(CategoryIconEnum)).ToList();
 
-    public static Icon CategoryIcon(string icon) => string.IsNullOrWhiteSpace(icon)
+    public static Icon CategoryIcon(string? icon) => string.IsNullOrWhiteSpace(icon)
         ? new Icons.Regular.Size20.BorderNone()
         : CategoryIcon(Enum.TryParse(icon, out CategoryIconEnum categoryIcon) ? categoryIcon : CategoryIconEnum.Uncategorized);
 

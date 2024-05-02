@@ -1,6 +1,4 @@
-﻿@inject TransactionService TransactionService
-@using Microsoft.FluentUI.AspNetCore.Components
-@implements IDialogContentComponent<ImportFileParams>
+﻿@using Microsoft.FluentUI.AspNetCore.Components
 
 <!-- Header -->
 <FluentDialogHeader ShowDismiss="true">
@@ -23,37 +21,3 @@
     <FluentButton Appearance="Appearance.Accent" OnClick="@Import" Disabled="@(string.IsNullOrWhiteSpace(Content.FileName) && !IsComplete)"> Import </FluentButton>
     <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Close </FluentButton>
 </FluentDialogFooter>
-
-@code {
-    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
-
-    [Parameter] public ImportFileParams Content { get; set; } = default!;
-
-    private async Task CancelAsync() => await Dialog.CancelAsync();
-
-    int progress;
-    string Status;
-    bool IsComplete = false;
-
-    private async Task Import()
-    {
-        var actionProgress = void (int p) => progress = p;
-
-        switch (Content.ImportType)
-        {
-            case ImportTypeEnum.Mint_CSV:
-                await TransactionService.ImportMintCSV(Content.FileName, actionProgress);
-                break;
-            case ImportTypeEnum.RBC_CSV:
-                await TransactionService.ImportRBCCSV(Content.FileName, false, actionProgress);
-                break;
-            case ImportTypeEnum.CIBC_CSV:
-                await TransactionService.ImportCIBCCSV(Content.FileName, false, actionProgress);
-                break;
-        }
-
-        Status = "Import complete";
-        IsComplete = true;
-    }
-
-}

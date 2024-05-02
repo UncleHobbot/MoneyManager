@@ -2,10 +2,6 @@
 @page "/transactions/{CanDeleteAll:bool}"
 @page "/transactions/{ChartPeriod}/{Category:int}/{CanGoBack:bool}"
 
-@inject IDialogService DialogService
-@inject DataService dataService
-@inject IJSRuntime JSRuntime
-
 @using Microsoft.FluentUI.AspNetCore.Components
 
 <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
@@ -21,20 +17,3 @@
 </FluentStack>
 
 <TransactionsList ChartPeriod="@ChartPeriod" Category="@Category"/>
-
-@code {
-    [Parameter] public bool CanGoBack { get; set; } = false;
-    [Parameter] public bool CanDeleteAll { get; set; } = false;
-    [Parameter] public string ChartPeriod { get; set; } = "a";
-    [Parameter] public int? Category { get; set; }
-
-    async Task DeleteAll()
-    {
-        var dialog = await DialogService.ShowConfirmationAsync("Do you want to delete all transactions?", "Yes", "No", "Transactions");
-        var result = await dialog.Result;
-        if (!result.Cancelled)
-            await dataService.DeleteAllTransactions();
-    }
-
-    private async Task GoBack() => await JSRuntime.InvokeVoidAsync("history.back");
-}

@@ -1,7 +1,5 @@
 ﻿@using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
-@implements IDialogContentComponent<Rule>
-@inject DataService dataService
 
 <!-- Header -->
 <FluentDialogHeader ShowDismiss="true">
@@ -70,35 +68,3 @@
     <FluentButton Appearance="Appearance.Accent" Disabled="@(!_editContext.Validate())" OnClick="@SaveAsync"> Save </FluentButton>
     <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Cancel </FluentButton>
 </FluentDialogFooter>
-
-@code {
-    private EditContext _editContext = default!;
-
-    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
-    [Parameter] public Rule Content { get; set; } = default!;
-
-    private HashSet<CategoryTree> TreeCategories { get; set; } = [];
-    string selectedType = "";
-    string selectedCategory = "";
-
-    protected override async Task OnInitializedAsync()
-    {
-        _editContext = new EditContext(Content);
-        await dataService.InitStaticStorage();
-        TreeCategories = dataService.GetCategoriesTree();
-        selectedCategory = Content.Category.Id.ToString();
-        selectedType = Content.CompareType.ToString();
-    }
-
-    private async Task SaveAsync()
-    {
-        if (_editContext.Validate())
-        {
-            Content.CompareType = Enum.Parse<RuleCompareType>(selectedType);
-            Content.Category = dataService.GetCategoryById(int.Parse(selectedCategory));
-            await Dialog.CloseAsync(Content);
-        }
-    }
-
-    private async Task CancelAsync() => await Dialog.CancelAsync();
-}

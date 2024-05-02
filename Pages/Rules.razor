@@ -1,6 +1,4 @@
 ﻿@page "/rules"
-@inject DataService dataService
-@inject IDialogService DialogService
 @using Microsoft.FluentUI.AspNetCore.Components
 
 <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
@@ -49,30 +47,3 @@
 </FluentDataGrid>
 
 <FluentPaginator State="@pagination"/>
-
-@code {
-    readonly PaginationState pagination = new() { ItemsPerPage = 19 };
-    IQueryable<Rule> rules;
-
-    protected override async Task OnInitializedAsync()
-    {
-        rules = await dataService.GetRules();
-    }
-
-    private async Task EditRule(Rule rule)
-    {
-        var dialog = await DialogService.ShowDialogAsync<EditRuleDialog>(rule, new DialogParameters
-        {
-            Height = "400px",
-            Width = "500px",
-            Title = "Edit Rule",
-            PreventDismissOnOverlayClick = true,
-            PreventScroll = true,
-        });
-
-        var result = await dialog.Result;
-        if (!result.Cancelled && result.Data != null)
-            rules = await dataService.ChangeRule((Rule)result.Data);
-    }
-
-}

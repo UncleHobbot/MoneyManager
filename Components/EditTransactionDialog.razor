@@ -1,7 +1,5 @@
 ﻿@using Microsoft.FluentUI.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Forms
-@implements IDialogContentComponent<Transaction>
-@inject DataService dataService
 
 <!-- Header -->
 <FluentDialogHeader ShowDismiss="true">
@@ -123,62 +121,3 @@
     </FluentButton>
     <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Cancel</FluentButton>
 </FluentDialogFooter>
-
-@code {
-    private EditContext _editContext = default!;
-
-    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
-    [Parameter] public Transaction Content { get; set; } = default!;
-
-    private HashSet<CategoryTree> TreeCategories { get; set; } = [];
-    string selectedCategory = "";
-
-    IQueryable<Rule> rules;
-    string activeTabId = "rule-apply";
-    Rule newRule = new();
-    string newRuleType = RuleCompareType.Contains.ToString();
-    string newRuleCategory;
-
-    protected override async Task OnInitializedAsync()
-    {
-        _editContext = new EditContext(Content);
-        await dataService.InitStaticStorage();
-        TreeCategories = dataService.GetCategoriesTree();
-        selectedCategory = Content.Category.Id.ToString();
-        rules = await dataService.GetPossibleRules(Content);
-        if (rules == null || !rules.Any())
-            activeTabId = "rule-new";
-
-        newRule.CompareType = RuleCompareType.StartsWith;
-        newRule.OriginalDescription = Content.OriginalDescription;
-        newRule.Category = Content.Category;
-        newRuleCategory = Content.Category.Id.ToString();
-    }
-
-    private async Task SaveAsync()
-    {
-        if (_editContext.Validate())
-        {
-            Content.Category = dataService.GetCategoryById(int.Parse(selectedCategory));
-            await Dialog.CloseAsync(Content);
-        }
-    }
-
-    private async Task CancelAsync() => await Dialog.CancelAsync();
-
-    private async Task SaveRuleAsync()
-    {
-        newRule.CompareType = Enum.Parse<RuleCompareType>(newRuleType);
-        newRule.Category = dataService.GetCategoryById(int.Parse(newRuleCategory));
-        await dataService.SaveNewRule(newRule);
-        rules = await dataService.GetPossibleRules(Content);
-        if (rules.Any())
-            activeTabId = "rule-apply";
-    }
-
-    private async Task ApplyRule(Rule rule)
-    {
-        var changedTran = await dataService.ApplyRule(Content, rule);
-        await Dialog.CloseAsync(changedTran);
-    }
-}

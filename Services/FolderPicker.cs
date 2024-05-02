@@ -11,13 +11,11 @@ public class FolderPicker
         return result == CommonFileDialogResult.Ok ? dialog.FileName : "";
     }
 
-    public string DisplayFilePicker(string filterName = null, string filterExt = null)
+    public string DisplayFilePicker(string filterName, string filterExt)
     {
         var dialog = new CommonOpenFileDialog { IsFolderPicker = false };
-        if (filterName != null)
-            dialog.Filters.Add(new CommonFileDialogFilter { DisplayName = filterName, Extensions = { filterExt } });
+        dialog.Filters.Add(new CommonFileDialogFilter { DisplayName = filterName, Extensions = { filterExt } });
         var result = dialog.ShowDialog();
         return result == CommonFileDialogResult.Ok ? dialog.FileName : "";
     }
-
 }

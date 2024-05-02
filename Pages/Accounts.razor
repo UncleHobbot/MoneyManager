@@ -1,6 +1,4 @@
 ﻿@page "/accounts"
-@inject DataService dataService
-@inject IDialogService DialogService
 @using Microsoft.FluentUI.AspNetCore.Components
 
 <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
@@ -40,43 +38,3 @@
 </FluentDataGrid>
 
 <FluentPaginator State="@pagination"/>
-
-@code {
-    IQueryable<Account> accounts;
-    IQueryable<Account> FilteredItems => accounts?.Where(x => x.ShownName.Contains(nameFilter, StringComparison.CurrentCultureIgnoreCase));
-    readonly PaginationState pagination = new() { ItemsPerPage = 20 };
-    string nameFilter = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        await dataService.InitStaticStorage();
-        accounts = dataService.GetAccounts().AsQueryable();
-    }
-
-    private void HandleShownNameFilter(ChangeEventArgs args)
-    {
-        if (args.Value is string value)
-            nameFilter = value;
-    }
-
-    private void HandleShownNameClear()
-    {
-        if (string.IsNullOrWhiteSpace(nameFilter))
-            nameFilter = string.Empty;
-    }
-
-    private async Task EditAccount(Account account)
-    {
-        var dialog = await DialogService.ShowDialogAsync<EditAccountDialog>(account, new DialogParameters
-        {
-            Height = "600px",
-            Title = $"Edit Account",
-            PreventDismissOnOverlayClick = true,
-            PreventScroll = true,
-        });
-
-        var result = await dialog.Result;
-        if (!result.Cancelled && result.Data != null)
-            accounts = (dataService.ChangeAccount((Account)result.Data).GetAwaiter().GetResult())?.AsQueryable();
-    }
-}
