@@ -1,8 +1,6 @@
-﻿using Microsoft.Data.Sqlite;
+﻿namespace MoneyManager.Services;
 
-namespace MoneyManager.Services;
-
-public partial class TransactionService(IDbContextFactory<DataContext> contextFactory, DataService dataService)
+public partial class TransactionService(IDbContextFactory<DataContext> contextFactory, DataService dataService, DBService dbService)
 {
     private Dictionary<string, Account> Accounts { get; set; } = [];
     private Dictionary<string, Category> Categories { get; set; } = [];
@@ -66,14 +64,5 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
 
         return ctx.Transactions.Any(t => t.Date == date && t.Amount == amount && t.IsDebit == isDebit
                                          && t.Account.Id == account.Id && (t.OriginalDescription.Trim() == originalDescription.Trim() || originalDescription.Contains(t.OriginalDescription.Trim())));
-    }
-
-    public void Backup()
-    {
-        using var location = new SqliteConnection(@"Data Source=c:\Projects\MoneyManager\Data\MoneyManager.db");
-        using var destination = new SqliteConnection(string.Format(@$"Data Source=c:\Projects\MoneyManager\Data\MoneyManagerBackup_{DateTime.Now:yyyyMMddHHmmss}.db"));
-        location.Open();
-        destination.Open();
-        location.BackupDatabase(destination);
     }
 }

@@ -4,12 +4,12 @@ namespace MoneyManager.Components;
 
 public partial class TransactionsList
 {
-    [Inject] private IDialogService DialogService { get; set; }
-    [Inject] private DataService dataService { get; set; }
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+    [Inject] private DataService dataService { get; set; } = null!;
 
     [Parameter] public TransactionListModeEnum Mode { get; set; } = TransactionListModeEnum.Full;
     [Parameter] public int HeightVH { get; set; } = 80;
-    [Parameter] public int HeightPx { get; set; } = 0;
+    [Parameter] public int HeightPx { get; set; }
     [Parameter] public string ChartPeriod { get; set; } = "a";
     [Parameter] public DateTime? DateStart { get; set; }
     [Parameter] public DateTime? DateEnd { get; set; }
@@ -21,7 +21,7 @@ public partial class TransactionsList
     [Parameter] public bool EditEnable { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
     private readonly PaginationState pagination = new();
-    private string gridStyle;
+    private string gridStyle= string.Empty;
     private string gridTemplateColumns = "100px 200px 100px 300px 500px";
     private GridSort<Transaction> accountSort = GridSort<Transaction>.ByAscending(x => x.Account.Name);
     private GridSort<Transaction> amountSort = GridSort<Transaction>.ByAscending(x => x.Amount);
@@ -31,14 +31,12 @@ public partial class TransactionsList
         .ThenAscending(x => x.Category.Name);
 
     private GridSort<Transaction> ruleSort = GridSort<Transaction>.ByAscending(x => x.IsRuleApplied);
-    private IQueryable<Transaction> allTransactions;
+    private IQueryable<Transaction> allTransactions= Array.Empty<Transaction>().AsQueryable();
 
     private IQueryable<Transaction> transactions
     {
         get
         {
-            if (allTransactions == null)
-                return null;
             var result = allTransactions;
             // external date filter
             if (DateStart.HasValue) result = result.Where(x => x.Date >= DateStart);
@@ -121,7 +119,7 @@ public partial class TransactionsList
         });
 
         var result = await dialog.Result;
-        if (!result.Cancelled && result.Data != null)
+        if (result is { Cancelled: false, Data: not null })
         {
             allTransactions = await dataService.ChangeTransaction((Transaction)result.Data);
             await Changed.InvokeAsync();

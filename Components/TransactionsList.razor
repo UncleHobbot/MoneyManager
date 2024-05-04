@@ -18,7 +18,7 @@
                     <FluentSpacer/>
                     <FluentButton Id="@($"filterByAccount_{context.Id}")" IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
                                   OnClick="@(() => FilterByAccount(context, true))"/>
-                    <FluentTooltip Anchor="@($"filterByAccount_{context.Id}")">Filter by Account</FluentTooltip>
+                    <FluentTooltip Anchor="@($"filterByAccount_{context.Id}")">Filter by @context.Account.ShownName Account</FluentTooltip>
 
                     <FluentButton Id="@($"filterByAccountR_{context.Id}")" IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
                                   OnClick="@(() => FilterByAccount(context, false))"/>
@@ -40,7 +40,7 @@
                         <FluentSpacer/>
                         <FluentButton Id="@($"filterByCategory_{context.Id}")" IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
                                       OnClick="@(() => FilterByCategory(context, true))"/>
-                        <FluentTooltip Anchor="@($"filterByCategory_{context.Id}")">Filter by Category</FluentTooltip>
+                        <FluentTooltip Anchor="@($"filterByCategory_{context.Id}")">Filter by @context.Category.Name Category and childs</FluentTooltip>
                         <FluentButton Id="@($"filterByCategoryR_{context.Id}")" IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
                                       OnClick="@(() => FilterByCategory(context, false))"/>
                         <FluentTooltip Anchor="@($"filterByCategoryR_{context.Id}")">Remove filter</FluentTooltip>

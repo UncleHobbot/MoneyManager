@@ -6,9 +6,10 @@ namespace MoneyManager.Pages;
 
 public partial class Home
 {
-    [Inject] private FolderPicker folderPicker { get; set; }
-    [Inject] private IDialogService DialogService { get; set; }
-    [Inject] private TransactionService TransactionService { get; set; }
+    [Inject] private FolderPicker folderPicker { get; set; } = null!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+    [Inject] private TransactionService TransactionService { get; set; } = null!;
+    [Inject] private DBService DBService { get; set; } = null!;
 
     private string importFileType = ImportTypeEnum.Mint_CSV.ToString();
     private string importFile;
@@ -79,8 +80,5 @@ public partial class Home
         StateHasChanged();
     }
 
-    private void Backup()
-    {
-        TransactionService.Backup();
-    }
+    private async Task Backup() => await DBService.Backup();
 }

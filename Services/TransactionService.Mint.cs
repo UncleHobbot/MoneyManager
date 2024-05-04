@@ -8,7 +8,7 @@ public partial class TransactionService
 {
     public async Task<int> ImportMintCSV(string filePath, Action<int> progress)
     {
-        Backup();
+        await dbService.Backup();
 
         // init global cache
         Accounts = [];

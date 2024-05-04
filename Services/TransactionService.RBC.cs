@@ -8,7 +8,8 @@ public partial class TransactionService
 {
     public async Task<int> ImportRBCCSV(string filePath, bool isCreateAccounts, Action<int> progress)
     {
-        Backup();
+        await dbService.Backup();
+        
         // init global cache
         Accounts = [];
         Categories = [];

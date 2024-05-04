@@ -1,0 +1,38 @@
+﻿@page "/appsettings"
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
+    <FluentLabel Typo="Typography.H3"> Application Settings </FluentLabel>
+    <FluentButton IconStart="@(new Icons.Regular.Size24.Save())" Appearance="Appearance.Stealth" OnClick="SaveSettings">Save</FluentButton>
+</FluentStack>
+
+<FluentGrid Spacing="1">
+    <FluentGridItem xs="12">
+        <FluentTextField @bind-Value="settings.BackupPath" Label="Folder to store database backup" Style="width: 100%">
+            <FluentIcon Value="@(new Icons.Regular.Size16.FolderSearch())" Color="@Color.Neutral" Slot="end" OnClick="SelectImportFile"/>
+        </FluentTextField>
+       
+    </FluentGridItem>
+</FluentGrid>
+
+@code {
+    [Inject] private SettingsService service { get; set; } = null!;
+    [Inject] private FolderPicker folderPicker { get; set; } = null!;
+    private SettingsModel settings = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        settings= await service.GetSettings();
+    }
+
+    private void SelectImportFile()
+    {
+        settings.BackupPath = folderPicker.DisplayFolderPicker();
+    }
+
+    private async Task SaveSettings()
+    {
+        await service.SaveSettings(settings);
+    }
+
+}

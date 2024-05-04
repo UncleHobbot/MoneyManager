@@ -1,8 +1,6 @@
 ﻿@using Microsoft.FluentUI.AspNetCore.Components
 
 @inherits LayoutComponentBase
-@inject SettingsService service
-@inject Seed seed
 
 <MudProviders/>
 <FluentToastProvider/>
@@ -27,13 +25,3 @@
         <div class="copyright">© Max "Uncle Ho" Iliashenko 2024. Powered by .NET @Environment.Version</div>
     </FluentFooter>
 </FluentLayout>
-
-@code {
-    SettingsModel data = new();
-
-    protected override async Task OnInitializedAsync()
-    {
-        data = await service.GetSettings();
-        await seed.SeedData();
-    }
-}

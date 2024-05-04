@@ -5,17 +5,16 @@ namespace MoneyManager.Components;
 
 public partial class Spending
 {
-    [Inject] private DataService dataService { get; set; }
-    [Inject] private IDialogService DialogService { get; set; }
-    [Inject] private NavigationManager NavigationManager { get; set; }
+    [Inject] private DataService dataService { get; set; } = null!;
+    [Inject] private NavigationManager NavigationManager { get; set; } = null!;
 
     [Parameter] public string ChartPeriod { get; set; } = "1";
-    [Parameter] public int Width { get; set; } = 0;
+    [Parameter] public int Width { get; set; }
     [Parameter] public int Height { get; set; } = 800;
     [Parameter] public bool ShowCaption { get; set; } = true;
     [Parameter] public bool ShowToolbar { get; set; } = true;
-    private ApexChart<CategoryChart> chart;
-    private ApexChartOptions<CategoryChart> options;
+    private ApexChart<CategoryChart>? chart;
+    private ApexChartOptions<CategoryChart>? options;
     private bool isLoading = true;
     private List<CategoryChart> expense = [];
 
@@ -50,7 +49,7 @@ public partial class Spending
             .Select(x => new CategoryChart
             {
                 Category = x.Key,
-                Amount = x.Sum(x => (x.IsDebit ? 1 : -1) * x.Amount)
+                Amount = x.Sum(y => (y.IsDebit ? 1 : -1) * y.Amount)
             }).OrderBy(x => x.Category.Name).ToList();
 
         if (chart != null)
@@ -64,7 +63,7 @@ public partial class Spending
 
     private async Task DataPointsSelected(SelectedData<CategoryChart> selectedData)
     {
-        if (selectedData?.DataPoint?.Items != null && selectedData?.DataPoint?.Items?.Count() > 0)
+        if (selectedData.DataPoint?.Items != null && selectedData.DataPoint?.Items?.Count() > 0)
         {
             var selectedCategory = selectedData.DataPoint.Items.First().Category;
             NavigationManager.NavigateTo($"transactions/{ChartPeriod}/{selectedCategory.Id}/true");

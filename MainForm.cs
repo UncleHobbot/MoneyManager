@@ -17,6 +17,7 @@ public partial class MainForm : Form
 
         services.AddTransient<FolderPicker>();
         services.AddSingleton<SettingsService>();
+        services.AddSingleton<DBService>();
         services.AddSingleton<DataService>();
         services.AddSingleton<TransactionService>();
         
