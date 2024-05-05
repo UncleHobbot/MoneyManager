@@ -1,0 +1,45 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentSelect ValueChanged="@(e => selectedCategory = e)" TOption="string" Height="250px" Label="Category">
+    @foreach (var pCat in TreeCategories.OrderBy(x => x.Name))
+    {
+        <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
+            @pCat.Name
+            <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start"
+                        Style="margin-right:5px; margin-left: 5px"/>
+        </FluentOption>
+
+        @if (pCat.Children.Count > 0)
+        {
+            foreach (var cCat in pCat.Children.OrderBy((x => x.Name)))
+            {
+                <FluentOption Value="@cCat.Id.ToString()" Selected="@(cCat.Id.ToString() == selectedCategory)">&nbsp;&nbsp;&nbsp;&nbsp; @cCat.Name</FluentOption>
+            }
+        }
+    }
+</FluentSelect>
+
+
+@code {
+    [Inject] protected DataService dataService { get; set; } = null!;
+    [Parameter] public Category Category { get; set; } = null!;
+    [Parameter] public EventCallback<Category> CategoryChanged { get; set; }
+
+    private HashSet<CategoryTree> TreeCategories { get; set; } = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        TreeCategories = dataService.GetCategoriesTree();
+    }
+
+    private string selectedCategory
+    {
+        get => Category.Id.ToString();
+        set
+        {
+            Category = dataService.GetCategoryById(int.Parse(value));
+            CategoryChanged.InvokeAsync(Category);
+        }
+    }
+
+}

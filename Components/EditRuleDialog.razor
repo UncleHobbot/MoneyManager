@@ -18,22 +18,22 @@
 
         <FluentSelect TOption="string" Label="Compare Type" Width="100%"
                       Value="@selectedType" ValueChanged="@(e => selectedType = e)">
-            <FluentOption Value="@RuleCompareType.Contains.ToString()">
+            <FluentOption Value="@RuleCompareType.Contains.ToString()" Selected="@(selectedType == RuleCompareType.Contains.ToString())">
                 Contains
                 <FluentIcon Value="@(new Icons.Regular.Size20.CenterHorizontal())" Color="@Color.Neutral"
                             Slot="start"/>
             </FluentOption>
-            <FluentOption Value="@RuleCompareType.StartsWith.ToString()" Selected="@(selectedCategory == RuleCompareType.StartsWith.ToString())">
+            <FluentOption Value="@RuleCompareType.StartsWith.ToString()" Selected="@(selectedType == RuleCompareType.StartsWith.ToString())">
                 Starts With
                 <FluentIcon Value="@(new Icons.Regular.Size20.AlignStartHorizontal())" Color="@Color.Neutral"
                             Slot="start"/>
             </FluentOption>
-            <FluentOption Value="@RuleCompareType.EndsWith.ToString()" Selected="@(selectedCategory == RuleCompareType.EndsWith.ToString())">
+            <FluentOption Value="@RuleCompareType.EndsWith.ToString()" Selected="@(selectedType == RuleCompareType.EndsWith.ToString())">
                 Ends With
                 <FluentIcon Value="@(new Icons.Regular.Size20.AlignEndHorizontal())" Color="@Color.Neutral"
                             Slot="start"/>
             </FluentOption>
-            <FluentOption Value="@RuleCompareType.Equals.ToString()">
+            <FluentOption Value="@RuleCompareType.Equals.ToString()" Selected="@(selectedType == RuleCompareType.Equals.ToString())">
                 Equals
                 <FluentIcon Value="@(new Icons.Regular.Size20.EqualCircle())" Color="@Color.Neutral" Slot="start"/>
             </FluentOption>
@@ -42,24 +42,7 @@
         <FluentTextField @bind-Value="@Content.OriginalDescription" style="width: 100%;" Required Label="Original description"/>
         <FluentTextField @bind-Value="@Content.NewDescription" style="width: 100%;" Required Label="Change to"/>
 
-        <FluentSelect ValueChanged="@(e => selectedCategory = e)" TOption="string" Height="250px" Label="Category" Width="100%">
-            @foreach (var pCat in TreeCategories.OrderBy(x => x.Name))
-            {
-                <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
-                    @pCat.Name
-                    <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start"
-                                Style="margin-right:5px; margin-left: 5px"/>
-                </FluentOption>
-
-                @if (pCat.Children.Count > 0)
-                {
-                    foreach (var cCat in pCat.Children.OrderBy((x => x.Name)))
-                    {
-                        <FluentOption Value="@cCat.Id.ToString()" Selected="@(cCat.Id.ToString() == selectedCategory)">&nbsp;&nbsp;&nbsp;&nbsp; @cCat.Name</FluentOption>
-                    }
-                }
-            }
-        </FluentSelect>
+        <CategorySelector @bind-Category="Content.Category"/>
     </EditForm>
 </FluentDialogBody>
 

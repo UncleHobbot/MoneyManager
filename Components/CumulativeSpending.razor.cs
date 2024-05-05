@@ -5,15 +5,15 @@ namespace MoneyManager.Components;
 
 public partial class CumulativeSpending
 {
-    [Inject] private DataService dataService { get; set; }
+    [Inject] private DataService dataService { get; set; } = null!;
 
     [Parameter] public int Width { get; set; } = 0;
     [Parameter] public int Height { get; set; } = 800;
     [Parameter] public bool ShowCaption { get; set; } = true;
     [Parameter] public bool ShowToolbar { get; set; } = true;
-    private ApexChart<CumulativeSpendingChart> chart;
-    private ApexChartOptions<CumulativeSpendingChart> options;
-    private List<CumulativeSpendingChart> spending;
+    private ApexChart<CumulativeSpendingChart>? chart;
+    private ApexChartOptions<CumulativeSpendingChart>? options;
+    private List<CumulativeSpendingChart> spending = [];
 
     protected override async Task OnInitializedAsync()
     {

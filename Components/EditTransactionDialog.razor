@@ -22,33 +22,11 @@
             <FluentNumberField Value="@Content.AmountExt" ReadOnly Label="Amount"/>
         </FluentStack>
 
-        <FluentSelect ValueChanged="@(e => selectedCategory = e)" TOption="string" Height="250px" Label="Category">
-            @foreach (var pCat in TreeCategories.OrderBy(x => x.Name))
-            {
-                <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
-                    @pCat.Name
-                    <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start"
-                                Style="margin-right:5px; margin-left: 5px"/>
-                </FluentOption>
-
-                @if (pCat.Children.Count > 0)
-                {
-                    foreach (var cCat in pCat.Children.OrderBy((x => x.Name)))
-                    {
-                        <FluentOption Value="@cCat.Id.ToString()" Selected="@(cCat.Id.ToString() == selectedCategory)">&nbsp;&nbsp;&nbsp;&nbsp; @cCat.Name</FluentOption>
-                    }
-                }
-            }
-        </FluentSelect>
-
-        @*</FluentStack>*@
+        <CategorySelector @bind-Category="Content.Category"/>
 
         <FluentTextField @bind-Value="@Content.Description" Label="Description" style="width: 100%;"/>
-        <FluentTextField @bind-Value="@Content.OriginalDescription" Label="Original Description" ReadOnly
-                         style="width: 100%;"/>
+        <FluentTextField @bind-Value="@Content.OriginalDescription" Label="Original Description" ReadOnly style="width: 100%;"/>
         <FluentCheckbox @bind-Value="@Content.IsRuleApplied" Label="Rule was applied" ReadOnly/>
-        @*<FluentButton Appearance="Appearance.Accent" OnClick="@(() => CreateRule(Content))">Create a new Rule</FluentButton>*@
-
     </EditForm>
 
     <FluentTabs @bind-ActiveTabId="@activeTabId" Style="border: 1px solid">
@@ -91,24 +69,7 @@
             <FluentTextField @bind-Value="@newRule.OriginalDescription" Label="Description" style="width: 100%;"/>
             <FluentTextField @bind-Value="@newRule.NewDescription" Label="New description" style="width: 100%;"/>
 
-            <FluentSelect ValueChanged="@(e => newRuleCategory = e)" TOption="string" Height="250px" Label="Category">
-                @foreach (var pCat in TreeCategories.OrderBy(x => x.Name))
-                {
-                    <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
-                        @pCat.Name
-                        <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start"
-                                    Style="margin-right:5px; margin-left: 5px"/>
-                    </FluentOption>
-
-                    @if (pCat.Children.Count > 0)
-                    {
-                        foreach (var cCat in pCat.Children.OrderBy((x => x.Name)))
-                        {
-                            <FluentOption Value="@cCat.Id.ToString()" Selected="@(cCat.Id.ToString() == selectedCategory)">&nbsp;&nbsp;&nbsp;&nbsp; @cCat.Name</FluentOption>
-                        }
-                    }
-                }
-            </FluentSelect>
+            <CategorySelector @bind-Category="newRule.Category"/>
             <FluentButton Appearance="Appearance.Accent" OnClick="@SaveRuleAsync"> Save New Rule</FluentButton>
         </FluentTab>
     </FluentTabs>

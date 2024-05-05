@@ -30,6 +30,6 @@ public static class AccountHelper
         0 => new Icons.Regular.Size20.MoneyHand(), //Cash
         1 => new Icons.Regular.Size20.Payment(), //CreditCard
         2 => new Icons.Regular.Size20.ArrowTrendingLines(), // Investment
-        _ => new Icons.Regular.Size20.CurrencyDollarEuro()
+        _ => new Icons.Regular.Size20.CurrencyDollarEuro() // Other
     };
 }

@@ -42,6 +42,7 @@
 
     <TemplateColumn Align="@Align.End" Title="Actions" Sortable="false">
         <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditRule(context))"/>
+        <FluentButton IconEnd="@(new Icons.Regular.Size16.Delete())" Style="height: 20px" OnClick="@(() => DeleteRule(context))"/>
     </TemplateColumn>
 
 </FluentDataGrid>

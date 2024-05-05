@@ -31,4 +31,12 @@ public partial class Rules
         if (result is { Cancelled: false, Data: not null })
             rules = await dataService.ChangeRule((Rule)result.Data);
     }
+
+    private async Task DeleteRule(Rule rule)
+    {
+        var dialog = await DialogService.ShowConfirmationAsync("Do you want to delete this rule?", "Yes", "No", "Rules");
+        var result = await dialog.Result;
+        if (!result.Cancelled)
+            rules = await dataService.DeleteRule(rule);
+    }
 }
