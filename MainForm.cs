@@ -11,7 +11,6 @@ public partial class MainForm : Form
         var services = new ServiceCollection();
         services.AddWindowsFormsBlazorWebView();
         services.AddBlazorWebViewDeveloperTools();
-        services.AddMudServices();
         services.AddFluentUIComponents();
         services.AddDataGridEntityFrameworkAdapter();
 
@@ -20,9 +19,17 @@ public partial class MainForm : Form
         services.AddSingleton<DBService>();
         services.AddSingleton<DataService>();
         services.AddSingleton<TransactionService>();
+
+        var dataFolder = @"c:\Projects\MoneyManager\Data";
+        var dataFile = Path.Combine(dataFolder, "MoneyManager.db");
+        if (!File.Exists(dataFile))
+        {
+            var emptyDataFile = Path.Combine(dataFolder, "MoneyManagerEmpty.db");
+            if (File.Exists(emptyDataFile))
+                File.Copy(emptyDataFile, dataFile);
+        }
         
-        services.AddDbContextFactory<DataContext>(options => options.UseSqlite(@"Data Source=c:\Projects\MoneyManager\Data\MoneyManager.db"));
-        services.AddSingleton<Seed>();
+        services.AddDbContextFactory<DataContext>(options => options.UseSqlite($"Data Source={dataFile}"));
 
         blazorWebView.HostPage = "wwwroot\\index.html";
         blazorWebView.Services = services.BuildServiceProvider();

@@ -10,4 +10,3 @@ global using MoneyManager.Helpers;
 global using MoneyManager.Model;
 global using MoneyManager.Model.Chart;
 global using MoneyManager.Services;
-global using MudBlazor.Services;

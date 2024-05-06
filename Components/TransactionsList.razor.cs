@@ -21,7 +21,7 @@ public partial class TransactionsList
     [Parameter] public bool EditEnable { get; set; }
     [Parameter] public EventCallback Changed { get; set; }
     private readonly PaginationState pagination = new();
-    private string gridStyle= string.Empty;
+    private string gridStyle = string.Empty;
     private string gridTemplateColumns = "100px 200px 100px 300px 500px";
     private GridSort<Transaction> accountSort = GridSort<Transaction>.ByAscending(x => x.Account.Name);
     private GridSort<Transaction> amountSort = GridSort<Transaction>.ByAscending(x => x.Amount);
@@ -31,7 +31,7 @@ public partial class TransactionsList
         .ThenAscending(x => x.Category.Name);
 
     private GridSort<Transaction> ruleSort = GridSort<Transaction>.ByAscending(x => x.IsRuleApplied);
-    private IQueryable<Transaction> allTransactions= Array.Empty<Transaction>().AsQueryable();
+    private IQueryable<Transaction> allTransactions = Array.Empty<Transaction>().AsQueryable();
 
     private IQueryable<Transaction> transactions
     {
@@ -63,6 +63,7 @@ public partial class TransactionsList
     }
 
     private int filterCategory = 0;
+    private Category? activeFilterCategory;
     private int filterAccount = 0;
     private string filterDescription = string.Empty;
 
@@ -92,7 +93,12 @@ public partial class TransactionsList
         return base.OnParametersSetAsync();
     }
 
-    private void FilterByCategory(Transaction transaction, bool isSet) => filterCategory = isSet ? transaction.Category.Id : 0;
+    private void FilterByCategory(Transaction transaction, bool isSet)
+    {
+        filterCategory = isSet ? transaction.Category.Id : 0;
+        activeFilterCategory = isSet ? transaction.Category : null;
+    }
+
     private void FilterByAccount(Transaction transaction, bool isSet) => filterAccount = isSet ? transaction.Account.Id : 0;
 
     private void FilterByDescription(ChangeEventArgs args)

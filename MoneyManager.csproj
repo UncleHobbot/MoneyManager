@@ -24,7 +24,6 @@
       <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.7.2" />
       <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.DataGrid.EntityFrameworkAdapter" Version="4.7.2" />
       <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.7.2" />
-	  <PackageReference Include="MudBlazor" Version="6.19.1" />
 	  <PackageReference Include="WindowsAPICodePack-Shell" Version="1.1.1" />
     </ItemGroup>
 
@@ -56,14 +55,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="Data\MoneyManagerBackup_20240417174050.db" />
-      <None Remove="Data\MoneyManagerBackup_20240417174101.db" />
-      <None Remove="Data\MoneyManagerBackup_20240417175301.db" />
-      <None Remove="Data\MoneyManagerBackup_20240417175917.db" />
-      <None Remove="Data\MoneyManagerBackup_20240417180211.db" />
-      <None Remove="Data\MoneyManagerBackup_20240417180412.db" />
-      <None Remove="Data\MoneyManagerBackup_20240417180822.db" />
-      <None Remove="Data\MoneyManagerBackup_20240417181040.db" />
+      <None Update="Pages\CategoriesS.razor.css" CssScope="custom-scope-identifier">
+        <DependentUpon>CategoriesS.razor</DependentUpon>
+      </None>
     </ItemGroup>
 
 </Project>

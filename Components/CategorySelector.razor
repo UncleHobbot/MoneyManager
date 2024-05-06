@@ -5,8 +5,7 @@
     {
         <FluentOption Value="@pCat.Id.ToString()" Selected="@(pCat.Id.ToString() == selectedCategory)">
             @pCat.Name
-            <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start"
-                        Style="margin-right:5px; margin-left: 5px"/>
+            <FluentIcon Value="@CategoryHelper.CategoryIcon(pCat.Icon)" Color="@Color.Neutral" Slot="start" Style="margin-right:5px; margin-left: 5px"/>
         </FluentOption>
 
         @if (pCat.Children.Count > 0)
@@ -18,28 +17,3 @@
         }
     }
 </FluentSelect>
-
-
-@code {
-    [Inject] protected DataService dataService { get; set; } = null!;
-    [Parameter] public Category Category { get; set; } = null!;
-    [Parameter] public EventCallback<Category> CategoryChanged { get; set; }
-
-    private HashSet<CategoryTree> TreeCategories { get; set; } = [];
-
-    protected override async Task OnInitializedAsync()
-    {
-        TreeCategories = dataService.GetCategoriesTree();
-    }
-
-    private string selectedCategory
-    {
-        get => Category.Id.ToString();
-        set
-        {
-            Category = dataService.GetCategoryById(int.Parse(value));
-            CategoryChanged.InvokeAsync(Category);
-        }
-    }
-
-}
