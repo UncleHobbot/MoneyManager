@@ -92,8 +92,10 @@ public partial class TransactionsList
 
         return base.OnParametersSetAsync();
     }
+    
+     public void Refresh() => StateHasChanged();
 
-    private void FilterByCategory(Transaction transaction, bool isSet)
+     private void FilterByCategory(Transaction transaction, bool isSet)
     {
         filterCategory = isSet ? transaction.Category.Id : 0;
         activeFilterCategory = isSet ? transaction.Category : null;

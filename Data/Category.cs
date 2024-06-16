@@ -20,17 +20,20 @@ public class Category
 
 public class CategoryTree
 {
-    public int Id { get; set; }
+    public int Id { get; init; }
     public string Name { get; set; } = null!;
     public string? Icon { get; set; }
-    public HashSet<CategoryTree> Children { get; set; } = [];
+    public HashSet<CategoryTree> Children { get; init; } = [];
+    public CategoryTree? Parent { get; set; }
+    public override string ToString() => Name;
 }
 
 public class CategoryDropItem(Category c, string parentId)
 {
-    public int Id { get; set; } = c.Id;
-    public string Name { get; set; } = c.Name;
+    public int Id { get; } = c.Id;
+    public string Name { get; } = c.Name;
     public string ParentCategory { get; set; } = parentId;
+    public override string ToString() => Name;
 }
 
 public static class CategoryHelper

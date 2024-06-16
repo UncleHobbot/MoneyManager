@@ -6,9 +6,17 @@ public partial class DataService
 
     public List<Category> GetCategories() => Categories.ToList();
 
-    public HashSet<CategoryTree> GetCategoriesTree() => GetChildren(null);
+    public HashSet<CategoryTree> GetCategoriesTree()
+    {
+        var result = GetChildren(null);
+        foreach (var parent in result)
+        foreach (var child in parent.Children)
+            child.Parent = parent;
 
-    private HashSet<CategoryTree> GetChildren(Category parent)
+        return result;
+    }
+
+    private HashSet<CategoryTree> GetChildren(Category? parent)
     {
         var res = new HashSet<CategoryTree>();
         foreach (var c in Categories.Where(c => c.Parent == parent && !c.IsNew).OrderBy(x => x.Name))
@@ -17,7 +25,7 @@ public partial class DataService
                 Id = c.Id,
                 Name = c.Name,
                 Icon = c.Icon,
-                Children = GetChildren(c)
+                Children = GetChildren(c),
             });
         return res;
     }
@@ -41,9 +49,12 @@ public partial class DataService
         {
             var ctx = await contextFactory.CreateDbContextAsync();
             var cat = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == category.Id);
-            cat.Parent = null;
-            cat.IsNew = false;
-            await ChangeCategory(cat);
+            if (cat != null)
+            {
+                cat.Parent = null;
+                cat.IsNew = false;
+                await ChangeCategory(cat);
+            }
         }
     }
 
@@ -72,12 +83,13 @@ public partial class DataService
         }
     }
 
-    public Category GetCategoryById(int id) => Categories.FirstOrDefault(x=>x.Id == id);
-    public async Task<Category> GetCategoryByName(string name)
+    public Category? GetCategoryById(int id) => Categories.FirstOrDefault(x => x.Id == id);
+
+    public async Task<Category?> GetCategoryByName(string name)
     {
         var ctx = await contextFactory.CreateDbContextAsync();
         return await ctx.Categories.FirstOrDefaultAsync(x => x.Name.ToUpper() == name.ToUpper());
     }
-    
-    public Category GetCategoryByNameFromCache(string name)=> Categories.FirstOrDefault(x => x.Name.ToUpper() == name.ToUpper());
+
+    public Category? GetCategoryByNameFromCache(string name) => Categories.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.CurrentCultureIgnoreCase));
 }

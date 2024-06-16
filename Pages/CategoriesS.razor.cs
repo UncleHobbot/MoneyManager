@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Components;
+using MoneyManager.Components;
 using Color = Microsoft.FluentUI.AspNetCore.Components.Color;
 using Icon = Microsoft.FluentUI.AspNetCore.Components.Icon;
 
@@ -8,6 +9,7 @@ public partial class CategoriesS
 {
     [Inject] DataService dataService { get; set; } = null!;
     [Inject] IToastService toastService { get; set; } = null!;
+    [Inject] private IDialogService DialogService { get; set; } = null!;
 
     private HashSet<CategoryTree> TreeCategories { get; set; } = [];
     private List<Option<string>> categoryIcons = [];
@@ -43,5 +45,27 @@ public partial class CategoriesS
         await dataService.SaveCategory(SelectedCategory);
         toastService.ShowSuccess($"Category \"{SelectedCategory.Name}\" saved");
         //TreeCategories = dataService.GetCategoriesTree();
+    }
+
+    private async Task SaveSettings()
+    {
+        var newParent = SelectedCategory.Parent ?? SelectedCategory;
+
+        var newCategory = new Category { Name = "New Category", Parent = dataService.GetCategoryById(newParent.Id) };
+        var dialog = await DialogService.ShowDialogAsync<NewCategoryDialog>(newCategory, new DialogParameters
+        {
+            Height = "300px",
+            Width = "350px",
+            Title = "New Category",
+            PreventDismissOnOverlayClick = true,
+            PreventScroll = true,
+        });
+
+        var result = await dialog.Result;
+        if (result is { Cancelled: false, Data: not null })
+        {
+            await dataService.ChangeCategory((Category)result.Data);
+            TreeCategories = dataService.GetCategoriesTree();
+        }
     }
 }

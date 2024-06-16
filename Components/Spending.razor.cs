@@ -60,6 +60,8 @@ public partial class Spending
 
         isLoading = false;
     }
+    
+    public void Refresh() => StateHasChanged();
 
     private async Task DataPointsSelected(SelectedData<CategoryChart> selectedData)
     {

@@ -30,4 +30,6 @@ public partial class CumulativeSpending
 
         spending = await dataService.ChartCumulativeSpending();
     }
+    
+    public void Refresh() => StateHasChanged();
 }

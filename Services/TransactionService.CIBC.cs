@@ -34,7 +34,7 @@ public partial class TransactionService
             foreach (var r in records)
             {
                 current++;
-                var p = current * 100 / total;
+                var p = total == 0 ? 0 : current * 100 / total;
                 if (p > lastReportedProgress)
                 {
                     lastReportedProgress = p;

@@ -5,7 +5,7 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
     private Dictionary<string, Account> Accounts { get; set; } = [];
     private Dictionary<string, Category> Categories { get; set; } = [];
 
-    private async Task<Account> GetAccount(string name, DataContext ctx, bool isCreateAccount = true)
+    private async Task<Account?> GetAccount(string name, DataContext ctx, bool isCreateAccount = true)
     {
         if (Accounts.TryGetValue(name, out var existingAccount))
             return existingAccount;

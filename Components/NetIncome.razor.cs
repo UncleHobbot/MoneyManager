@@ -40,4 +40,6 @@ public partial class NetIncome
             await chart.UpdateSeriesAsync();
         isLoading = false;
     }
+    
+    public void Refresh() => StateHasChanged();
 }

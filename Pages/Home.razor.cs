@@ -11,11 +11,27 @@ public partial class Home
     [Inject] private TransactionService TransactionService { get; set; } = null!;
     [Inject] private DBService DBService { get; set; } = null!;
 
-    private string importFileType = ImportTypeEnum.Mint_CSV.ToString();
-    private string importFile;
+    private readonly string importFileType = ImportTypeEnum.Mint_CSV.ToString();
+    private string importFile = null!;
     private bool isCreateAccounts;
     private string incomeChartPeriod = "1";
     private string spendingChartPeriod = "m1";
+    
+    private TransactionsList uncatTransactions = null!;
+    private TransactionsList recentTransactions = null!;
+    private CumulativeSpending cumSpending = null!;
+    private NetIncome netIncome = null!;
+    private Spending spending = null!;
+
+    public void Refresh()
+    {
+        StateHasChanged();
+        uncatTransactions.Refresh();
+        recentTransactions.Refresh();
+        cumSpending.Refresh();
+        netIncome.Refresh();
+        spending.Refresh();
+    }
 
     private void SelectImportFile()
     {
@@ -55,7 +71,7 @@ public partial class Home
         var records = await TransactionService.ImportRBCCSV(importFile, isCreateAccounts, void (_) => { });
         var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from RBC file {importFile}");
         await dialog.Result;
-        StateHasChanged();
+        Refresh();
     }
 
     private async Task ImportFileCIBC()
@@ -66,7 +82,7 @@ public partial class Home
         var records = await TransactionService.ImportCIBCCSV(importFile, isCreateAccounts, void (_) => { });
         var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from CIBC file {importFile}");
         await dialog.Result;
-        StateHasChanged();
+        Refresh();
     }
 
     private async Task ImportFileMint()
@@ -77,7 +93,7 @@ public partial class Home
         var records = await TransactionService.ImportMintCSV(importFile, void (_) => { });
         var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from CIBC file {importFile}");
         await dialog.Result;
-        StateHasChanged();
+        Refresh();
     }
 
     private async Task Backup() => await DBService.Backup();

@@ -1,0 +1,32 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
+
+<!-- Header -->
+<FluentDialogHeader ShowDismiss="true">
+    <FluentStack VerticalAlignment="VerticalAlignment.Center">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Tag())"/>
+        <FluentLabel Typo="Typography.PaneHeader">
+            @Dialog.Instance.Parameters.Title
+        </FluentLabel>
+    </FluentStack>
+</FluentDialogHeader>
+
+<!-- Body -->
+<FluentDialogBody>
+    <EditForm EditContext="@_editContext" FormName="edit_categoty">
+        <DataAnnotationsValidator/>
+        <FluentTextField @bind-Value="@Content.Name" Label="Name" style="width: 100%;" @ref="refname"/>
+        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Style="margin-top: 30px">
+            <div>Parent: </div>
+            <FluentIcon Value="@CategoryHelper.CategoryIcon(Content.Parent.Icon)" Color="@Color.Neutral" Slot="start" Style="margin-right:5px; margin-left: 5px"/>
+            <div><b>@Content.Parent.Name</b></div>
+        </FluentStack>
+
+    </EditForm>
+</FluentDialogBody>
+
+<!-- Footer -->
+<FluentDialogFooter>
+    <FluentButton Appearance="Appearance.Accent" Disabled="@(!_editContext.Validate())" OnClick="@SaveAsync"> Save </FluentButton>
+    <FluentButton Appearance="Appearance.Neutral" OnClick="@CancelAsync"> Cancel </FluentButton>
+</FluentDialogFooter>
