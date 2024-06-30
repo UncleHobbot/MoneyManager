@@ -23,7 +23,7 @@ public partial class Home
     private NetIncome netIncome = null!;
     private Spending spending = null!;
 
-    public void Refresh()
+    private void Refresh()
     {
         StateHasChanged();
         uncatTransactions.Refresh();

@@ -5,7 +5,7 @@ namespace MoneyManager.Services;
 
 public partial class DataService
 {
-    private async Task<List<Transaction>> ChartGetTransactions(DateTime startDate, DateTime endDate)
+    public async Task<List<Transaction>> ChartGetTransactions(DateTime startDate, DateTime endDate)
     {
         var ctx = await contextFactory.CreateDbContextAsync();
         var categoryTransfer = await ctx.Categories.FirstOrDefaultAsync(x => x.Name == "Transfer");

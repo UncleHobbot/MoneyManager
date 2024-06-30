@@ -19,7 +19,7 @@
         <FluentStack>
             <FluentDatePicker Value="@Content.Date" ReadOnly Label="Date"/>
             <FluentTextField Value="@Content.Account.ShownName" ReadOnly Label="Account"/>
-            <FluentNumberField Value="@Content.AmountExt" ReadOnly Label="Amount"/>
+            <FluentTextField Value="@Content.AmountExt.ToString("c2")" ReadOnly Label="Amount"/>
         </FluentStack>
 
         <CategorySelector @bind-Category="Content.Category"/>
