@@ -4,7 +4,7 @@ namespace MoneyManager.Pages.Charts;
 
 public partial class Income
 {
-    [Inject] private DataService dataService { get; set; }
+    [Inject] private DataService dataService { get; set; } = null!;
     private List<BalanceChart> DataGrid { get; set; } = [];
     private IQueryable<BalanceChart> DataQ => DataGrid.AsQueryable();
     private bool isLoading = true;

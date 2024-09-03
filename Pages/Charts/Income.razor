@@ -32,11 +32,25 @@
                 <TemplateColumn Title="Net" Align="Align.End">
                     @if (context.Balance >= 0)
                     {
-                        <span>@(context.Balance.ToString("c"))</span>
+                        @if (context.MonthKey == "t")
+                        {
+                            <span><b>@(context.Balance.ToString("c"))</b></span>
+                        }
+                        else
+                        {
+                            <span>@(context.Balance.ToString("c"))</span>
+                        }
                     }
                     else
                     {
-                        <span style='color:red'>@(context.Balance.ToString("c"))</span>
+                        @if (context.MonthKey == "t")
+                        {
+                            <span style='color:red'><b>@(context.Balance.ToString("c"))</b></span>
+                        }
+                        else
+                        {
+                            <span style='color:red'>@(context.Balance.ToString("c"))</span>
+                        }
                     }
                 </TemplateColumn>
             </FluentDataGrid>
