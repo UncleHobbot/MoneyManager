@@ -8,11 +8,23 @@ public partial class Income
     private List<BalanceChart> DataGrid { get; set; } = [];
     private IQueryable<BalanceChart> DataQ => DataGrid.AsQueryable();
     private bool isLoading = true;
+    private string chartPeriod = "m1";
+
+    private string ChartPeriod
+    {
+        get => chartPeriod;
+        set
+        {
+            chartPeriod = value;
+            DataService.NetIncomeChartPeriod = value;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
         await LoadData();
+        ChartPeriod = DataService.NetIncomeChartPeriod;
         isLoading = false;
     }
 

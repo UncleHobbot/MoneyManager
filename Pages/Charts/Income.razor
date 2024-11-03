@@ -4,10 +4,10 @@
 @using Orientation = Microsoft.FluentUI.AspNetCore.Components.Orientation
 
 <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Top" Width="100%" HorizontalGap="20">
-    <NetIncome Width="1000" Height="800" ChartPeriod="@DataService.NetIncomeChartPeriod"/>
+    <NetIncome Width="1000" Height="800" ChartPeriod="@ChartPeriod"/>
 
     <FluentStack Orientation="Orientation.Vertical">
-        <FluentSelect TOption="string" @bind-Value="@DataService.NetIncomeChartPeriod" Label="Select period" SelectedOptionChanged="UpdateChart">
+        <FluentSelect TOption="string" @bind-Value="@ChartPeriod" Label="Select period" SelectedOptionChanged="UpdateChart">
             <FluentOption Value="12">Last 12 months</FluentOption>
             <FluentOption Value="1">This year</FluentOption>
             <FluentOption Value="2">Last year</FluentOption>

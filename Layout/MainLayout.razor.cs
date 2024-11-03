@@ -4,7 +4,7 @@ namespace MoneyManager.Layout;
 
 public partial class MainLayout : LayoutComponentBase
 {
-    [Inject] private SettingsService service { get; set; }
+    [Inject] private SettingsService service { get; set; } = null!;
 
     private SettingsModel data = new();
 

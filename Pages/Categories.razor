@@ -103,19 +103,19 @@
         TreeCategories = dataService.GetCategoriesTree();
     }
 
-    private async Task OpenAllCategories(bool newVal)
+    private void OpenAllCategories(bool newVal)
     {
         if (newVal)
             TreeCategories = dataService.GetCategoriesTree();
     }
 
-    private async Task OpenNewParent(bool newVal)
+    private void OpenNewParent(bool newVal)
     {
         if (newVal)
             newPossibleParents = dataService.GetCategories().Where(x => x.IsNew).Select(x => new CategoryDropItem(x, "new")).OrderBy(x => x.Name).ToList();
     }
 
-    private async Task OpenNewCategories(bool newVal)
+    private void OpenNewCategories(bool newVal)
     {
         if (newVal)
         {

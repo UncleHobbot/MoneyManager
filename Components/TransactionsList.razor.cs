@@ -27,8 +27,8 @@ public partial class TransactionsList
     private GridSort<Transaction> amountSort = GridSort<Transaction>.ByAscending(x => x.Amount);
 
     private GridSort<Transaction> categorySort = GridSort<Transaction>
-        .ByAscending(x => x.Category.Parent == null ? x.Category.Name : x.Category.Parent.Name)
-        .ThenAscending(x => x.Category.Name);
+        .ByAscending(x => x.Category!.Parent == null ? x.Category.Name : x.Category.Parent.Name)
+        .ThenAscending(x => x.Category!.Name);
 
     private GridSort<Transaction> ruleSort = GridSort<Transaction>.ByAscending(x => x.IsRuleApplied);
     private IQueryable<Transaction> allTransactions = Array.Empty<Transaction>().AsQueryable();
@@ -42,10 +42,10 @@ public partial class TransactionsList
             if (DateStart.HasValue) result = result.Where(x => x.Date >= DateStart);
             if (DateEnd.HasValue) result = result.Where(x => x.Date < DateEnd);
             // custom category filter
-            result = result.Where(x => filterCategory == 0 || x.Category.Id == filterCategory || (x.Category.Parent != null && x.Category.Parent.Id == filterCategory));
+            result = result.Where(x => x.Category != null && (filterCategory == 0 || x.Category.Id == filterCategory || (x.Category.Parent != null && x.Category.Parent.Id == filterCategory)));
             // external category filter   
             if (Category.HasValue)
-                result = result.Where(x => x.Category.Id == Category || (x.Category.Parent != null && x.Category.Parent.Id == Category));
+                result = result.Where(x => x.Category != null && (x.Category.Id == Category || (x.Category.Parent != null && x.Category.Parent.Id == Category)));
             // custom account filter
             result = result.Where(x => filterAccount == 0 || x.Account.Id == filterAccount);
             // external account filter
@@ -54,7 +54,7 @@ public partial class TransactionsList
             if (RuleApplied.HasValue)
             {
                 var uCategory = dataService.GetCategoryByNameFromCache("Uncategorized");
-                result = result.Where(x => x.Category.Id == uCategory.Id);
+                result = result.Where(x => x.Category != null && uCategory != null && x.Category.Id == uCategory.Id);
             }
 
             result = result.Where(x => string.IsNullOrWhiteSpace(filterDescription) || x.Description.ToUpper().Contains(filterDescription.ToUpper()));
@@ -97,8 +97,11 @@ public partial class TransactionsList
 
      private void FilterByCategory(Transaction transaction, bool isSet)
     {
-        filterCategory = isSet ? transaction.Category.Id : 0;
-        activeFilterCategory = isSet ? transaction.Category : null;
+        if (transaction.Category != null)
+        {
+            filterCategory = isSet ? transaction.Category.Id : 0;
+            activeFilterCategory = isSet ? transaction.Category : null;
+        }
     }
 
     private void FilterByAccount(Transaction transaction, bool isSet) => filterAccount = isSet ? transaction.Account.Id : 0;

@@ -5,8 +5,11 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
     private Dictionary<string, Account> Accounts { get; set; } = [];
     private Dictionary<string, Category> Categories { get; set; } = [];
 
-    private async Task<Account?> GetAccount(string name, DataContext ctx, bool isCreateAccount = true)
+    private async Task<Account?> GetAccount(string? name, DataContext ctx, bool isCreateAccount = true)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+        
         if (Accounts.TryGetValue(name, out var existingAccount))
             return existingAccount;
 
@@ -35,8 +38,11 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
         return null;
     }
 
-    private async Task<Category> GetCategory(string name, DataContext ctx)
+    private async Task<Category?> GetCategory(string? name, DataContext ctx)
     {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+        
         if (Categories.TryGetValue(name, out var existingCategory))
             return existingCategory;
 
@@ -56,7 +62,7 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
 
     private async Task<Category> GetDefaultCategory(DataContext ctx) => await GetCategory("Uncategorized", ctx);
 
-    private bool IsTransactionExists(DateTime date, decimal amount, bool isDebit, string originalDescription, Account account, DataContext ctx, bool isDateFuzzy = false)
+    private bool IsTransactionExists(DateTime date, decimal amount, bool isDebit, string? originalDescription, Account? account, DataContext ctx, bool isDateFuzzy = false)
     {
         if (isDateFuzzy)
         {

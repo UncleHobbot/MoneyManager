@@ -24,13 +24,14 @@ public partial class EditAccountDialog : IDialogContentComponent<Account>
     {
         if (_editContext.Validate())
         {
-            Content.Type = int.Parse(stringAccountType);
+            if (stringAccountType != null)
+                Content.Type = int.Parse(stringAccountType);
             await Dialog.CloseAsync(Content);
         }
     }
 
     private async Task CancelAsync() => await Dialog.CancelAsync();
-    private string stringAccountType;
+    private string? stringAccountType;
 
     private static readonly List<Option<string>> accountTypes =
     [
