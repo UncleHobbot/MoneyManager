@@ -10,8 +10,13 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
         if (Accounts.TryGetValue(name, out var existingAccount))
             return existingAccount;
 
-        var accountInDB = await ctx.Accounts.FirstOrDefaultAsync(c => c.Name == name || c.Number == name.Replace("-", "")
-                                                                                     || c.AlternativeName1.ToUpper() == name.ToUpper() || c.AlternativeName2.ToUpper() == name.ToUpper());
+        var accountInDB = await ctx.Accounts.FirstOrDefaultAsync(c => c.Name == name
+                                                                      || c.Number == name.Replace("-", "")
+                                                                      || (c.AlternativeName1 != null && c.AlternativeName1.ToUpper() == name.ToUpper())
+                                                                      || (c.AlternativeName2 != null && c.AlternativeName2.ToUpper() == name.ToUpper())
+                                                                      || (c.AlternativeName3 != null && c.AlternativeName3.ToUpper() == name.ToUpper())
+                                                                      || (c.AlternativeName4 != null && c.AlternativeName4.ToUpper() == name.ToUpper())
+                                                                      || (c.AlternativeName5 != null && c.AlternativeName5.ToUpper() == name.ToUpper()));
         if (accountInDB != null)
         {
             Accounts.Add(name, accountInDB);

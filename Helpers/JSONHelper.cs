@@ -8,7 +8,7 @@ public static class JSONHelper
         await JsonSerializer.SerializeAsync(createStream, obj, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    public static async Task<T> ReadJSON<T>(this string filename)
+    public static async Task<T?> ReadJSON<T>(this string filename)
     {
         if (File.Exists(filename))
         {

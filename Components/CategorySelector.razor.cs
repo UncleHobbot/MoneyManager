@@ -6,7 +6,7 @@ public partial class CategorySelector
 {
     [Inject] protected DataService dataService { get; set; } = null!;
 
-    [Parameter] public Category Category { get; set; } = null!;
+    [Parameter] public Category? Category { get; set; } = null!;
     [Parameter] public EventCallback<Category> CategoryChanged { get; set; }
     
     private HashSet<CategoryTree> TreeCategories { get; set; } = [];
@@ -16,13 +16,16 @@ public partial class CategorySelector
         TreeCategories = dataService.GetCategoriesTree();
     }
 
-    private string selectedCategory
+    private string? selectedCategory
     {
-        get => Category.Id.ToString();
+        get => Category?.Id.ToString();
         set
         {
-            Category = dataService.GetCategoryById(int.Parse(value));
-            CategoryChanged.InvokeAsync(Category);
+            if (value != null)
+            {
+                Category = dataService.GetCategoryById(int.Parse(value));
+                CategoryChanged.InvokeAsync(Category);
+            }
         }
     }
 }

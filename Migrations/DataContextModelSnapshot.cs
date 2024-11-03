@@ -15,7 +15,7 @@ namespace MoneyManager.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "8.0.2");
+            modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
 
             modelBuilder.Entity("MoneyManager.Data.Account", b =>
                 {
@@ -29,6 +29,15 @@ namespace MoneyManager.Migrations
                     b.Property<string>("AlternativeName2")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AlternativeName3")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlternativeName4")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AlternativeName5")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
@@ -36,12 +45,14 @@ namespace MoneyManager.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Number")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ShownName")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Type")
@@ -58,7 +69,7 @@ namespace MoneyManager.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("AccountId")
+                    b.Property<int>("AccountId")
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("Amount")
@@ -87,6 +98,7 @@ namespace MoneyManager.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("ParentId")
@@ -105,16 +117,18 @@ namespace MoneyManager.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("CategoryId")
+                    b.Property<int>("CategoryId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("CompareType")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("NewDescription")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalDescription")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -130,7 +144,7 @@ namespace MoneyManager.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("AccountId")
+                    b.Property<int>("AccountId")
                         .HasColumnType("INTEGER");
 
                     b.Property<decimal>("Amount")
@@ -143,6 +157,7 @@ namespace MoneyManager.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsDebit")
@@ -152,6 +167,7 @@ namespace MoneyManager.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("OriginalDescription")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -167,7 +183,9 @@ namespace MoneyManager.Migrations
                 {
                     b.HasOne("MoneyManager.Data.Account", "Account")
                         .WithMany()
-                        .HasForeignKey("AccountId");
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Account");
                 });
@@ -185,7 +203,9 @@ namespace MoneyManager.Migrations
                 {
                     b.HasOne("MoneyManager.Data.Category", "Category")
                         .WithMany()
-                        .HasForeignKey("CategoryId");
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Category");
                 });
@@ -194,7 +214,9 @@ namespace MoneyManager.Migrations
                 {
                     b.HasOne("MoneyManager.Data.Account", "Account")
                         .WithMany()
-                        .HasForeignKey("AccountId");
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("MoneyManager.Data.Category", "Category")
                         .WithMany()

@@ -84,10 +84,14 @@ public partial class TransactionService
 
         var folder = Path.GetDirectoryName(filePath);
         var file = Path.GetFileName(filePath);
-        var importedFolder = Path.Combine(folder, "Imported");
-        if (!Directory.Exists(importedFolder))
-            Directory.CreateDirectory(importedFolder);
-        File.Copy(filePath, Path.Combine(importedFolder, file), true);
+        if (folder != null)
+        {
+            var importedFolder = Path.Combine(folder, "Imported");
+            if (!Directory.Exists(importedFolder))
+                Directory.CreateDirectory(importedFolder);
+            File.Copy(filePath, Path.Combine(importedFolder, file), true);
+        }
+
         File.Delete(filePath);
         return transactions.Count;
     }

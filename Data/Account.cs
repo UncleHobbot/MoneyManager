@@ -16,6 +16,9 @@ public class Account
     public bool IsHideFromGraph { get; set; }
     public string? AlternativeName1 { get; set; }
     public string? AlternativeName2 { get; set; }
+    public string? AlternativeName3 { get; set; }
+    public string? AlternativeName4 { get; set; }
+    public string? AlternativeName5 { get; set; }
 
     [NotMapped]
     public Icon TypeIcon => AccountHelper.TypeIcon(Type);
