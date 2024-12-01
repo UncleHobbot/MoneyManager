@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-using MoneyManager.Components;
+﻿using MoneyManager.Components;
 
 namespace MoneyManager.Pages;
 

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-using MoneyManager.Components;
+﻿using MoneyManager.Components;
 using Color = Microsoft.FluentUI.AspNetCore.Components.Color;
 using Icon = Microsoft.FluentUI.AspNetCore.Components.Icon;
 

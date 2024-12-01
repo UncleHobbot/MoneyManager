@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
+﻿using Microsoft.AspNetCore.Components.Forms;
 using Color = Microsoft.FluentUI.AspNetCore.Components.Color;
 
 namespace MoneyManager.Components;
@@ -7,8 +6,8 @@ namespace MoneyManager.Components;
 public partial class EditAccountDialog : IDialogContentComponent<Account>
 {
     private EditContext _editContext = default!;
-    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
-    [Parameter] public Account Content { get; set; } = default!;
+    [CascadingParameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public Account Content { get; set; } = default!;
 
     protected override void OnInitialized()
     {

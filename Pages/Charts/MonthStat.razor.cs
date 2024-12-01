@@ -1,5 +1,4 @@
 ﻿using ApexCharts;
-using Microsoft.AspNetCore.Components;
 using Microsoft.FluentUI.AspNetCore.Components.Extensions;
 using Microsoft.JSInterop;
 
@@ -7,20 +6,21 @@ namespace MoneyManager.Pages.Charts;
 
 public partial class MonthStat
 {
-    [Inject] private DataService dataService { get; set; }
-    [Inject] IJSRuntime JSRuntime { get; set; }
+    [Inject] private DataService dataService { get; set; } = null!;
+    [Inject] IJSRuntime JSRuntime { get; set; } = null!;
 
-    [Parameter] public string Month { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public string? Month { get; set; }
+    
     private List<Transaction> transactions = [];
     private List<CategoryChart> income = [];
     private List<CategoryChart> expense = [];
-    private ApexChart<CategoryChart> chartI;
-    private ApexChart<CategoryChart> chartE;
+    private ApexChart<CategoryChart>? chartI;
+    private ApexChart<CategoryChart>? chartE;
     private ApexChartOptions<CategoryChart> optionsI { get; set; } = new();
     private ApexChartOptions<CategoryChart> optionsE { get; set; } = new();
     private DateTime dateStart;
     private DateTime dateEnd;
-    private Category selectedCategory;
+    private Category? selectedCategory;
 
     protected override async Task OnInitializedAsync()
     {
@@ -105,7 +105,7 @@ public partial class MonthStat
 
     private void DataPointsSelected(SelectedData<CategoryChart> selectedData)
     {
-        if (selectedData?.DataPoint?.Items != null && selectedData.DataPoint?.Items?.Count() > 0)
+        if (selectedData.DataPoint?.Items != null && selectedData.DataPoint?.Items?.Count() > 0)
             selectedCategory = selectedData.DataPoint.Items.First().Category;
     }
 

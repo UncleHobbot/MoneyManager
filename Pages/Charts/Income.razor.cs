@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-
-namespace MoneyManager.Pages.Charts;
+﻿namespace MoneyManager.Pages.Charts;
 
 public partial class Income
 {

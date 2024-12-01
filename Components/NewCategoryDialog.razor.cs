@@ -1,13 +1,12 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
+﻿using Microsoft.AspNetCore.Components.Forms;
 
 namespace MoneyManager.Components;
 
 public partial class NewCategoryDialog: IDialogContentComponent<Category>
 {
     private EditContext _editContext = default!;
-    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
-    [Parameter] public Category Content { get; set; } = default!;
+    [CascadingParameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public Category Content { get; set; } = default!;
 
     protected override void OnInitialized()
     {

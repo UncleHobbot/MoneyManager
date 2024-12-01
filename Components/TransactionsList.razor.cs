@@ -1,25 +1,24 @@
-﻿using Microsoft.AspNetCore.Components;
-
-namespace MoneyManager.Components;
+﻿namespace MoneyManager.Components;
 
 public partial class TransactionsList
 {
     [Inject] private IDialogService DialogService { get; set; } = null!;
     [Inject] private DataService dataService { get; set; } = null!;
 
-    [Parameter] public TransactionListModeEnum Mode { get; set; } = TransactionListModeEnum.Full;
-    [Parameter] public int HeightVH { get; set; } = 80;
-    [Parameter] public int HeightPx { get; set; }
-    [Parameter] public string ChartPeriod { get; set; } = "a";
-    [Parameter] public DateTime? DateStart { get; set; }
-    [Parameter] public DateTime? DateEnd { get; set; }
-    [Parameter] public int PageSize { get; set; } = 19;
-    [Parameter] public int? Category { get; set; }
-    [Parameter] public bool CategoryFilters { get; set; } = true;
-    [Parameter] public bool OnlyVisibleAccounts { get; set; }
-    [Parameter] public bool? RuleApplied { get; set; }
-    [Parameter] public bool EditEnable { get; set; }
-    [Parameter] public EventCallback Changed { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public TransactionListModeEnum Mode { get; set; } = TransactionListModeEnum.Full;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int HeightVH { get; set; } = 80;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int HeightPx { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public string ChartPeriod { get; set; } = "a";
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public DateTime? DateStart { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public DateTime? DateEnd { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int PageSize { get; set; } = 19;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int? Category { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool CategoryFilters { get; set; } = true;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool OnlyVisibleAccounts { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool? RuleApplied { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool EditEnable { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public EventCallback Changed { get; set; }
+    
     private readonly PaginationState pagination = new();
     private string gridStyle = string.Empty;
     private string gridTemplateColumns = "100px 200px 100px 300px 500px";

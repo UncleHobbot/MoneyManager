@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-
-namespace MoneyManager.Layout;
+﻿namespace MoneyManager.Layout;
 
 public partial class MainLayout : LayoutComponentBase
 {

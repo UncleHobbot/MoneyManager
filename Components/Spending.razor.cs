@@ -1,5 +1,4 @@
 ﻿using ApexCharts;
-using Microsoft.AspNetCore.Components;
 
 namespace MoneyManager.Components;
 
@@ -8,11 +7,12 @@ public partial class Spending
     [Inject] private DataService dataService { get; set; } = null!;
     [Inject] private NavigationManager NavigationManager { get; set; } = null!;
 
-    [Parameter] public string ChartPeriod { get; set; } = "1";
-    [Parameter] public int Width { get; set; }
-    [Parameter] public int Height { get; set; } = 800;
-    [Parameter] public bool ShowCaption { get; set; } = true;
-    [Parameter] public bool ShowToolbar { get; set; } = true;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public string ChartPeriod { get; set; } = "1";
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int Width { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int Height { get; set; } = 800;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool ShowCaption { get; set; } = true;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool ShowToolbar { get; set; } = true;
+    
     private ApexChart<CategoryChart>? chart;
     private ApexChartOptions<CategoryChart>? options;
     private bool isLoading = true;

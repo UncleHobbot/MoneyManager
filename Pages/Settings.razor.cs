@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-
-namespace MoneyManager.Pages;
+﻿namespace MoneyManager.Pages;
 
 public partial class Settings
 {

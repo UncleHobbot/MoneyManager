@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
+﻿using Microsoft.AspNetCore.Components.Forms;
 
 namespace MoneyManager.Components;
 
@@ -7,8 +6,8 @@ public partial class EditTransactionDialog : IDialogContentComponent<Transaction
 {
     [Inject] protected DataService dataService { get; set; } = null!;
     private EditContext _editContext = default!;
-    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
-    [Parameter] public Transaction Content { get; set; } = default!;
+    [CascadingParameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public Transaction Content { get; set; } = default!;
 
     private IQueryable<Rule> rules = new List<Rule>().AsQueryable();
     private string activeTabId = "rule-apply";

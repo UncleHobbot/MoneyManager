@@ -1,13 +1,11 @@
-﻿using Microsoft.AspNetCore.Components;
-
-namespace MoneyManager.Components;
+﻿namespace MoneyManager.Components;
 
 public partial class CategorySelector
 {
     [Inject] protected DataService dataService { get; set; } = null!;
 
-    [Parameter] public Category? Category { get; set; } = null!;
-    [Parameter] public EventCallback<Category> CategoryChanged { get; set; }
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public Category? Category { get; set; } = null!;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public EventCallback<Category> CategoryChanged { get; set; }
     
     private HashSet<CategoryTree> TreeCategories { get; set; } = [];
 

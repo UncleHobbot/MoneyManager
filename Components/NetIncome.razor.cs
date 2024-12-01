@@ -1,18 +1,19 @@
 ﻿using ApexCharts;
-using Microsoft.AspNetCore.Components;
 
 namespace MoneyManager.Components;
 
 public partial class NetIncome
 {
-    [Inject] private DataService dataService { get; set; }
-    [Parameter] public string ChartPeriod { get; set; } = "1";
-    [Parameter] public int Width { get; set; } = 0;
-    [Parameter] public int Height { get; set; } = 800;
-    [Parameter] public bool ShowCaption { get; set; } = true;
-    [Parameter] public bool ShowToolbar { get; set; } = true;
-    private ApexChart<BalanceChart> chart;
-    private ApexChartOptions<BalanceChart> options;
+    [Inject] private DataService dataService { get; set; } = null!;
+    
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public string ChartPeriod { get; set; } = "1";
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int Width { get; set; } = 0;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int Height { get; set; } = 800;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool ShowCaption { get; set; } = true;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool ShowToolbar { get; set; } = true;
+    
+    private ApexChart<BalanceChart> chart = null!;
+    private ApexChartOptions<BalanceChart> options = null!;
     private bool isLoading = true;
     private List<BalanceChart> DataChart { get; set; } = [];
 

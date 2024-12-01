@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-using MoneyManager.Model.Import;
+﻿using MoneyManager.Model.Import;
 
 namespace MoneyManager.Components;
 
@@ -7,8 +6,8 @@ public partial class ImportFileDialog : IDialogContentComponent<ImportFileParams
 {
     [Inject] private TransactionService TransactionService { get; set; }
 
-    [CascadingParameter] public FluentDialog Dialog { get; set; } = default!;
-    [Parameter] public ImportFileParams Content { get; set; } = default!;
+    [CascadingParameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public FluentDialog Dialog { get; set; } = default!;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public ImportFileParams Content { get; set; } = default!;
     private async Task CancelAsync() => await Dialog.CancelAsync();
     private int progress;
     private string Status;

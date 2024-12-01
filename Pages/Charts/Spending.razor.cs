@@ -1,5 +1,4 @@
 ﻿using ApexCharts;
-using Microsoft.AspNetCore.Components;
 
 namespace MoneyManager.Pages.Charts;
 
