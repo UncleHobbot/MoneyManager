@@ -4,13 +4,14 @@ namespace MoneyManager.Components;
 
 public partial class ImportFileDialog : IDialogContentComponent<ImportFileParams>
 {
-    [Inject] private TransactionService TransactionService { get; set; }
+    [Inject] private TransactionService TransactionService { get; set; } = null!;
 
-    [CascadingParameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public FluentDialog Dialog { get; set; } = default!;
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public ImportFileParams Content { get; set; } = default!;
+    [CascadingParameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public FluentDialog Dialog { get; set; } = null!;
+    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public ImportFileParams Content { get; set; } = null!;
+    
     private async Task CancelAsync() => await Dialog.CancelAsync();
     private int progress;
-    private string Status;
+    private string? Status;
     private bool IsComplete;
 
     private async Task Import()

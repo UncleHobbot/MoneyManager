@@ -60,7 +60,7 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
         return category;
     }
 
-    private async Task<Category> GetDefaultCategory(DataContext ctx) => await GetCategory("Uncategorized", ctx);
+    private async Task<Category?> GetDefaultCategory(DataContext ctx) => await GetCategory("Uncategorized", ctx);
 
     private bool IsTransactionExists(DateTime date, decimal amount, bool isDebit, string? originalDescription, Account? account, DataContext ctx, bool isDateFuzzy = false)
     {

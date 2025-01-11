@@ -12,3 +12,5 @@ global using MoneyManager.Helpers;
 global using MoneyManager.Model;
 global using MoneyManager.Model.Chart;
 global using MoneyManager.Services;
+
+global using Icons = Microsoft.FluentUI.AspNetCore.Components.Icons;

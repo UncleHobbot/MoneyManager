@@ -4,9 +4,9 @@ namespace MoneyManager.Pages;
 
 public partial class Transactions
 {
-    [Inject] private IDialogService DialogService { get; set; }
-    [Inject] DataService dataService { get; set; }
-    [Inject] IJSRuntime JSRuntime { get; set; }
+    [Inject] private IDialogService DialogService { get; set; } = null!;
+    [Inject] DataService dataService { get; set; } = null!;
+    [Inject] IJSRuntime JSRuntime { get; set; } = null!;
 
     [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool CanGoBack { get; set; } = false;
     [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool CanDeleteAll { get; set; } = false;

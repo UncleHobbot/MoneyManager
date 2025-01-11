@@ -41,7 +41,7 @@ public static class CategoryHelper
     public static List<string> CategoryIcons => Enum.GetNames(typeof(CategoryIconEnum)).ToList();
 
     public static Icon CategoryIcon(string? icon) => string.IsNullOrWhiteSpace(icon)
-        ? new Icons.Regular.Size20.BorderNone()
+        ? new  Icons.Regular.Size20.BorderNone()
         : CategoryIcon(Enum.TryParse(icon, out CategoryIconEnum categoryIcon) ? categoryIcon : CategoryIconEnum.Uncategorized);
 
     private static Icon CategoryIcon(CategoryIconEnum icon) => icon switch
