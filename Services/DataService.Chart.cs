@@ -34,14 +34,19 @@ public partial class DataService
 
         if (chartPeriod == "12") // last 12 months
             startDate = DateTime.Today.AddMonths(-12).StartOfMonth(Thread.CurrentThread.CurrentCulture);
-        else if (chartPeriod == "1") // this year
+        else if (chartPeriod == "y1") // this year
             startDate = new DateTime(DateTime.Today.Year, 1, 1);
-        else if (chartPeriod == "2") // last year
+        else if (chartPeriod == "y2") // last year
         {
             startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
             endDate = new DateTime(DateTime.Today.Year, 1, 1);
         }
-        else if (chartPeriod == "3") // last + this year
+        else if (chartPeriod == "y3") // 2 years ago
+        {
+            startDate = new DateTime(DateTime.Today.Year - 2, 1, 1);
+            endDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
+        }
+        else if (chartPeriod == "y12") // last + this year
             startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
         else if (chartPeriod == "m1") // This month
             startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
@@ -94,7 +99,7 @@ public partial class DataService
 
         var thisMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         var lastMonthStart = thisMonthStart.AddDays(-1);
-        lastMonthStart= new DateTime(lastMonthStart.Year, lastMonthStart.Month, 1);
+        lastMonthStart = new DateTime(lastMonthStart.Year, lastMonthStart.Month, 1);
 
         var catIncome = await GetCategoryByName("Income");
         var trans = (await ChartGetTransactions(lastMonthStart, DateTime.Today))

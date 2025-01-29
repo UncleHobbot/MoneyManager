@@ -9,10 +9,11 @@
     <FluentSelect TOption="string" @bind-Value="@ChartPeriod" Label="Select period" SelectedOptionChanged="UpdateChart">
         <FluentOption Value="m1">This month</FluentOption>
         <FluentOption Value="m2">Last month</FluentOption>
-        <FluentOption Value="1">This year</FluentOption>
-        <FluentOption Value="2">Last year</FluentOption>
+        <FluentOption Value="y1">This year</FluentOption>
+        <FluentOption Value="y2">Last year</FluentOption>
+        <FluentOption Value="y3">Two years ago</FluentOption>
         <FluentOption Value="12">Last 12 months</FluentOption>
-        <FluentOption Value="3">This + Last year</FluentOption>
+        <FluentOption Value="y12">This + Last year</FluentOption>
     </FluentSelect>
 </FluentStack>
 
