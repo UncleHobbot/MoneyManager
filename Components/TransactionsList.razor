@@ -28,7 +28,7 @@
             </TemplateColumn>
 
             @*Column 3 - Amount*@
-            <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amount"/>
+            <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Sortable="true" Title="Amount"/>
 
             @*Column 4 - Category*@
             <TemplateColumn Align="Align.Center" Title="@("Category" + (activeFilterCategory != null ? $" ({activeFilterCategory.Name})" : ""))" Sortable="true" SortBy="@categorySort">

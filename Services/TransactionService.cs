@@ -1,6 +1,9 @@
 ﻿namespace MoneyManager.Services;
 
-public partial class TransactionService(IDbContextFactory<DataContext> contextFactory, DataService dataService, DBService dbService)
+public partial class TransactionService(
+    IDbContextFactory<DataContext> contextFactory,
+    DataService dataService,
+    DBService dbService)
 {
     private Dictionary<string, Account> Accounts { get; set; } = [];
     private Dictionary<string, Category> Categories { get; set; } = [];
@@ -9,17 +12,27 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
     {
         if (string.IsNullOrWhiteSpace(name))
             return null;
-        
+
         if (Accounts.TryGetValue(name, out var existingAccount))
             return existingAccount;
 
         var accountInDB = await ctx.Accounts.FirstOrDefaultAsync(c => c.Name == name
                                                                       || c.Number == name.Replace("-", "")
-                                                                      || (c.AlternativeName1 != null && c.AlternativeName1.ToUpper() == name.ToUpper())
-                                                                      || (c.AlternativeName2 != null && c.AlternativeName2.ToUpper() == name.ToUpper())
-                                                                      || (c.AlternativeName3 != null && c.AlternativeName3.ToUpper() == name.ToUpper())
-                                                                      || (c.AlternativeName4 != null && c.AlternativeName4.ToUpper() == name.ToUpper())
-                                                                      || (c.AlternativeName5 != null && c.AlternativeName5.ToUpper() == name.ToUpper()));
+                                                                      || (c.AlternativeName1 != null &&
+                                                                          c.AlternativeName1.ToUpper() ==
+                                                                          name.ToUpper())
+                                                                      || (c.AlternativeName2 != null &&
+                                                                          c.AlternativeName2.ToUpper() ==
+                                                                          name.ToUpper())
+                                                                      || (c.AlternativeName3 != null &&
+                                                                          c.AlternativeName3.ToUpper() ==
+                                                                          name.ToUpper())
+                                                                      || (c.AlternativeName4 != null &&
+                                                                          c.AlternativeName4.ToUpper() ==
+                                                                          name.ToUpper())
+                                                                      || (c.AlternativeName5 != null &&
+                                                                          c.AlternativeName5.ToUpper() ==
+                                                                          name.ToUpper()));
         if (accountInDB != null)
         {
             Accounts.Add(name, accountInDB);
@@ -42,7 +55,7 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
     {
         if (string.IsNullOrWhiteSpace(name))
             return null;
-        
+
         if (Categories.TryGetValue(name, out var existingCategory))
             return existingCategory;
 
@@ -62,18 +75,21 @@ public partial class TransactionService(IDbContextFactory<DataContext> contextFa
 
     private async Task<Category?> GetDefaultCategory(DataContext ctx) => await GetCategory("Uncategorized", ctx);
 
-    private bool IsTransactionExists(DateTime date, decimal amount, bool isDebit, string? originalDescription, Account? account, DataContext ctx, bool isDateFuzzy = false)
+    private bool IsTransactionExists(DateTime date, decimal amount, bool isDebit, string? originalDescription,
+        Account? account, DataContext ctx, bool isDateFuzzy = false)
     {
         if (isDateFuzzy)
         {
             var lowDate = date.AddDays(-5);
             var highDate = date.AddDays(5);
-            return ctx.Transactions.Any(t => (t.Date >= lowDate && t.Date <= highDate)
-                                             && t.Amount == amount && t.IsDebit == isDebit
-                                             && t.Account.Id == account.Id && (t.OriginalDescription.Trim() == originalDescription.Trim() || originalDescription.Contains(t.OriginalDescription.Trim())));
+            return ctx.Transactions.Any(t => t.Date >= lowDate && t.Date <= highDate
+                                                               && t.Amount == amount && t.IsDebit == isDebit
+                                                               && t.Account.Id == account.Id && (t.OriginalDescription.Trim() == originalDescription.Trim() || originalDescription.Contains(t.OriginalDescription.Trim())));
         }
 
         return ctx.Transactions.Any(t => t.Date == date && t.Amount == amount && t.IsDebit == isDebit
-                                         && t.Account.Id == account.Id && (t.OriginalDescription.Trim() == originalDescription.Trim() || originalDescription.Contains(t.OriginalDescription.Trim())));
+                                         && t.Account.Id == account.Id &&
+                                         (t.OriginalDescription.Trim() == originalDescription.Trim() ||
+                                          originalDescription.Contains(t.OriginalDescription.Trim())));
     }
 }

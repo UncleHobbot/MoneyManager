@@ -11,7 +11,7 @@ public class FolderPicker
         return result == CommonFileDialogResult.Ok ? dialog.FileName : "";
     }
 
-    public string DisplayFilePicker(string filterName, string filterExt)
+    public string DisplayFilePicker(string? filterName, string? filterExt)
     {
         var dialog = new CommonOpenFileDialog { IsFolderPicker = false };
         dialog.Filters.Add(new CommonFileDialogFilter { DisplayName = filterName, Extensions = { filterExt } });

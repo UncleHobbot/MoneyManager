@@ -12,8 +12,8 @@ public class DBService(IDbContextFactory<DataContext> contextFactory, SettingsSe
         if (string.IsNullOrEmpty(settings.BackupPath))
             backupPath = Path.Combine(Application.UserAppDataPath, "Backup");
 
-        using var location = new SqliteConnection(ctx.Database.GetConnectionString());
-        using var destination = new SqliteConnection(string.Format(@$"Data Source={backupPath}\MoneyManagerBackup_{DateTime.Now:yyyyMMddHHmmss}.db"));
+        await using var location = new SqliteConnection(ctx.Database.GetConnectionString());
+        await using var destination = new SqliteConnection(string.Format(@$"Data Source={backupPath}\MoneyManagerBackup_{DateTime.Now:yyyyMMddHHmmss}.db"));
         location.Open();
         destination.Open();
         location.BackupDatabase(destination);

@@ -34,8 +34,8 @@ public partial class Home
 
     private void SelectImportFile()
     {
-        string filterName = null;
-        string filterExt = null;
+        string? filterName = null;
+        string? filterExt = null;
         if (importFileType == ImportTypeEnum.Mint_CSV.ToString() || importFileType == ImportTypeEnum.RBC_CSV.ToString() || importFileType == ImportTypeEnum.CIBC_CSV.ToString())
         {
             filterName = "CSV file";

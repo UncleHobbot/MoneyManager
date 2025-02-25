@@ -5,34 +5,72 @@ public partial class TransactionsList
     [Inject] private IDialogService DialogService { get; set; } = null!;
     [Inject] private DataService dataService { get; set; } = null!;
 
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public TransactionListModeEnum Mode { get; set; } = TransactionListModeEnum.Full;
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int HeightVH { get; set; } = 80;
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int HeightPx { get; set; }
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public string ChartPeriod { get; set; } = "a";
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public DateTime? DateStart { get; set; }
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public DateTime? DateEnd { get; set; }
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int PageSize { get; set; } = 19;
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int? Category { get; set; }
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool CategoryFilters { get; set; } = true;
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool OnlyVisibleAccounts { get; set; }
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool? RuleApplied { get; set; }
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public bool EditEnable { get; set; }
-    [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public EventCallback Changed { get; set; }
-    
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public TransactionListModeEnum Mode { get; set; } = TransactionListModeEnum.Full;
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int HeightVH { get; set; } = 80;
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int HeightPx { get; set; }
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public string ChartPeriod { get; set; } = "a";
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public DateTime? DateStart { get; set; }
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public DateTime? DateEnd { get; set; }
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int PageSize { get; set; } = 19;
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int? Category { get; set; }
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool CategoryFilters { get; set; } = true;
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool OnlyVisibleAccounts { get; set; }
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool? RuleApplied { get; set; }
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool EditEnable { get; set; }
+
+    [Parameter]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public EventCallback Changed { get; set; }
+
     private readonly PaginationState pagination = new();
     private string gridStyle = string.Empty;
-    private string gridTemplateColumns = "100px 200px 100px 300px 500px";
-    private GridSort<Transaction> accountSort = GridSort<Transaction>.ByAscending(x => x.Account.Name);
-    private GridSort<Transaction> amountSort = GridSort<Transaction>.ByAscending(x => x.Amount);
+    private string gridTemplateColumns = "100px 200px 150px 300px 500px";
+    private GridSort<TransactionDto> accountSort = GridSort<TransactionDto>.ByAscending(x => x.Account.Name);
+    private GridSort<TransactionDto> amountSort = GridSort<TransactionDto>.ByAscending(x => x.Amount);
 
-    private GridSort<Transaction> categorySort = GridSort<Transaction>
+    private GridSort<TransactionDto> categorySort = GridSort<TransactionDto>
         .ByAscending(x => x.Category!.Parent == null ? x.Category.Name : x.Category.Parent.Name)
         .ThenAscending(x => x.Category!.Name);
 
-    private GridSort<Transaction> ruleSort = GridSort<Transaction>.ByAscending(x => x.IsRuleApplied);
+    private GridSort<TransactionDto> ruleSort = GridSort<TransactionDto>.ByAscending(x => x.IsRuleApplied);
     private IQueryable<Transaction> allTransactions = Array.Empty<Transaction>().AsQueryable();
 
-    private IQueryable<Transaction> transactions
+    private IQueryable<TransactionDto> transactions
     {
         get
         {
@@ -41,10 +79,14 @@ public partial class TransactionsList
             if (DateStart.HasValue) result = result.Where(x => x.Date >= DateStart);
             if (DateEnd.HasValue) result = result.Where(x => x.Date < DateEnd);
             // custom category filter
-            result = result.Where(x => x.Category != null && (filterCategory == 0 || x.Category.Id == filterCategory || (x.Category.Parent != null && x.Category.Parent.Id == filterCategory)));
+            result = result.Where(x => x.Category != null && (filterCategory == 0 || x.Category.Id == filterCategory ||
+                                                              (x.Category.Parent != null &&
+                                                               x.Category.Parent.Id == filterCategory)));
             // external category filter   
             if (Category.HasValue)
-                result = result.Where(x => x.Category != null && (x.Category.Id == Category || (x.Category.Parent != null && x.Category.Parent.Id == Category)));
+                result = result.Where(x => x.Category != null && (x.Category.Id == Category ||
+                                                                  (x.Category.Parent != null &&
+                                                                   x.Category.Parent.Id == Category)));
             // custom account filter
             result = result.Where(x => filterAccount == 0 || x.Account.Id == filterAccount);
             // external account filter
@@ -56,8 +98,10 @@ public partial class TransactionsList
                 result = result.Where(x => x.Category != null && uCategory != null && x.Category.Id == uCategory.Id);
             }
 
-            result = result.Where(x => string.IsNullOrWhiteSpace(filterDescription) || x.Description.ToUpper().Contains(filterDescription.ToUpper()));
-            return result;
+            result = result.Where(x =>
+                string.IsNullOrWhiteSpace(filterDescription) ||
+                x.Description.ToUpper().Contains(filterDescription.ToUpper()));
+            return result.ToList().Select(x => x.ToDto()).AsQueryable();
         }
     }
 
@@ -91,10 +135,10 @@ public partial class TransactionsList
 
         return base.OnParametersSetAsync();
     }
-    
-     public void Refresh() => StateHasChanged();
 
-     private void FilterByCategory(Transaction transaction, bool isSet)
+    public void Refresh() => StateHasChanged();
+
+    private void FilterByCategory(TransactionDto transaction, bool isSet)
     {
         if (transaction.Category != null)
         {
@@ -103,7 +147,8 @@ public partial class TransactionsList
         }
     }
 
-    private void FilterByAccount(Transaction transaction, bool isSet) => filterAccount = isSet ? transaction.Account.Id : 0;
+    private void FilterByAccount(TransactionDto transaction, bool isSet) =>
+        filterAccount = isSet ? transaction.Account.Id : 0;
 
     private void FilterByDescription(ChangeEventArgs args)
     {
@@ -117,8 +162,9 @@ public partial class TransactionsList
             filterDescription = string.Empty;
     }
 
-    private async Task EditTransaction(Transaction transaction)
+    private async Task EditTransaction(TransactionDto transactionDTO)
     {
+        var transaction = transactionDTO.Transaction;
         var dialog = await DialogService.ShowDialogAsync<EditTransactionDialog>(transaction, new DialogParameters
         {
             Height = "700px",
