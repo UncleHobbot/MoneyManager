@@ -10,7 +10,7 @@ public partial class Home
     [Inject] private TransactionService TransactionService { get; set; } = null!;
     [Inject] private DBService DBService { get; set; } = null!;
 
-    private readonly string importFileType = ImportTypeEnum.Mint_CSV.ToString();
+    private readonly string importFileType = nameof(ImportTypeEnum.Mint_CSV);
     private string importFile = null!;
     private bool isCreateAccounts;
     private string incomeChartPeriod = "1";
@@ -36,7 +36,7 @@ public partial class Home
     {
         string? filterName = null;
         string? filterExt = null;
-        if (importFileType == ImportTypeEnum.Mint_CSV.ToString() || importFileType == ImportTypeEnum.RBC_CSV.ToString() || importFileType == ImportTypeEnum.CIBC_CSV.ToString())
+        if (importFileType == nameof(ImportTypeEnum.Mint_CSV) || importFileType == nameof(ImportTypeEnum.RBC_CSV) || importFileType == nameof(ImportTypeEnum.CIBC_CSV))
         {
             filterName = "CSV file";
             filterExt = "csv";

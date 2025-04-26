@@ -89,7 +89,8 @@
     {
         <FluentDataGrid Items="@transactions" GridTemplateColumns="1fr 6fr 1fr" Style="@gridStyle" Virtualize="true" ItemSize="54">
             <ChildContent>
-            <PropertyColumn Property="x => x.Date" Format="MMM dd" Align="Align.Center" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending"/>
+                <PropertyColumn Property="x => x.Date" Format="MMM dd" Align="Align.Center" 
+                                Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending"/>
             <TemplateColumn Align="Align.Start">
                 <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Width="100%" HorizontalGap="10">
                     <FluentIcon Value="@(context.Category.objIcon)"/>
