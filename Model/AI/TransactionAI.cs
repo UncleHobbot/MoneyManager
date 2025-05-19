@@ -8,5 +8,5 @@ public class TransactionAI
     public string Description { get; set; } = null!;
     public decimal Amount { get; set; }
     public string Category { get; set; } = null!;
-    public string ParentCategory { get; set; } = null!;
+    public string SubCategory { get; set; } = null!;
 }

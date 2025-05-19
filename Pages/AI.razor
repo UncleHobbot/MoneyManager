@@ -1,0 +1,55 @@
+﻿@page "/ai"
+@using Microsoft.FluentUI.AspNetCore.Components
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20"
+             Style="margin: 10px 0;">
+    <FluentLabel Typo="Typography.H3"> AI Analysis</FluentLabel>
+
+    <FluentSelect TOption="string" @bind-Value="@ChartPeriod" Label="Select period">
+        <FluentOption Value="m1">This month</FluentOption>
+        <FluentOption Value="m2">Last month</FluentOption>
+        <FluentOption Value="y1">This year</FluentOption>
+        <FluentOption Value="y2">Last year</FluentOption>
+        <FluentOption Value="y3">Two years ago</FluentOption>
+        <FluentOption Value="12">Last 12 months</FluentOption>
+        <FluentOption Value="y12">This + Last year</FluentOption>
+    </FluentSelect>
+
+</FluentStack>
+
+<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Top" HorizontalGap="20"
+             Style="margin: 10px 0;">
+    <FluentNavMenu Id="main-menu" Width="400" Collapsible="false" Expanded="true">
+        <FluentNavGroup Expanded="true">
+            <TitleTemplate>
+                <FluentLabel Typo="Typography.H5"> Spending Analysis</FluentLabel>
+            </TitleTemplate>
+            <ChildContent>
+                <FluentNavLink OnClick="SpendingGeneral">General Analysis</FluentNavLink>
+                <FluentNavLink OnClick="SpendingBudget">Create budget</FluentNavLink>
+                <FluentNavLink OnClick="SpendingTrends">Monthly spending trends</FluentNavLink>
+            </ChildContent>
+        </FluentNavGroup>
+    </FluentNavMenu>
+
+    <FluentStack Orientation="Orientation.Vertical" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20"
+                 Style="margin: 10px 0;">
+        @if (IsButtonVisible)
+        {
+            <FluentButton Appearance="Appearance.Accent" OnClick="@Action"> Run analysis</FluentButton>
+        }
+        
+        @if (IsRunning)
+        {
+            <FluentProgressRing Width="128px"/>
+        }
+        else
+        {
+            <span>@((MarkupString)ResultTokens)</span>
+            @((MarkupString)ResultHTML)
+        }
+    </FluentStack>
+
+</FluentStack>
+
+
