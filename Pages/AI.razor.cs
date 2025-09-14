@@ -6,7 +6,7 @@ namespace MoneyManager.Pages;
 public partial class AI : ComponentBase
 {
     [Inject] private AIService aiService { get; set; } = null!;
-    private string ChartPeriod { get; set; } = "m1";
+    private string ChartPeriod { get; set; } = "y1";
     private string? AnalysisType { get; set; }
     private string? Result { get; set; }
     private string? ResultHTML { get; set; }
@@ -23,7 +23,8 @@ public partial class AI : ComponentBase
             var result = await aiService.GetAnalysis(ChartPeriod, AnalysisType);
             Result = result.Result;
             ResultTokens = $"Used tokens: <b>{result.TotalTokens:n0}</b>";
-            ResultHTML = Markdown.ToHtml(Result);
+            var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+            ResultHTML = Markdown.ToHtml(Result, pipeline);
             IsRunning = false;
             StateHasChanged();
         }

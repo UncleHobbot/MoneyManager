@@ -59,11 +59,11 @@ public partial class TransactionsList
 
     private readonly PaginationState pagination = new();
     private string gridStyle = string.Empty;
-    private string gridTemplateColumns = "100px 200px 150px 300px 500px";
-    private GridSort<TransactionDto> accountSort = GridSort<TransactionDto>.ByAscending(x => x.Account.Name);
+    private readonly string gridTemplateColumns = "120px 200px 150px 300px 500px";
+    private readonly GridSort<TransactionDto> accountSort = GridSort<TransactionDto>.ByAscending(x => x.Account.Name);
     private GridSort<TransactionDto> amountSort = GridSort<TransactionDto>.ByAscending(x => x.Amount);
 
-    private GridSort<TransactionDto> categorySort = GridSort<TransactionDto>
+    private readonly GridSort<TransactionDto> categorySort = GridSort<TransactionDto>
         .ByAscending(x => x.Category!.Parent == null ? x.Category.Name : x.Category.Parent.Name)
         .ThenAscending(x => x.Category!.Name);
 
@@ -144,6 +144,7 @@ public partial class TransactionsList
         {
             filterCategory = isSet ? transaction.Category.Id : 0;
             activeFilterCategory = isSet ? transaction.Category : null;
+            pagination.SetCurrentPageIndexAsync(0);
         }
     }
 
@@ -153,13 +154,19 @@ public partial class TransactionsList
     private void FilterByDescription(ChangeEventArgs args)
     {
         if (args.Value is string value)
+        {
             filterDescription = value;
+            pagination.SetCurrentPageIndexAsync(0);
+        }
     }
 
     private void FilterByDescriptionClear()
     {
         if (string.IsNullOrWhiteSpace(filterDescription))
+        {
             filterDescription = string.Empty;
+            pagination.SetCurrentPageIndexAsync(0);
+        }
     }
 
     private async Task EditTransaction(TransactionDto transactionDTO)

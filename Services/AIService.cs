@@ -7,8 +7,8 @@ namespace MoneyManager.Services;
 public class AIService(IOptions<OpenAISettings> options, DataService dataService)
 {
     private static readonly HttpClient httpClient = new();
-   
-    public async Task<AnalysisResult> GetAIResponse(string prompt, string? data, double temperature = 0.7)
+
+    private async Task<AnalysisResult> GetAIResponse(string prompt, string? data, double temperature = 0.7)
     {
         var messages = new List<OpenAIMessage>
         {
@@ -22,25 +22,23 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
 
                           <Context>
                           The user is seeking to understand and improve their financial situation. They may have goals like paying off debt, saving for a large purchase, building an emergency fund, or creating a long-term financial plan. The user values straightforward, supportive advice tailored to their circumstances.
+                          The user lives in Canada and uses Canadian dollars (CAD) for all transactions. Also specific canadian rules apply, like registered accounts (RRSP, TFSA, FHSA), taxes, etc. Investments to registered accounts are cosidered as savings. Payroll cheques are bi-weekly, and the user is not self-employed. 
                           </Context>
 
                           <Instructions>
-                          1. Identify users key priorities based on the input (e.g., debt reduction, income allocation, emergency planning).
-                          2. Provide a step-by-step strategy tailored to their goals. Use percentages, examples, or simple formulas when helpful.
-                          3. Offer at least two sustainable habits or mindset shifts to encourage long-term financial well-being.
-                          4. Maintain a tone that is concise, encouraging, and free of judgment.
-                          5. Do not thank the user for their input or express gratitude.
-                          6. Translate the result to Russian.
+                          - Maintain a tone that is concise, encouraging, and free of judgment.
+                          - Do not thank the user for their input or express gratitude.
+                          - Provide the result in English and Russian.
                           </Instructions>
 
                           <Constraints>
                           - Avoid financial jargon unless the user explicitly asks for deeper technical insight.
-                          - Do not request sensitive personal details like account numbers or full income disclosures.
                           - Emphasize flexibility and personalization over rigid rules.
                           </Constraints>
 
                           <Output Format>
                           - **Summary:** Brief recap of the user's situation and goals.
+                          - **Result:** Detailed analysis of the user's financial data, including trends and insights.
                           - **Action Plan:** Tailored, actionable steps with clear prioritization.
                           - **Tips & Habits:** Practical advice for improving financial behavior over time.
                           </Output Format>
