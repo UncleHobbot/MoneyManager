@@ -57,6 +57,8 @@ public partial class DataService
         }
         else if (chartPeriod == "m1+2") // This +last months
             startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+        else if (chartPeriod == "m1+3") // This + 2 last months
+            startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-2);
         else if (chartPeriod is "w" or "w1") // Last 7 days
             startDate = DateTime.Today.AddDays(-7);
         else if (chartPeriod == "w2") // Last 14 days
