@@ -61,13 +61,13 @@ public partial class TransactionsList
     private string gridStyle = string.Empty;
     private readonly string gridTemplateColumns = "120px 200px 150px 300px 500px";
     private readonly GridSort<TransactionDto> accountSort = GridSort<TransactionDto>.ByAscending(x => x.Account.Name);
-    private GridSort<TransactionDto> amountSort = GridSort<TransactionDto>.ByAscending(x => x.Amount);
+    //private GridSort<TransactionDto> amountSort = GridSort<TransactionDto>.ByAscending(x => x.Amount);
 
     private readonly GridSort<TransactionDto> categorySort = GridSort<TransactionDto>
         .ByAscending(x => x.Category!.Parent == null ? x.Category.Name : x.Category.Parent.Name)
         .ThenAscending(x => x.Category!.Name);
 
-    private GridSort<TransactionDto> ruleSort = GridSort<TransactionDto>.ByAscending(x => x.IsRuleApplied);
+    private readonly GridSort<TransactionDto> ruleSort = GridSort<TransactionDto>.ByAscending(x => x.IsRuleApplied);
     private IQueryable<Transaction> allTransactions = Array.Empty<Transaction>().AsQueryable();
 
     private IQueryable<TransactionDto> transactions
@@ -105,9 +105,9 @@ public partial class TransactionsList
         }
     }
 
-    private int filterCategory = 0;
+    private int filterCategory;
     private Category? activeFilterCategory;
-    private int filterAccount = 0;
+    private int filterAccount;
     private string filterDescription = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -151,23 +151,11 @@ public partial class TransactionsList
     private void FilterByAccount(TransactionDto transaction, bool isSet) =>
         filterAccount = isSet ? transaction.Account.Id : 0;
 
-    private void FilterByDescription(ChangeEventArgs args)
+    private void FilterByDescription()
     {
-        if (args.Value is string value)
-        {
-            filterDescription = value;
-            pagination.SetCurrentPageIndexAsync(0);
-        }
+        pagination.SetCurrentPageIndexAsync(0);
     }
 
-    private void FilterByDescriptionClear()
-    {
-        if (string.IsNullOrWhiteSpace(filterDescription))
-        {
-            filterDescription = string.Empty;
-            pagination.SetCurrentPageIndexAsync(0);
-        }
-    }
 
     private async Task EditTransaction(TransactionDto transactionDTO)
     {

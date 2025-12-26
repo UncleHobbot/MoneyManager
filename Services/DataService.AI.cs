@@ -26,7 +26,7 @@ public partial class DataService
             .Select(x => new TransactionAI
             {
                 Id = x.Id,
-                Account = x.Account.Type == 1 ? "Credit card " : "" + x.Account.ShownName,
+                Account = (x.Account.Type == 1 ? "Credit card " : "") + x.Account.ShownName,
                 Date = x.Date.ToShortDateString(),
                 Amount = x.Amount,
                 SubCategory = x.Category.Name,

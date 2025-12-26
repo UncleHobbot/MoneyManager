@@ -22,7 +22,7 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
 
                           <Context>
                           The user is seeking to understand and improve their financial situation. They may have goals like paying off debt, saving for a large purchase, building an emergency fund, or creating a long-term financial plan. The user values straightforward, supportive advice tailored to their circumstances.
-                          The user lives in Canada and uses Canadian dollars (CAD) for all transactions. Also specific canadian rules apply, like registered accounts (RRSP, TFSA, FHSA), taxes, etc. Investments to registered accounts are cosidered as savings. Payroll cheques are bi-weekly, and the user is not self-employed. 
+                          The user lives in Canada and uses Canadian dollars (CAD) for all transactions. Also specific canadian rules apply, like registered saving accounts (RRSP, TFSA, FHSA), taxes, etc. Investments to registered accounts are cosidered as savings. Payroll cheques are bi-weekly, and the user is not self-employed. 
                           </Context>
 
                           <Instructions>
@@ -102,7 +102,7 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
         {
             "SpendingGeneral" => "Analyze my transactions. What are my top spending categories? Give me a summary of my spending habits.",
             "SpendingBudget" => "Create a 50/30/20 budget based on my average monthly income and expenses",
-            "SpendingTrends" => "Compare my monthly spending trends. Am I spending more or less month-over-month?",
+            "SpendingTrends" => "Compare my monthly spending trends. Am I spending more or less month-over-month? Also produce a clean table by month (total spending + baseline vs irregular)",
             _ => string.Empty
         };
 
