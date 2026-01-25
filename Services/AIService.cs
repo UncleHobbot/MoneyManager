@@ -4,23 +4,127 @@ using MoneyManager.Model.AI;
 
 namespace MoneyManager.Services;
 
+/// <summary>
+/// Contains constants and methods for managing AI analysis prompts and temperature settings.
+/// </summary>
+/// <remarks>
+/// This class provides:
+/// - Constants for all available analysis types
+/// - A method to retrieve the appropriate prompt for each analysis type
+/// - A method to retrieve the appropriate temperature (creativity) setting for each analysis type
+/// 
+/// The prompts are tailored to Canadian financial context (CAD, RRSP, TFSA, FHSA, taxes).
+/// Prompts are bilingual (English and Russian) for financial advisor output.
+/// </remarks>
 public static class AnalysisTypePrompts
 {
+    /// <summary>
+    /// General spending analysis - comprehensive overview of spending habits.
+    /// </summary>
     public const string SpendingGeneral = "SpendingGeneral";
+
+    /// <summary>
+    /// Budget analysis - compares actual spending to recommended budgeting methods (50/30/20, zero-based, envelope).
+    /// </summary>
     public const string SpendingBudget = "SpendingBudget";
+
+    /// <summary>
+    /// Spending trends analysis - month-over-month and year-over-year comparisons.
+    /// </summary>
     public const string SpendingTrends = "SpendingTrends";
+
+    /// <summary>
+    /// Debt analysis - evaluates debt situation and recommends payoff strategies.
+    /// </summary>
     public const string DebtAnalysis = "DebtAnalysis";
+
+    /// <summary>
+    /// Savings and emergency fund analysis - evaluates emergency fund position and savings rate.
+    /// </summary>
     public const string SavingsEmergencyFund = "SavingsEmergencyFund";
+
+    /// <summary>
+    /// Cash flow forecast - predicts cash flow over the next 6 months.
+    /// </summary>
     public const string CashFlowForecast = "CashFlowForecast";
+
+    /// <summary>
+    /// Goal-based planning - helps create savings plans for specific goals (car, house, vacation).
+    /// </summary>
     public const string GoalBasedPlanning = "GoalBasedPlanning";
+
+    /// <summary>
+    /// Recurring income analysis - analyzes income patterns and sources.
+    /// </summary>
     public const string RecurringIncome = "RecurringIncome";
+
+    /// <summary>
+    /// Behavioral insights - analyzes spending patterns related to behavior and psychology.
+    /// </summary>
     public const string BehavioralInsights = "BehavioralInsights";
+
+    /// <summary>
+    /// Subscriptions optimization - identifies and analyzes all subscription payments.
+    /// </summary>
     public const string SubscriptionsOptimization = "SubscriptionsOptimization";
+
+    /// <summary>
+    /// Anomaly detection - identifies unusual, duplicate, or suspicious transactions.
+    /// </summary>
     public const string AnomalyDetection = "AnomalyDetection";
+
+    /// <summary>
+    /// Tax efficiency analysis - Canadian tax-deductible expenses and registered account recommendations.
+    /// </summary>
     public const string TaxEfficiency = "TaxEfficiency";
+
+    /// <summary>
+    /// Registered accounts analysis - RRSP, TFSA, FHSA optimization and allocation.
+    /// </summary>
     public const string RegisteredAccounts = "RegisteredAccounts";
+
+    /// <summary>
+    /// Seasonal analysis - identifies spending patterns across seasons and holidays.
+    /// </summary>
     public const string SeasonalAnalysis = "SeasonalAnalysis";
 
+    /// <summary>
+    /// Retrieves the analysis prompt for the specified analysis type.
+    /// </summary>
+    /// <param name="analysisType">The type of analysis to get the prompt for.</param>
+    /// <returns>
+    /// The analysis prompt string, or an empty string if the analysis type is not recognized.
+    /// </returns>
+    /// <remarks>
+    /// Each prompt is tailored to provide specific financial guidance:
+    /// 
+    /// **General Prompts** (Temperature 0.7 - More creative):
+    /// - SpendingGeneral: Top categories, outliers, daily/weekly averages
+    /// - SpendingTrends: Month-over-month, year-over-year comparisons
+    /// - BehavioralInsights: Weekend/weekday patterns, trigger events
+    /// - SubscriptionsOptimization: Subscription review and savings
+    /// 
+    /// **Moderate Prompts** (Temperature 0.5 - Balanced):
+    /// - SpendingBudget: 50/30/20 method, budget recommendations
+    /// - SavingsEmergencyFund: Emergency fund target and progress
+    /// - GoalBasedPlanning: Savings timelines and account allocation
+    /// - TaxEfficiency: Canadian tax deductions and registered accounts
+    /// - RegisteredAccounts: RRSP vs TFSA optimization
+    /// 
+    /// **Precise Prompts** (Temperature 0.3 - More deterministic):
+    /// - DebtAnalysis: Avalanche vs snowball method, payoff timeline
+    /// - CashFlowForecast: 6-month prediction, cash flow gaps
+    /// - AnomalyDetection: Unusual transactions, duplicates, spikes
+    /// - RecurringIncome: Income source identification and irregularity
+    /// - SeasonalAnalysis: Seasonal patterns and holiday spending
+    /// 
+    /// All prompts include specific requirements for:
+    /// - Canadian financial context (RRSP, TFSA, FHSA)
+    /// - Bilingual output (English and Russian)
+    /// - Specific output format (Summary, Analysis, Insights, Action Plan, Tips)
+    /// - Tables for structured data
+    /// - Bold for key figures
+    /// </remarks>
     public static string GetPrompt(string analysisType)
     {
         return analysisType switch
@@ -154,6 +258,39 @@ public static class AnalysisTypePrompts
         };
     }
 
+    /// <summary>
+    /// Retrieves the temperature (creativity) setting for the specified analysis type.
+    /// </summary>
+    /// <param name="analysisType">The type of analysis to get the temperature for.</param>
+    /// <returns>
+    /// A temperature value between 0.0 and 1.0:
+    /// - 0.3: Low creativity (more deterministic, precise calculations)
+    /// - 0.5: Medium creativity (balanced recommendations)
+    /// - 0.7: High creativity (more varied, exploratory insights)
+    /// </returns>
+    /// <remarks>
+    /// Temperature controls the randomness of the AI's responses:
+    /// 
+    /// **Low Temperature (0.3)**: Used for analyses requiring precision and factual accuracy:
+    /// - DebtAnalysis: Needs exact calculations for payoff timeline and interest
+    /// - CashFlowForecast: Needs accurate predictions based on historical data
+    /// - AnomalyDetection: Needs precise identification of unusual transactions
+    /// - RecurringIncome: Needs accurate income pattern analysis
+    /// - SeasonalAnalysis: Needs accurate seasonal pattern identification
+    /// 
+    /// **Medium Temperature (0.5)**: Used for analyses requiring balanced recommendations:
+    /// - SpendingBudget: Needs creative but practical budgeting suggestions
+    /// - SavingsEmergencyFund: Needs tailored savings recommendations
+    /// - GoalBasedPlanning: Needs creative goal-setting strategies
+    /// - TaxEfficiency: Needs strategic tax planning recommendations
+    /// - RegisteredAccounts: Needs balanced account allocation advice
+    /// 
+    /// **High Temperature (0.7)**: Used for analyses requiring creative insights and exploration:
+    /// - SpendingGeneral: Needs varied perspectives on spending patterns
+    /// - SpendingTrends: Needs creative trend identification
+    /// - BehavioralInsights: Needs nuanced behavioral analysis
+    /// - SubscriptionsOptimization: Needs creative optimization strategies
+    /// </remarks>
     public static double GetTemperature(string analysisType)
     {
         return analysisType switch
@@ -166,10 +303,74 @@ public static class AnalysisTypePrompts
     }
 }
 
+/// <summary>
+/// Provides AI-powered financial analysis using OpenAI's API.
+/// </summary>
+/// <remarks>
+/// This service:
+/// - Integrates with OpenAI's chat completion API
+/// - Sends transaction data as CSV along with analysis prompts
+/// - Returns bilingual (English and Russian) financial analysis
+/// - Manages API requests, responses, and error handling
+/// - Uses configured temperature settings per analysis type
+/// 
+/// The service uses a certified financial advisor persona with:
+/// - Empathetic, non-judgmental tone
+/// - Canadian financial context (CAD, RRSP, TFSA, FHSA, taxes)
+/// - Structured output format with sections
+/// - Theory of Mind for emotional awareness
+/// - Strategic Chain-of-Thought reasoning
+/// 
+/// Thread Safety: This service uses a static HttpClient which is thread-safe.
+/// Each analysis call is independent and can run concurrently.
+/// 
+/// Dependencies: Requires OpenAISettings to be configured with ApiKey, ApiUrl, and Model.
+/// </remarks>
 public class AIService(IOptions<OpenAISettings> options, DataService dataService)
 {
+    /// <summary>
+    /// The static HTTP client used for making API requests to OpenAI.
+    /// </summary>
+    /// <remarks>
+    /// This is a static client reused across all instances to improve performance and avoid socket exhaustion.
+    /// The client's headers are cleared and reset for each request.
+    /// </remarks>
     private static readonly HttpClient httpClient = new();
 
+    /// <summary>
+    /// Sends a request to the OpenAI API for financial analysis.
+    /// </summary>
+    /// <param name="prompt">The analysis prompt specifying what analysis to perform.</param>
+    /// <param name="data">Optional CSV data containing transactions to analyze. Can be null or empty.</param>
+    /// <param name="temperature">The temperature parameter controlling response creativity (0.0 to 1.0).</param>
+    /// <returns>
+    /// An AnalysisResult containing:
+    /// - Success: Whether the request was successful
+    /// - Content: The AI's analysis response (if successful) or error message (if failed)
+    /// - Tokens: Total tokens used in the request/response
+    /// </returns>
+    /// <remarks>
+    /// This method:
+    /// 1. Creates a messages array with system prompt and user prompt
+    /// 2. Optionally adds transaction data as a separate user message if data is provided
+    /// 3. Constructs an OpenAI chat completion request
+    /// 4. Serializes request to JSON and sends to the configured API endpoint
+    /// 5. Parses the response and returns an AnalysisResult
+    /// 
+    /// The system prompt establishes:
+    /// - Role: Certified financial advisor
+    /// - Tone: Concise, encouraging, non-judgmental
+    /// - Context: User lives in Canada, uses CAD, is not self-employed
+    /// - Output: Bilingual (English and Russian), tables, bold text for emphasis
+    /// - Format: Summary, Detailed Analysis, Key Insights, Action Plan, Tips & Recommendations
+    /// 
+    /// Error Handling:
+    /// - Returns success=false with error message if API request fails
+    /// - Returns success=false with "No choices in response" if response format is unexpected
+    /// - Returns success=false with response content for unexpected error codes
+    /// 
+    /// The method does not throw exceptions; all errors are captured in the AnalysisResult.
+    /// </remarks>
     private async Task<AnalysisResult> GetAIResponse(string prompt, string? data, double temperature = 0.7)
     {
         var messages = new List<OpenAIMessage>
@@ -264,6 +465,30 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
         return new AnalysisResult(false, responseString, 0);
     }
 
+    /// <summary>
+    /// Performs financial analysis on transactions for a specified period and analysis type.
+    /// </summary>
+    /// <param name="period">The period code (e.g., "12", "y1", "m1", "w", "a") specifying the time range to analyze.</param>
+    /// <param name="analysisType">The type of analysis to perform (e.g., "SpendingGeneral", "DebtAnalysis", "TaxEfficiency").</param>
+    /// <returns>
+    /// An AnalysisResult containing the AI's bilingual financial analysis or an error message if the request failed.
+    /// </returns>
+    /// <remarks>
+    /// This is the main entry point for AI analysis. It:
+    /// 1. Retrieves the appropriate prompt for the analysis type from AnalysisTypePrompts
+    /// 2. Retrieves the appropriate temperature setting for the analysis type
+    /// 3. Fetches transaction data as CSV from the DataService for the specified period
+    /// 4. Sends the prompt and data to the OpenAI API
+    /// 5. Returns the analysis result
+    /// 
+    /// Available analysis types:
+    /// - SpendingGeneral, SpendingBudget, SpendingTrends
+    /// - DebtAnalysis, SavingsEmergencyFund, CashFlowForecast, GoalBasedPlanning
+    /// - RecurringIncome, BehavioralInsights, SubscriptionsOptimization
+    /// - AnomalyDetection, TaxEfficiency, RegisteredAccounts, SeasonalAnalysis
+    /// 
+    /// The method handles all communication with the AI service and any errors that occur.
+    /// </remarks>
     public async Task<AnalysisResult> GetAnalysis(string period, string analysisType)
     {
         var prompt = AnalysisTypePrompts.GetPrompt(analysisType);

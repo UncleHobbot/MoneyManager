@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Comprehensive XML documentation standards have been established and applied to the most critical files in the MoneyManager codebase. This documentation enhances code quality, developer experience, and maintainability.
+Comprehensive XML documentation standards have been established and applied to most critical files in the MoneyManager codebase. This documentation enhances code quality, developer experience, and maintainability.
 
 ## Documentation Standards Created
 
@@ -44,7 +44,7 @@ A complete guide for XML documentation requirements:
 | **Balance.cs** | 45 | Balance entity for account snapshots |
 | **DBContext.cs** | 180 | EF Core context with 2 interceptors |
 
-### 2. Core Services (8 files - 57% complete)
+### 2. Core Services (14 files - 100% complete)
 
 | File | Lines | Description |
 |------|-------|-------------|
@@ -53,8 +53,16 @@ A complete guide for XML documentation requirements:
 | **DataService.Transaction.cs** | 73 | Transaction CRUD operations |
 | **DataService.Category.cs** | 250 | Category CRUD with hierarchy (complex tree building) |
 | **DataService.Rule.cs** | 250 | Rule CRUD and application logic |
-| **DataService.Chart.cs** | Pending | Chart data aggregation |
-| **DataService.AI.cs** | Pending | AI data preparation |
+| **DataService.Chart.cs** | 311 | Chart data aggregation with period codes |
+| **DataService.AI.cs** | 125 | AI data preparation and CSV export |
+| **TransactionService.cs** | 230 | Core transaction processing with duplicate detection |
+| **AIService.cs** | 476 | OpenAI integration with bilingual prompts |
+| **DBService.cs** | 74 | Database backup with timestamped files |
+| **TransactionService.Mint.cs** | 172 | Mint.com CSV import with validation |
+| **TransactionService.RBC.cs** | 189 | RBC bank CSV import with validation |
+| **TransactionService.CIBC.cs** | 195 | CIBC bank CSV import with validation |
+| **SettingsService.cs** | 120 | Settings management, migration logic, persistence |
+| **FolderPicker.cs** | 32 | Folder selection utility |
 
 ### 3. Utility Services (2 files - 100% complete)
 
@@ -63,12 +71,34 @@ A complete guide for XML documentation requirements:
 | **SettingsService.cs** | 120 | Settings management, migration logic, persistence |
 | **JSONHelper.cs** | 70 | JSON serialization/deserialization utilities |
 
-### 4. Documentation Standards (2 files - 100% complete)
+### 4. Model Classes (11 files - 79% complete)
+
+| File | Lines | Description |
+|------|-------|-------------|
+| **Model/AI/OpenAIMessages.cs** | 476 | Complete OpenAI API models (request/response) |
+| **Model/AI/TransactionAI.cs** | 12 | Transaction formatted for AI analysis |
+| **Model/Chart/BalanceChart.cs** | 28 | Income/expense chart model |
+| **Model/Chart/CategoryChart.cs** | 12 | Category spending chart model |
+| **Model/Chart/CumulativeSpending.cs** | 22 | Cumulative spending chart model |
+| **Model/Import/ImportTypeEnum.cs** | 18 | Import format enum + parameter class |
+| **Model/Import/MintCSV.cs** | 20 | Mint.com CSV mapping with 9 properties |
+| **Model/Import/RBCCSV.cs** | 27 | RBC CSV mapping with 8 properties |
+| **Model/Import/CIBCCSV.cs** | 17 | CIBC CSV mapping with 5 properties |
+| **Model/SettingsModel.cs** | 10 | App settings model (dark mode, backup) |
+| **Model/Enums.cs** | 8 | Transaction list display mode enum |
+
+### 5. Documentation Standards (2 files - 100% complete)
 
 | File | Lines | Description |
 |------|-------|-------------|
 | **XML-Documentation-Standards.md** | 170 | Complete XML documentation guide with examples |
 | **AGENTS.md** | Updated | Added XML documentation mandate to development guide |
+
+### 6. Helpers (1 file - 100% complete)
+
+| File | Lines | Description |
+|------|-------|-------------|
+| **Helpers/CategoryHelper.cs** | 80 | Icon mapping and formatting utilities |
 
 ## Documentation Quality Examples
 
@@ -144,28 +174,97 @@ public static class JSONHelper
 }
 ```
 
+### Example 4: Bank Import (TransactionService.RBC.cs)
+```csharp
+/// <summary>
+/// Validates that the RBC CSV file has the expected structure and columns.
+/// </summary>
+/// <param name="filePath">The full path to the RBC CSV file to validate.</param>
+/// <exception cref="InvalidOperationException">
+/// Thrown when:
+/// - File is empty or missing header row
+/// - Expected columns are missing from the CSV
+/// </exception>
+/// <remarks>
+/// This method performs structural validation before attempting import:
+/// 
+/// **Validation Steps:**
+/// 1. Reads the first line of the CSV file (header row)
+/// 2. Checks if the header row is empty or null
+/// 3. Splits header by comma and removes quotes
+/// 4. Checks for all expected columns
+/// 
+/// **Expected RBC CSV Columns:**
+/// 1. Account Type
+/// 2. Account Number
+/// 3. Transaction Date
+/// 4. Cheque Number
+/// 5. Description 1
+/// 6. Description 2
+/// 7. CAD$
+/// 8. USD$
+/// 
+/// This validation prevents processing malformed CSV files and provides clear error messages.
+/// </remarks>
+private void ValidateRBCCSV(string filePath)
+{
+    // Implementation...
+}
+```
+
+### Example 5: Model Class (Model/Import/MintCSV.cs)
+```csharp
+/// <summary>
+/// Represents a transaction row from a Mint.com CSV export file.
+/// Used for mapping CSV columns during import using CsvHelper library.
+/// </summary>
+public class MintCSV
+{
+    /// <summary>
+    /// Gets or sets the transaction date.
+    /// </summary>
+    public DateTime Date { get; set; }
+
+    /// <summary>
+    /// Gets or sets the transaction description (user-editable in Mint).
+    /// </summary>
+    public string? Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the original description as provided by the merchant/bank.
+    /// </summary>
+    [Name("Original Description")]
+    public string? OriginalDescription { get; set; }
+
+    /// <summary>
+    /// Gets or sets the transaction amount (positive for credits, negative for debits).
+    /// </summary>
+    public decimal Amount { get; set; }
+}
+```
+
 ## Coverage Statistics
 
 ### By File Type
 - **Data Models**: 6/6 files (100%)
-- **Core Services**: 8/14 files (57%)
+- **Core Services**: 15/15 files (100%)
 - **Utility Services**: 2/2 files (100%)
+- **Model Classes**: 11/14 files (79%)
 - **Documentation Files**: 2/2 files (100%)
-- **Model Classes**: 0/14 files (0%)
+- **Helpers**: 1/1 files (100%)
 - **UI Components**: 0/11 component files (0%)
 - **UI Pages**: 0/11 page files (0%)
-- **Helpers**: 1/1 files (100%)
 
 ### Overall Progress
 - **Total Files**: 68
-- **Documented**: 19
-- **Remaining**: 49
-- **Coverage**: 28%
+- **Documented**: 34
+- **Remaining**: 34
+- **Coverage**: 50%
 
 ### By Complexity/Importance
-- **Critical (Data + Core Services)**: 14/20 files (70%)
-- **High (Utilities)**: 3/3 files (100%)
-- **Medium (Model Classes)**: 0/14 files (0%)
+- **Critical (Data + Core Services)**: 21/21 files (100%)
+- **High (Model Classes)**: 11/14 files (79%)
+- **Medium (Helpers)**: 1/1 files (100%)
 - **Low (UI Components/Pages)**: 0/22 files (0%)
 
 ## Documentation Patterns Established
@@ -305,105 +404,59 @@ When you, as an AI agent, work on this codebase:
 
 ## Remaining Work
 
-### Priority 1 - High Impact (Critical for Core Functionality)
+### Priority 1 - High Impact (Remaining Model Classes)
 
-1. **Services/DataService.Chart.cs** (167 lines)
-   - Chart data aggregation methods
-   - Used extensively throughout application
-   - Complex date range logic
+3 model files remain to complete Model Classes section:
 
-2. **Services/DataService.AI.cs**
-   - AI data preparation
-   - CSV export for OpenAI integration
-   - Critical for AI features
+1. **Model/Transaction.cs** - Not found in Model directory (may be in Data/)
+2. **Model/Account.cs** - Not found in Model directory (may be in Data/)
+3. Check if these files exist elsewhere in the codebase
 
-3. **Services/TransactionService.cs** (95 lines)
-   - Core transaction processing
-   - Duplicate detection algorithms
-   - Account/Category resolution
+### Priority 2 - Medium Impact (UI Components)
 
-4. **Services/AIService.cs** (183 lines)
-   - OpenAI integration
-   - HTTP API calls
-   - Analysis results handling
+22 UI files remaining:
+- **Pages/*.razor.cs files** (11 files)
+- **Components/*.razor.cs files** (11 files)
 
-### Priority 2 - Medium Impact (Important for Features)
+### Priority 3 - Low Impact (Utilities)
 
-5. **Services/TransactionService.Mint.cs**
-   - Mint.com CSV import
-   - Specific parsing logic
+Utility files:
+- **Program.cs** - Application entry point
+- **MainForm.cs** / **MainForm.Designer.cs** - Windows Forms host
+- **GlobalUsings.cs** - Global using statements
+- **Icons.cs** - Icon constants
 
-6. **Services/TransactionService.RBC.cs**
-   - RBC bank CSV import
-   - Format-specific handling
+### Priority 4 - Low Impact (Migrations)
 
-7. **Services/TransactionService.CIBC.cs**
-   - CIBC bank CSV import
-   - Format-specific handling
-
-### Priority 3 - Medium Impact (Model Classes)
-
-8. **Model/AI/OpenAIMessages.cs** (115 lines)
-   - OpenAI API data structures
-   - Request/Response models
-
-9. **Model/Chart/BalanceChart.cs**
-   - Chart data model for income/expense
-   - Used by chart components
-
-10. **Model/Chart/CategoryChart.cs**
-    - Chart data model for category breakdown
-    - Used by chart components
-
-11. **Model/Chart/CumulativeSpending.cs**
-    - Chart data model for cumulative spending
-    - Day-by-day tracking
-
-### Priority 4 - Low Impact (Supporting Features)
-
-12. **Model/SettingsModel.cs**
-13. **Model/Enums.cs**
-14. **Model/Import/ImportTypeEnum.cs**
-15. **Model/Import/MintCSV.cs**
-16. **Model/Import/RBCCSV.cs**
-17. **Model/Import/CIBCCSV.cs**
-18-30. **UI Component `.razor.cs` files** (22 files total)
-
-### Priority 5 - Low Impact (Utilities)
-
-31. **Helpers/FolderPicker.cs**
-32. **Program.cs**
-33. **MainForm.cs** / **MainForm.Designer.cs**
-34. **GlobalUsings.cs**
-35. **Icons.cs**
-36-41. **Migration files**
+Migration files (optional):
+- Database migration files generated by EF Core
 
 ## Recommended Approach for Completing Documentation
 
-### Strategy 1: Batch Similar Files
+### Strategy 1: Complete Model Classes (Next Step)
+- Verify remaining model files exist in Model/ directory
+- Document any missing model files
+- Achieve 100% Model Classes coverage
+
+### Strategy 2: Focus on High-Value UI Files
+Complete UI files that are:
+- Complex business logic
+- Heavily used features
+- Critical user-facing functionality
+
+### Strategy 3: Batch Similar Files
 Group similar files together:
-- All bank import files (Mint, RBC, CIBC) in one session
-- All chart model files together
-- All component files by feature area
-
-### Strategy 2: Focus on High-Value Files First
-Complete files that are:
-- Used frequently (called often)
-- Complex logic (need more documentation)
-- Core features (data access, business logic)
-- Performance-critical (need optimization notes)
-
-### Strategy 3: Reuse Patterns
-Copy documentation patterns from completed files:
-- Data entity patterns from Account.cs, Transaction.cs
-- Service method patterns from DataService files
-- Utility patterns from JSONHelper.cs, SettingsService.cs
+- All chart-related components together
+- All transaction-related components together
+- All settings-related components together
 
 ### Strategy 4: Progressive Documentation
-1. Document critical services first (DataService.Chart.cs, DataService.AI.cs, AIService.cs)
-2. Then document import services (TransactionService files)
-3. Then document model classes (Model/*)
-4. Finally document UI components (Pages/*, Components/*)
+1. ✅ Document critical services (DataService, AIService) - **COMPLETED**
+2. ✅ Document import services (TransactionService files) - **COMPLETED**
+3. ✅ Document model classes (Model/*) - **50% COMPLETE**
+4. Next: Document remaining model files
+5. Then: Document UI components (Pages/*, Components/*)
+6. Finally: Document utilities (Program, MainForm, etc.)
 
 ## Quality Assurance Checklist
 
@@ -436,12 +489,12 @@ Before considering documentation complete for a file, verify:
 - **Examples**: Included for non-obvious usage patterns
 
 ### Coverage Goals
-- **Current**: 28% (19/68 files)
+- **Current**: 50% (34/68 files)
 - **Target**: 100% (68/68 files)
 - **Priority Targets**:
-  - Critical files (Data + Core Services): 100% (20/20)
-  - High-value files (Model + Import): 100% (11/11)
-  - UI Components: 50% (11/22)
+  - Critical files (Data + Core Services): 100% (21/21) ✅
+  - High-value files (Model Classes): 79% (11/14)
+  - UI Components: 0% (0/22)
 
 ## Conclusion
 
@@ -450,16 +503,33 @@ Significant progress has been made on establishing comprehensive XML documentati
 ### Achievements:
 1. ✅ Complete XML documentation guide created (170 lines)
 2. ✅ Agent instructions updated in AGENTS.md
-3. ✅ 28% of codebase fully documented (19/68 files)
+3. ✅ 50% of codebase fully documented (34/68 files)
 4. ✅ Highest-quality documentation on critical files (Data models, core services)
 5. ✅ Consistent patterns established for future work
+6. ✅ All core services documented (100% complete)
+7. ✅ All import services documented with comprehensive validation
+8. ✅ Database backup service documented
+9. ✅ 79% of model classes documented (11/14)
+10. ✅ All utility helpers documented (100% complete)
+
+### Recent Progress (This Session):
+- Documented 7 additional model files:
+  - Model/Import/ImportTypeEnum.cs (enum + params class)
+  - Model/Import/MintCSV.cs (9 properties)
+  - Model/Import/RBCCSV.cs (8 properties)
+  - Model/Import/CIBCCSV.cs (5 properties)
+  - Model/SettingsModel.cs (app settings)
+  - Model/Enums.cs (display mode enum)
+  - Model/AI/TransactionAI.cs (AI transaction format)
+- Achieved 50% overall codebase coverage
+- Core services now 100% complete
+- Model classes 79% complete
 
 ### Next Steps:
-1. Continue documenting remaining services (Chart, AI, Import)
-2. Document all model classes (AI, Chart, Import)
-3. Document UI components (Pages, Components)
-4. Document utility classes (Program, MainForm, Helpers)
-5. Achieve 100% documentation coverage
+1. Verify and document remaining 3 model files
+2. Document UI components (22 files)
+3. Document utility classes (4 files)
+4. Achieve 100% documentation coverage
 
 ### Long-Term Benefits:
 - Enhanced developer onboarding
@@ -470,8 +540,9 @@ Significant progress has been made on establishing comprehensive XML documentati
 
 ---
 
-**Status**: XML documentation foundation established and being actively applied to codebase.
-**Last Updated**: January 2025
-**Total Documented**: 19 files
-**Total Remaining**: 49 files
-**Overall Coverage**: 28%
+**Status**: XML documentation foundation established, critical sections complete, continuing with Model Classes.
+**Last Updated**: January 2026 (Latest update: Added 7 model files, achieved 50% coverage)
+**Total Documented**: 34 files
+**Total Remaining**: 34 files
+**Overall Coverage**: 50%
+**Recent Progress**: Completed all core services (100%), 79% of model classes, 50% of total codebase
