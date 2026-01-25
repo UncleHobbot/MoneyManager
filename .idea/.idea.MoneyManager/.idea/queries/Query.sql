@@ -1,1 +1,0 @@
-﻿Select * from Categories where ParentId is null
