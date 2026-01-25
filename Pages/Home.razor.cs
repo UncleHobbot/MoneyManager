@@ -13,7 +13,7 @@ public partial class Home
     private readonly string importFileType = nameof(ImportTypeEnum.Mint_CSV);
     private string importFile = null!;
     private bool isCreateAccounts;
-    private string incomeChartPeriod = "1";
+    private string incomeChartPeriod = "12";
     private string spendingChartPeriod = "m1";
     
     private TransactionsList uncatTransactions = null!;

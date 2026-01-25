@@ -9,7 +9,7 @@
 <FluentGrid Spacing="1">
     <FluentGridItem xs="12">
         <FluentTextField @bind-Value="settings.BackupPath" Label="Folder to store database backup" Style="width: 100%">
-            <FluentIcon Value="@(new Icons.Regular.Size16.FolderSearch())" Color="@Color.Neutral" Slot="end" OnClick="SelectImportFile"/>
+            <FluentIcon Value="@(new Icons.Regular.Size16.FolderSearch())" Color="@Color.Neutral" Slot="start" OnClick="SelectImportFile"/>
         </FluentTextField>
        
     </FluentGridItem>

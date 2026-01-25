@@ -13,6 +13,21 @@ public partial class Transactions
     [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public string ChartPeriod { get; set; } = "a";
     [Parameter] [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] public int? Category { get; set; }
 
+    private string selectedPeriod = "12";
+
+    protected override void OnInitialized()
+    {
+        // Initialize period from parameter or use default
+        if (!string.IsNullOrEmpty(ChartPeriod) && ChartPeriod != "a")
+            selectedPeriod = ChartPeriod;
+    }
+
+    private void OnPeriodChanged()
+    {
+        // Trigger UI update when period changes
+        StateHasChanged();
+    }
+
     private async Task DeleteAll()
     {
         var dialog = await DialogService.ShowConfirmationAsync("Do you want to delete all transactions?", "Yes", "No", "Transactions");

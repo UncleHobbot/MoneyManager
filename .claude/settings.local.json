@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "WebFetch(domain:www.fluentui-blazor.net)",
+      "WebSearch",
+      "WebFetch(domain:www.bytefish.de)",
+      "WebFetch(domain:github.com)",
+      "mcp__microsoft_docs__microsoft_docs_search",
+      "mcp__microsoft_docs__microsoft_code_sample_search",
+      "Bash(dotnet build:*)"
+    ]
+  }
+}

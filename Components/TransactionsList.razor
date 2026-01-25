@@ -1,117 +1,379 @@
 ﻿@using Microsoft.FluentUI.AspNetCore.Components
 
-<FluentDesignSystemProvider Density="-1">
+<!-- Screen reader announcements for accessibility -->
+@if (!string.IsNullOrWhiteSpace(filterAnnouncement))
+{
+    @filterAnnouncement
+}
 
-    @if (Mode == TransactionListModeEnum.Full)
-    {
-        <FluentDataGrid Items="@transactions" ResizableColumns=true Pagination="@pagination"
-                        GridTemplateColumns="@gridTemplateColumns" Style="@gridStyle" Virtualize="true" ItemSize="32">
-
-            @*Column 1 - Date*@
-            <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
-                            InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"/>
-
-            @*Column 2 - Account*@
-            <TemplateColumn Title="Account" Align="Align.Center" Sortable="true" SortBy="@accountSort">
-                <div style="display:flex;width:190px">
-                    <div style="display:flex;align-items: center">@context.Account.ShownName</div>
-                    <FluentSpacer/>
-                    <FluentButton Id="@($"filterByAccount_{context.Id}")" IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
-                                  OnClick="@(() => FilterByAccount(context, true))"/>
-                    <FluentTooltip Anchor="@($"filterByAccount_{context.Id}")">Filter by @context.Account.ShownName Account</FluentTooltip>
-
-                    <FluentButton Id="@($"filterByAccountR_{context.Id}")" IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
-                                  OnClick="@(() => FilterByAccount(context, false))"/>
-                    <FluentTooltip Anchor="@($"filterByAccountR_{context.Id}")">Remove filter</FluentTooltip>
-                    <div style="display:flex;align-items: center"></div>
-                </div>
-            </TemplateColumn>
-
-            @*Column 3 - Amount*@
-            <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Sortable="true" Title="Amount"/>
-
-            @*Column 4 - Category*@
-            <TemplateColumn Align="Align.Center" Title="@("Category" + (activeFilterCategory != null ? $" ({activeFilterCategory.Name})" : ""))" Sortable="true" SortBy="@categorySort">
-                @if (CategoryFilters)
-                {
-                    <div style="display:flex;width:290px">
-                        <FluentIcon Value="@(context.Category.objIcon)"/>
-                        <div style="display:flex;align-items: center"> @context.Category.Name </div>
-                        <FluentSpacer/>
-                        <FluentButton Id="@($"filterByCategory_{context.Id}")" IconEnd="@(new Icons.Filled.Size12.Filter())" Style="height: 20px"
-                                      OnClick="@(() => FilterByCategory(context, true))"/>
-                        <FluentTooltip Anchor="@($"filterByCategory_{context.Id}")">Filter by @context.Category.Name Category and childs</FluentTooltip>
-                        <FluentButton Id="@($"filterByCategoryR_{context.Id}")" IconEnd="@(new Icons.Filled.Size12.Dismiss())" Style="height: 20px;margin-right: 10px"
-                                      OnClick="@(() => FilterByCategory(context, false))"/>
-                        <FluentTooltip Anchor="@($"filterByCategoryR_{context.Id}")">Remove filter</FluentTooltip>
-                        <div style="display:flex;align-items: center"></div>
-                    </div>
-                }
-                else
-                {
-                    <FluentIcon Value="@(context.Category.objIcon)" Style="margin-right: 15px"/>
-                    @context.Category.Name
-                }
-            </TemplateColumn>
-
-            @*Column 5 - Description*@
-            <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true" Filtered="!string.IsNullOrWhiteSpace(filterDescription)">
-                <ColumnOptions>
-                    <div class="search-box">
-                        <FluentSearch type="search" Autofocus=true Immediate="false" @bind-Value=filterDescription
-                                      @bind-Value:after="FilterByDescription" Placeholder="Description..."/>
-                    </div>
-                </ColumnOptions>
-            </PropertyColumn>
-
-            @*Column 6 - Rule applied*@
-            <TemplateColumn Align="Align.Center" Title="Rule applied" Sortable="true" SortBy="@ruleSort">
-                @if (context.IsRuleApplied)
-                {
-                    <FluentIcon Value="@(new Icons.Regular.Size20.Tag())"/>
-                }
-            </TemplateColumn>
-
-            @*Column 7 - Actions*@
-            <TemplateColumn Align="@Align.End" Title="Actions" Sortable="false">
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
-            </TemplateColumn>
-
-        </FluentDataGrid>
-
-        <FluentPaginator State="@pagination">
-            <SummaryTemplate>
-                Total <strong>@(Math.Abs(transactions.ToList().Sum(x => x.AmountExt)).ToString("C"))</strong> in <strong>@pagination.TotalItemCount</strong> items
-            </SummaryTemplate>
-        </FluentPaginator>
+<style>
+    .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
     }
-    else if (Mode == TransactionListModeEnum.Short)
-    {
-        <FluentDataGrid Items="@transactions" GridTemplateColumns="1fr 6fr 1fr" Style="@gridStyle" Virtualize="true" ItemSize="54">
-            <ChildContent>
-                <PropertyColumn Property="x => x.Date" Format="MMM dd" Align="Align.Center" 
-                                Sortable="true" IsDefaultSortColumn="true" InitialSortDirection="SortDirection.Descending"/>
-            <TemplateColumn Align="Align.Start">
-                <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" Width="100%" HorizontalGap="10">
-                    <FluentIcon Value="@(context.Category.objIcon)"/>
-                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Left" VerticalGap="0">
-                        <FluentLabel Color="Color.Neutral">@context.Description</FluentLabel>
-                        <FluentLabel Color="Color.Info">@context.Account.ShownName</FluentLabel>
-                    </FluentStack>
-                </FluentStack>
-            </TemplateColumn>
-            <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amnt"/>
-            @if (EditEnable)
+
+    .filter-options {
+        padding: 10px;
+        min-width: 250px;
+    }
+
+    .transactions-list-container {
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+</style>
+
+<FluentDesignSystemProvider Density="-1" Style="width: 100%; max-width: 100%; display: flex; flex: 1; min-height: 0;">
+    <div class="transactions-list-container">
+        @if (Mode == TransactionListModeEnum.Full)
+        {
+            @* Clear All Filters Button *@
+            @if (HasAnyActiveFilter())
             {
-                <TemplateColumn Align="@Align.End" Sortable="false">
-                    <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())" Style="height: 20px" OnClick="@(() => EditTransaction(context))"/>
-                </TemplateColumn>
+                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8"
+                             Style="margin-bottom: 10px; width: 100%; flex-shrink: 0;">
+                    <FluentButton Appearance="Appearance.Accent"
+                                  IconStart="@(new Icons.Regular.Size16.DismissCircle())"
+                                  OnClick="ClearAllFilters"
+                                  aria-label="Clear all active filters">
+                        Clear All Filters
+                    </FluentButton>
+                    <FluentLabel Style="align-self: center;">@GetActiveFiltersSummary()</FluentLabel>
+                </FluentStack>
             }
-            </ChildContent>
-            <EmptyContent>
-                <FluentIcon Value="@(new Icons.Filled.Size24.Crown())" Color="@Color.Accent" />&nbsp; Nothing to see here. Carry on!
-            </EmptyContent>
-        </FluentDataGrid>
-    }
 
+            <FluentDataGrid Items="@transactions" ResizableColumns=true
+                            GridTemplateColumns="@gridTemplateColumns" Style="@($"{gridStyle}; overflow-y: auto; max-height: calc(100vh - 200px);")">
+                <ChildContent>
+                    @*Column 1 - Date*@
+                    <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
+                                    InitialSortDirection="SortDirection.Descending" IsDefaultSortColumn="true"
+                                    Filtered="HasDateFilter()">
+                        <ColumnOptions>
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Class="filter-options">
+                                <FluentStack Orientation="Orientation.Horizontal"
+                                             HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                                    <FluentLabel Weight="FontWeight.Bold">Filter by date:</FluentLabel>
+                                    @if (HasDateFilter())
+                                    {
+                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                      IconEnd="@(new Icons.Regular.Size16.Dismiss())"
+                                                      OnClick="ClearDateFilter"
+                                                      aria-label="Clear date filter"
+                                                      Style="min-height: 24px;">
+                                            Clear
+                                        </FluentButton>
+                                    }
+                                </FluentStack>
+
+                                <FluentRadioGroup @bind-Value="dateFilterType"
+                                                  @bind-Value:after="OnDateFilterTypeChanged"
+                                                  Orientation="Orientation.Vertical"
+                                                  aria-label="Date filter type">
+                                    <FluentRadio Value="@("none")">No filter</FluentRadio>
+                                    <FluentRadio Value="@("exact")">Exact date</FluentRadio>
+                                    <FluentRadio Value="@("range")">Date range</FluentRadio>
+                                </FluentRadioGroup>
+
+                                @if (dateFilterType == "exact")
+                                {
+                                    <FluentDatePicker @bind-Value="exactDate"
+                                                      @bind-Value:after="ApplyDateFilter"
+                                                      Placeholder="Select date"
+                                                      aria-label="Exact date to filter"
+                                                      Style="width: 100%;"/>
+                                }
+                                else if (dateFilterType == "range")
+                                {
+                                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                                        <FluentDatePicker @bind-Value="startDate"
+                                                          Placeholder="Start date"
+                                                          aria-label="Start date for range"
+                                                          Style="width: 100%;"/>
+                                        <FluentDatePicker @bind-Value="endDate"
+                                                          Placeholder="End date"
+                                                          aria-label="End date for range"
+                                                          Style="width: 100%;"/>
+                                    </FluentStack>
+                                }
+                            </FluentStack>
+                        </ColumnOptions>
+                    </PropertyColumn>
+
+                    @*Column 2 - Account*@
+                    <TemplateColumn Title="@GetAccountColumnTitle()" Align="Align.Center" Sortable="true"
+                                    SortBy="@accountSort"
+                                    Filtered="filterAccount != 0">
+                        <ColumnOptions>
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Class="filter-options">
+                                <FluentStack Orientation="Orientation.Horizontal"
+                                             HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                                    <FluentLabel Weight="FontWeight.Bold">Filter by account:</FluentLabel>
+                                    @if (filterAccount != 0)
+                                    {
+                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                      IconEnd="@(new Icons.Regular.Size16.Dismiss())"
+                                                      OnClick="ClearAccountFilter"
+                                                      aria-label="Clear account filter"
+                                                      Style="min-height: 24px;">
+                                            Clear
+                                        </FluentButton>
+                                    }
+                                </FluentStack>
+                                <FluentSelect TOption="Account"
+                                              Items="@GetAccountOptions()"
+                                              OptionText="@(a => a.ShownName)"
+                                              OptionValue="@(a => a.Id.ToString())"
+                                              @bind-SelectedOption="selectedAccountFilter"
+                                              @bind-SelectedOption:after="ApplyAccountFilter"
+                                              Placeholder="All Accounts"
+                                              aria-label="Filter transactions by account"
+                                              Style="width: 100%;">
+                                    <FluentOption Value="">All Accounts</FluentOption>
+                                </FluentSelect>
+                            </FluentStack>
+                        </ColumnOptions>
+                        <ChildContent>
+                            @context.Account.ShownName
+                        </ChildContent>
+                    </TemplateColumn>
+
+                    @*Column 3 - Amount*@
+                    <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Sortable="true"
+                                    Title="Amount"
+                                    Filtered="HasAmountFilter()">
+                        <ColumnOptions>
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Class="filter-options">
+                                <FluentStack Orientation="Orientation.Horizontal"
+                                             HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                                    <FluentLabel Weight="FontWeight.Bold">Filter by amount:</FluentLabel>
+                                    @if (HasAmountFilter())
+                                    {
+                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                      IconEnd="@(new Icons.Regular.Size16.Dismiss())"
+                                                      OnClick="ClearAmountFilter"
+                                                      aria-label="Clear amount filter"
+                                                      Style="min-height: 24px;">
+                                            Clear
+                                        </FluentButton>
+                                    }
+                                </FluentStack>
+
+                                <FluentRadioGroup @bind-Value="amountFilterType"
+                                                  @bind-Value:after="OnAmountFilterTypeChanged"
+                                                  Orientation="Orientation.Vertical"
+                                                  aria-label="Amount filter type">
+                                    <FluentRadio Value="@("none")">No filter</FluentRadio>
+                                    <FluentRadio Value="@("exact")">Exact amount</FluentRadio>
+                                    <FluentRadio Value="@("range")">Amount range</FluentRadio>
+                                </FluentRadioGroup>
+
+                                @if (amountFilterType == "exact")
+                                {
+                                    <FluentNumberField @bind-Value="exactAmount"
+                                                       @bind-Value:after="ApplyAmountFilter"
+                                                       Placeholder="Enter amount"
+                                                       aria-label="Exact amount to filter"
+                                                       Style="width: 100%;"/>
+                                }
+                                else if (amountFilterType == "range")
+                                {
+                                    <FluentStack Orientation="Orientation.Vertical" VerticalGap="4">
+                                        <FluentNumberField @bind-Value="minAmount"
+                                                           Placeholder="Min amount"
+                                                           aria-label="Minimum amount"
+                                                           Style="width: 100%;"/>
+                                        <FluentNumberField @bind-Value="maxAmount"
+                                                           Placeholder="Max amount"
+                                                           aria-label="Maximum amount"
+                                                           Style="width: 100%;"/>
+                                    </FluentStack>
+                                }
+                            </FluentStack>
+                        </ColumnOptions>
+                    </PropertyColumn>
+
+                    @*Column 4 - Category*@
+                    @if (CategoryFilters)
+                    {
+                        <TemplateColumn Align="Align.Center" Title="@GetCategoryColumnTitle()" Sortable="true"
+                                        SortBy="@categorySort"
+                                        Filtered="filterCategory != 0">
+                            <ColumnOptions>
+                                <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Class="filter-options">
+                                    <FluentStack Orientation="Orientation.Horizontal"
+                                                 HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                                        <FluentLabel Weight="FontWeight.Bold">Filter by category:</FluentLabel>
+                                        @if (filterCategory != 0)
+                                        {
+                                            <FluentButton Appearance="Appearance.Lightweight"
+                                                          IconEnd="@(new Icons.Regular.Size16.Dismiss())"
+                                                          OnClick="ClearCategoryFilter"
+                                                          aria-label="Clear category filter"
+                                                          Style="min-height: 24px;">
+                                                Clear
+                                            </FluentButton>
+                                        }
+                                    </FluentStack>
+                                    <FluentSelect TOption="Category"
+                                                  Items="@GetCategoryOptions()"
+                                                  OptionText="@(c => c.Name)"
+                                                  OptionValue="@(c => c.Id.ToString())"
+                                                  @bind-SelectedOption="selectedCategoryFilter"
+                                                  @bind-SelectedOption:after="ApplyCategoryFilter"
+                                                  Placeholder="All Categories"
+                                                  aria-label="Filter transactions by category"
+                                                  Style="width: 100%;">
+                                        <FluentOption Value="">All Categories</FluentOption>
+                                    </FluentSelect>
+
+                                    <FluentCheckbox @bind-Value="includeSubcategories"
+                                                    @bind-Value:after="ApplyCategoryFilter"
+                                                    Label="Include subcategories"
+                                                    aria-label="Include subcategories in filter"/>
+                                </FluentStack>
+                            </ColumnOptions>
+                            <ChildContent>
+                                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                                    <FluentIcon Value="@(context.Category.objIcon)"/>
+                                    <span>@context.Category.Name</span>
+                                </FluentStack>
+                            </ChildContent>
+                        </TemplateColumn>
+                    }
+                    else
+                    {
+                        <TemplateColumn Align="Align.Center" Title="Category" Sortable="true" SortBy="@categorySort">
+                            <ChildContent>
+                                <FluentStack Orientation="Orientation.Horizontal" HorizontalGap="8">
+                                    <FluentIcon Value="@(context.Category.objIcon)"/>
+                                    <span>@context.Category.Name</span>
+                                </FluentStack>
+                            </ChildContent>
+                        </TemplateColumn>
+                    }
+
+                    @*Column 5 - Description*@
+                    <PropertyColumn Property="x => x.Description" Title="Description" Sortable="true"
+                                    Filtered="!string.IsNullOrWhiteSpace(filterDescription)">
+                        <ColumnOptions>
+                            <FluentStack Orientation="Orientation.Vertical" VerticalGap="8" Class="filter-options">
+                                <FluentStack Orientation="Orientation.Horizontal"
+                                             HorizontalAlignment="HorizontalAlignment.SpaceBetween">
+                                    <FluentLabel Weight="FontWeight.Bold">Search description:</FluentLabel>
+                                    @if (!string.IsNullOrWhiteSpace(filterDescription))
+                                    {
+                                        <FluentButton Appearance="Appearance.Lightweight"
+                                                      IconEnd="@(new Icons.Regular.Size16.Dismiss())"
+                                                      OnClick="ClearDescriptionFilter"
+                                                      aria-label="Clear description filter"
+                                                      Style="min-height: 24px;">
+                                            Clear
+                                        </FluentButton>
+                                    }
+                                </FluentStack>
+                                <FluentSearch type="search" Immediate="false" @bind-Value=filterDescription
+                                              @bind-Value:after="FilterByDescription"
+                                              Placeholder="Search description..."
+                                              aria-label="Filter transactions by description text"/>
+                            </FluentStack>
+                        </ColumnOptions>
+                    </PropertyColumn>
+
+                    @*Column 6 - Rule applied*@
+                    <TemplateColumn Align="Align.Center" Title="Rule Applied" Sortable="true" SortBy="@ruleSort">
+                        @if (context.IsRuleApplied)
+                        {
+                            <FluentIcon Id="@($"ruleIcon_{context.Id}")"
+                                        Value="@(new Icons.Regular.Size20.Tag())"
+                                        aria-label="Categorized by rule"/>
+                            <FluentTooltip Anchor="@($"ruleIcon_{context.Id}")">
+                                This transaction was automatically categorized by a rule
+                            </FluentTooltip>
+                        }
+                    </TemplateColumn>
+
+                    @*Column 7 - Actions*@
+                    <TemplateColumn Align="@Align.End" Title="Actions" Sortable="false">
+                        <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())"
+                                      Appearance="Appearance.Lightweight"
+                                      aria-label="@($"Edit transaction from {context.Date.ToString("d")}")"
+                                      OnClick="@(() => EditTransaction(context))"/>
+                    </TemplateColumn>
+                </ChildContent>
+
+                <EmptyContent>
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center"
+                                 VerticalGap="8">
+                        <FluentIcon Value="@(new Icons.Filled.Size24.DocumentSearch())" Color="@Color.Neutral"/>
+                        <FluentLabel Typo="Typography.Body">No transactions found</FluentLabel>
+                        <FluentLabel Typo="Typography.Subject" Color="Color.Lightweight">
+                            Try adjusting your filters or date range
+                        </FluentLabel>
+                    </FluentStack>
+                </EmptyContent>
+            </FluentDataGrid>
+
+            <FluentStack Orientation="Orientation.Horizontal" Style="padding: 10px; width: 100%; flex-shrink: 0;">
+                @{
+                    var total = transactions.ToList().Sum(x => x.AmountExt);
+                    var totalLabel = total >= 0 ? "Net Income" : "Net Expense";
+                    var totalAbs = Math.Abs(total);
+                    var count = transactions.Count();
+                }
+                <strong>@totalLabel:</strong> @totalAbs.ToString("C") in <strong>@count</strong> items
+            </FluentStack>
+        }
+        else if (Mode == TransactionListModeEnum.Short)
+        {
+            <FluentDataGrid Items="@transactions" GridTemplateColumns="1fr 6fr 1fr" Style="@gridStyle">
+                <ChildContent>
+                    <PropertyColumn Property="x => x.Date" Format="MMM dd" Align="Align.Center"
+                                    Sortable="true" IsDefaultSortColumn="true"
+                                    InitialSortDirection="SortDirection.Descending"/>
+                    <TemplateColumn Align="Align.Start">
+                        <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center"
+                                     Width="100%" HorizontalGap="10">
+                            <FluentIcon Value="@(context.Category.objIcon)"/>
+                            <FluentStack Orientation="Orientation.Vertical"
+                                         HorizontalAlignment="HorizontalAlignment.Left" VerticalGap="0">
+                                <FluentLabel Color="Color.Neutral">@context.Description</FluentLabel>
+                                <FluentLabel Color="Color.Info">@context.Account.ShownName</FluentLabel>
+                            </FluentStack>
+                        </FluentStack>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.AmountExt" Format="c2" Align="Align.End" Title="Amnt"/>
+                    @if (EditEnable)
+                    {
+                        <TemplateColumn Align="@Align.End" Sortable="false">
+                            <FluentButton IconEnd="@(new Icons.Regular.Size16.Edit())"
+                                          Appearance="Appearance.Lightweight"
+                                          OnClick="@(() => EditTransaction(context))"/>
+                        </TemplateColumn>
+                    }
+                </ChildContent>
+                <EmptyContent>
+                    <FluentStack Orientation="Orientation.Vertical" HorizontalAlignment="HorizontalAlignment.Center"
+                                 VerticalGap="8">
+                        <FluentIcon Value="@(new Icons.Filled.Size24.DocumentSearch())" Color="@Color.Neutral"/>
+                        <FluentLabel Typo="Typography.Body">No transactions found</FluentLabel>
+                        <FluentLabel Typo="Typography.Subject" Color="Color.Lightweight">
+                            Try adjusting your filters or date range
+                        </FluentLabel>
+                    </FluentStack>
+                </EmptyContent>
+            </FluentDataGrid>
+        }
+    </div>
 </FluentDesignSystemProvider>
