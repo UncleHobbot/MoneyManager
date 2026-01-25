@@ -54,7 +54,7 @@
             }
 
             <FluentDataGrid Items="@transactions" ResizableColumns=true
-                            GridTemplateColumns="@gridTemplateColumns" Style="@($"{gridStyle}; overflow-y: auto; max-height: calc(100vh - 200px);")">
+                            GridTemplateColumns="@gridTemplateColumns" Style="@($"{gridStyle}; overflow-y: auto; max-height: calc(100vh - 200px);")" Virtualize="true" ItemSize="32">
                 <ChildContent>
                     @*Column 1 - Date*@
                     <PropertyColumn Property="x => x.Date" Format="d" Align="Align.Center" Title="Date" Sortable="true"
@@ -337,7 +337,7 @@
         }
         else if (Mode == TransactionListModeEnum.Short)
         {
-            <FluentDataGrid Items="@transactions" GridTemplateColumns="1fr 6fr 1fr" Style="@gridStyle">
+            <FluentDataGrid Items="@transactions" GridTemplateColumns="1fr 6fr 1fr" Style="@gridStyle" ItemSize="54" Virtualize="true" >
                 <ChildContent>
                     <PropertyColumn Property="x => x.Date" Format="MMM dd" Align="Align.Center"
                                     Sortable="true" IsDefaultSortColumn="true"

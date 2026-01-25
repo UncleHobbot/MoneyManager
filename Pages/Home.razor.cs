@@ -1,4 +1,4 @@
-﻿using MoneyManager.Components;
+using MoneyManager.Components;
 using MoneyManager.Model.Import;
 
 namespace MoneyManager.Pages;
@@ -67,10 +67,17 @@ public partial class Home
         importFile = folderPicker.DisplayFilePicker("RBC CSV file", "csv");
         if (string.IsNullOrWhiteSpace(importFile))
             return;
-        var records = await TransactionService.ImportRBCCSV(importFile, isCreateAccounts, void (_) => { });
-        var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from RBC file {importFile}");
-        await dialog.Result;
-        Refresh();
+        try
+        {
+            var records = await TransactionService.ImportRBCCSV(importFile, isCreateAccounts, void (_) => { });
+            var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from RBC file {importFile}");
+            await dialog.Result;
+            Refresh();
+        }
+        catch (InvalidOperationException ex)
+        {
+            await DialogService.ShowErrorAsync(ex.Message, "Import Error", "OK");
+        }
     }
 
     private async Task ImportFileCIBC()
@@ -78,10 +85,17 @@ public partial class Home
         importFile = folderPicker.DisplayFilePicker("CIBC CSV file", "csv");
         if (string.IsNullOrWhiteSpace(importFile))
             return;
-        var records = await TransactionService.ImportCIBCCSV(importFile, isCreateAccounts, void (_) => { });
-        var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from CIBC file {importFile}");
-        await dialog.Result;
-        Refresh();
+        try
+        {
+            var records = await TransactionService.ImportCIBCCSV(importFile, isCreateAccounts, void (_) => { });
+            var dialog = await DialogService.ShowSuccessAsync($"Imported {records} transactions from CIBC file {importFile}");
+            await dialog.Result;
+            Refresh();
+        }
+        catch (InvalidOperationException ex)
+        {
+            await DialogService.ShowErrorAsync(ex.Message, "Import Error", "OK");
+        }
     }
 
     private async Task ImportFileMint()

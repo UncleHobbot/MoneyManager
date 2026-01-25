@@ -1,41 +1,43 @@
-﻿@page "/spending"
+@page "/spending"
 @using ApexCharts
 @using Microsoft.FluentUI.AspNetCore.Components
 @using Orientation = Microsoft.FluentUI.AspNetCore.Components.Orientation
 
-<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="margin: 10px 0;">
-    <FluentLabel Typo="Typography.H3"> Income and spendings by category </FluentLabel>
+<div style="width: 100%; height: 90vh; display: flex; flex-direction: column; box-sizing: border-box; padding: 10px;">
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20" Style="flex-shrink: 0; margin: 0 0 10px 0;">
+        <FluentLabel Typo="Typography.H3"> Income and spendings by category </FluentLabel>
 
-    <FluentSelect TOption="string" @bind-Value="@ChartPeriod" Label="Select period" SelectedOptionChanged="UpdateChart">
-        <FluentOption Value="m1">This month</FluentOption>
-        <FluentOption Value="m2">Last month</FluentOption>
-        <FluentOption Value="y1">This year</FluentOption>
-        <FluentOption Value="y2">Last year</FluentOption>
-        <FluentOption Value="y3">Two years ago</FluentOption>
-        <FluentOption Value="12">Last 12 months</FluentOption>
-        <FluentOption Value="y12">This + Last year</FluentOption>
-    </FluentSelect>
-</FluentStack>
+        <FluentSelect TOption="string" @bind-Value="@ChartPeriod" Label="Select period" SelectedOptionChanged="UpdateChart">
+            <FluentOption Value="m1">This month</FluentOption>
+            <FluentOption Value="m2">Last month</FluentOption>
+            <FluentOption Value="y1">This year</FluentOption>
+            <FluentOption Value="y2">Last year</FluentOption>
+            <FluentOption Value="y3">Two years ago</FluentOption>
+            <FluentOption Value="12">Last 12 months</FluentOption>
+            <FluentOption Value="y12">This + Last year</FluentOption>
+        </FluentSelect>
+    </FluentStack>
 
-<FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Top" Width="100%" HorizontalGap="20">
-    <ApexChart @ref=chartI TItem="CategoryChart" Title="Income" Options="optionsI" Width="600" Height="600" OnDataPointSelection=DataPointsSelected>
-        <ApexPointSeries TItem="CategoryChart" Items="income" Name="Value"
-                         SeriesType="SeriesType.Donut" ShowDataLabels
-                         XValue="@(e => e.Category.Name)"
-                         YAggregate="@(e => e.Sum(e => e.Amount))"
-                         OrderByDescending="e => e.Y"/>
-    </ApexChart>
+    <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Top" Width="100%" HorizontalGap="20" Style="flex-shrink: 0;">
+        <ApexChart @ref=chartI TItem="CategoryChart" Title="Income" Options="optionsI" Width="600" Height="350" OnDataPointSelection=DataPointsSelected>
+            <ApexPointSeries TItem="CategoryChart" Items="income" Name="Value"
+                             SeriesType="SeriesType.Donut" ShowDataLabels
+                             XValue="@(e => e.Category.Name)"
+                             YAggregate="@(e => e.Sum(e => e.Amount))"
+                             OrderByDescending="e => e.Y"/>
+        </ApexChart>
 
-    <ApexChart @ref=chartE TItem="CategoryChart" Title="Expense" Options="optionsE" Width="650" Height="650" OnDataPointSelection=DataPointsSelected>
-        <ApexPointSeries TItem="CategoryChart" Items="expense" Name="Value"
-                         SeriesType="SeriesType.Donut" ShowDataLabels
-                         XValue="@(e => e.Category.Name)"
-                         YAggregate="@(e => e.Sum(e => e.Amount))"
-                         OrderByDescending="e => e.Y"/>
-    </ApexChart>
-</FluentStack>
+        <ApexChart @ref=chartE TItem="CategoryChart" Title="Expense" Options="optionsE" Width="650" Height="350" OnDataPointSelection=DataPointsSelected>
+            <ApexPointSeries TItem="CategoryChart" Items="expense" Name="Value"
+                             SeriesType="SeriesType.Donut" ShowDataLabels
+                             XValue="@(e => e.Category.Name)"
+                             YAggregate="@(e => e.Sum(e => e.Amount))"
+                             OrderByDescending="e => e.Y"/>
+        </ApexChart>
+    </FluentStack>
 
-<div style="margin-top: 10px">
-    <TransactionsList DateStart="dateStart" DateEnd="dateEnd" Category="@selectedCategory?.Id" PageSize="10" HeightVH="32"
-                      Changed="TransactionChanged"/>
+    <div style="margin-top: 10px; flex: 1; min-height: 0; overflow: hidden;">
+        <TransactionsList DateStart="dateStart" DateEnd="dateEnd" Category="@selectedCategory?.Id" PageSize="10"
+                          Changed="TransactionChanged"/>
+    </div>
 </div>

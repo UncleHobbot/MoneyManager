@@ -1,4 +1,4 @@
-﻿@page "/ai"
+@page "/ai"
 @using Microsoft.FluentUI.AspNetCore.Components
 
 <FluentStack Orientation="Orientation.Horizontal" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20"
@@ -30,6 +30,49 @@
                 <FluentNavLink OnClick="SpendingTrends">Monthly spending trends</FluentNavLink>
             </ChildContent>
         </FluentNavGroup>
+
+        <FluentNavGroup Expanded="false">
+            <TitleTemplate>
+                <FluentLabel Typo="Typography.H5"> Debt & Savings</FluentLabel>
+            </TitleTemplate>
+            <ChildContent>
+                <FluentNavLink OnClick="DebtAnalysis">Debt Analysis</FluentNavLink>
+                <FluentNavLink OnClick="SavingsEmergencyFund">Savings & Emergency Fund</FluentNavLink>
+            </ChildContent>
+        </FluentNavGroup>
+
+        <FluentNavGroup Expanded="false">
+            <TitleTemplate>
+                <FluentLabel Typo="Typography.H5"> Planning & Forecasting</FluentLabel>
+            </TitleTemplate>
+            <ChildContent>
+                <FluentNavLink OnClick="CashFlowForecast">Cash Flow Forecast</FluentNavLink>
+                <FluentNavLink OnClick="GoalBasedPlanning">Goal-Based Planning</FluentNavLink>
+                <FluentNavLink OnClick="RecurringIncome">Recurring Income Analysis</FluentNavLink>
+            </ChildContent>
+        </FluentNavGroup>
+
+        <FluentNavGroup Expanded="false">
+            <TitleTemplate>
+                <FluentLabel Typo="Typography.H5"> Behavior & Optimization</FluentLabel>
+            </TitleTemplate>
+            <ChildContent>
+                <FluentNavLink OnClick="BehavioralInsights">Behavioral Insights</FluentNavLink>
+                <FluentNavLink OnClick="SubscriptionsOptimization">Subscriptions Optimization</FluentNavLink>
+                <FluentNavLink OnClick="AnomalyDetection">Anomaly Detection</FluentNavLink>
+            </ChildContent>
+        </FluentNavGroup>
+
+        <FluentNavGroup Expanded="false">
+            <TitleTemplate>
+                <FluentLabel Typo="Typography.H5"> Canadian-Specific</FluentLabel>
+            </TitleTemplate>
+            <ChildContent>
+                <FluentNavLink OnClick="TaxEfficiency">Tax Efficiency</FluentNavLink>
+                <FluentNavLink OnClick="RegisteredAccounts">Registered Accounts</FluentNavLink>
+                <FluentNavLink OnClick="SeasonalAnalysis">Seasonal Analysis</FluentNavLink>
+            </ChildContent>
+        </FluentNavGroup>
     </FluentNavMenu>
 
     <FluentStack Orientation="Orientation.Vertical" VerticalAlignment="VerticalAlignment.Center" HorizontalGap="20"
@@ -38,7 +81,7 @@
         {
             <FluentButton Appearance="Appearance.Accent" OnClick="@Action"> Run analysis</FluentButton>
         }
-        
+
         @if (IsRunning)
         {
             <FluentProgressRing Width="128px"/>

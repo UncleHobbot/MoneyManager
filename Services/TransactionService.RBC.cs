@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using CsvHelper;
 using MoneyManager.Model.Import;
 
@@ -6,8 +6,30 @@ namespace MoneyManager.Services;
 
 public partial class TransactionService
 {
+    private void ValidateRBCCSV(string filePath)
+    {
+        var headerLine = File.ReadLines(filePath).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(headerLine))
+        {
+            throw new InvalidOperationException("RBC CSV file is empty or missing header row.");
+        }
+
+        var expectedColumns = new[] { "Account Type", "Account Number", "Transaction Date", "Cheque Number", "Description 1", "Description 2", "CAD$", "USD$" };
+        var actualColumns = headerLine.Split(',').Select(c => c.Trim().Replace("\"", "")).ToArray();
+
+        foreach (var expected in expectedColumns)
+        {
+            if (!actualColumns.Contains(expected))
+            {
+                throw new InvalidOperationException($"RBC CSV file does not have the expected structure. Missing column: '{expected}'. Expected columns: {string.Join(", ", expectedColumns)}");
+            }
+        }
+    }
+
     public async Task<int> ImportRBCCSV(string filePath, bool isCreateAccounts, Action<int> progress)
     {
+        ValidateRBCCSV(filePath);
+        
         await dbService.Backup();
         
         // init global cache

@@ -1,5 +1,6 @@
-﻿using Markdig;
+using Markdig;
 using MouseEventArgs = Microsoft.AspNetCore.Components.Web.MouseEventArgs;
+using MoneyManager.Services;
 
 namespace MoneyManager.Pages;
 
@@ -32,19 +33,85 @@ public partial class AI : ComponentBase
 
     private void SpendingGeneral(MouseEventArgs arg)
     {
-        AnalysisType = "SpendingGeneral";
+        AnalysisType = AnalysisTypePrompts.SpendingGeneral;
         IsButtonVisible = true;
     }
 
     private void SpendingBudget()
     {
-        AnalysisType = "SpendingBudget";
+        AnalysisType = AnalysisTypePrompts.SpendingBudget;
         IsButtonVisible = true;
     }
 
     private void SpendingTrends()
     {
-        AnalysisType = "SpendingTrends";
+        AnalysisType = AnalysisTypePrompts.SpendingTrends;
+        IsButtonVisible = true;
+    }
+
+    private void DebtAnalysis()
+    {
+        AnalysisType = AnalysisTypePrompts.DebtAnalysis;
+        IsButtonVisible = true;
+    }
+
+    private void SavingsEmergencyFund()
+    {
+        AnalysisType = AnalysisTypePrompts.SavingsEmergencyFund;
+        IsButtonVisible = true;
+    }
+
+    private void CashFlowForecast()
+    {
+        AnalysisType = AnalysisTypePrompts.CashFlowForecast;
+        IsButtonVisible = true;
+    }
+
+    private void GoalBasedPlanning()
+    {
+        AnalysisType = AnalysisTypePrompts.GoalBasedPlanning;
+        IsButtonVisible = true;
+    }
+
+    private void RecurringIncome()
+    {
+        AnalysisType = AnalysisTypePrompts.RecurringIncome;
+        IsButtonVisible = true;
+    }
+
+    private void BehavioralInsights()
+    {
+        AnalysisType = AnalysisTypePrompts.BehavioralInsights;
+        IsButtonVisible = true;
+    }
+
+    private void SubscriptionsOptimization()
+    {
+        AnalysisType = AnalysisTypePrompts.SubscriptionsOptimization;
+        IsButtonVisible = true;
+    }
+
+    private void AnomalyDetection()
+    {
+        AnalysisType = AnalysisTypePrompts.AnomalyDetection;
+        IsButtonVisible = true;
+    }
+
+    private void TaxEfficiency()
+    {
+        AnalysisType = AnalysisTypePrompts.TaxEfficiency;
+        IsButtonVisible = true;
+    }
+
+    private void RegisteredAccounts()
+    {
+        AnalysisType = AnalysisTypePrompts.RegisteredAccounts;
+        IsButtonVisible = true;
+    }
+
+    private void SeasonalAnalysis()
+    {
+        AnalysisType = AnalysisTypePrompts.SeasonalAnalysis;
         IsButtonVisible = true;
     }
 }

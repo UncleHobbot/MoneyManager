@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
 using MoneyManager.Model.Import;
@@ -7,8 +7,48 @@ namespace MoneyManager.Services;
 
 public partial class TransactionService
 {
+    private void ValidateCIBCCSV(string filePath)
+    {
+        var lines = File.ReadLines(filePath).Take(5).ToList();
+        if (!lines.Any())
+        {
+            throw new InvalidOperationException("CIBC CSV file is empty.");
+        }
+
+        var config = new CsvConfiguration(CultureInfo.InvariantCulture) { HasHeaderRecord = false };
+        try
+        {
+            using var reader = new StreamReader(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(string.Join("\n", lines))));
+            using var csv = new CsvReader(reader, config);
+
+            var record = new CIBCCSV();
+            var records = csv.EnumerateRecords(record);
+            var hasValidRecord = false;
+
+            foreach (var r in records)
+            {
+                if (r.Date != default && !string.IsNullOrWhiteSpace(r.Description) && !string.IsNullOrWhiteSpace(r.AccountNumber))
+                {
+                    hasValidRecord = true;
+                    break;
+                }
+            }
+
+            if (!hasValidRecord)
+            {
+                throw new InvalidOperationException("CIBC CSV file does not have the expected structure. Unable to find valid records with Date, Description, and Account Number.");
+            }
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException)
+        {
+            throw new InvalidOperationException("CIBC CSV file does not have the expected structure. Expected format: Date (index 0), Description (index 1), AmountDebit (index 2), AmountCredit (index 3), AccountNumber (index 4).", ex);
+        }
+    }
+
     public async Task<int> ImportCIBCCSV(string filePath, bool isCreateAccounts, Action<int> progress)
     {
+        ValidateCIBCCSV(filePath);
+        
         await dbService.Backup();
         // init global cache
         Accounts = [];

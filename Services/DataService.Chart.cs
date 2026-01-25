@@ -32,41 +32,64 @@ public partial class DataService
         startDate = new DateTime(DateTime.Today.Year, 1, 1);
         endDate = DateTime.Today.AddMonths(1).StartOfMonth(Thread.CurrentThread.CurrentCulture);
 
-        if (chartPeriod == "12") // last 12 months
-            startDate = DateTime.Today.AddMonths(-12).StartOfMonth(Thread.CurrentThread.CurrentCulture);
-        else if (chartPeriod == "y1") // this year
-            startDate = new DateTime(DateTime.Today.Year, 1, 1);
-        else if (chartPeriod == "y2") // last year
+        switch (chartPeriod)
         {
-            startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
-            endDate = new DateTime(DateTime.Today.Year, 1, 1);
+            // last 12 months
+            case "12":
+                startDate = DateTime.Today.AddMonths(-12).StartOfMonth(Thread.CurrentThread.CurrentCulture);
+                break;
+            // this year
+            case "y1":
+                startDate = new DateTime(DateTime.Today.Year, 1, 1);
+                break;
+            // last year
+            case "y2":
+                startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
+                endDate = new DateTime(DateTime.Today.Year, 1, 1);
+                break;
+            // 2 years ago
+            case "y3":
+                startDate = new DateTime(DateTime.Today.Year - 2, 1, 1);
+                endDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
+                break;
+            // last + this year
+            case "y12":
+                startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
+                break;
+            // This month
+            case "m1":
+                startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                break;
+            // Last month
+            case "m2":
+                startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+                endDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+                break;
+            // This +last months
+            case "m1+2":
+                startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+                break;
+            // This + 2 last months
+            case "m1+3":
+                startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-2);
+                break;
+            // Last 7 days
+            case "w" or "w1":
+                startDate = DateTime.Today.AddDays(-7);
+                break;
+            // Last 14 days
+            case "w2":
+                startDate = DateTime.Today.AddDays(-14);
+                break;
+            // Last 31 days
+            case "w3":
+                startDate = DateTime.Today.AddDays(-31);
+                break;
+            // All
+            case "a":
+                startDate = DateTime.MinValue;
+                break;
         }
-        else if (chartPeriod == "y3") // 2 years ago
-        {
-            startDate = new DateTime(DateTime.Today.Year - 2, 1, 1);
-            endDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
-        }
-        else if (chartPeriod == "y12") // last + this year
-            startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
-        else if (chartPeriod == "m1") // This month
-            startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-        else if (chartPeriod == "m2") // Last month
-        {
-            startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
-            endDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-        }
-        else if (chartPeriod == "m1+2") // This +last months
-            startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
-        else if (chartPeriod == "m1+3") // This + 2 last months
-            startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-2);
-        else if (chartPeriod is "w" or "w1") // Last 7 days
-            startDate = DateTime.Today.AddDays(-7);
-        else if (chartPeriod == "w2") // Last 14 days
-            startDate = DateTime.Today.AddDays(-14);
-        else if (chartPeriod == "w3") // Last 31 days
-            startDate = DateTime.Today.AddDays(-31);
-        else if (chartPeriod == "a") // All
-            startDate = DateTime.MinValue;
     }
 
     public async Task<List<Transaction>> ChartGetTransactionsP(string chartPeriod)
