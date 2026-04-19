@@ -1,0 +1,15 @@
+**/node_modules
+**/bin
+**/obj
+**/.git
+**/.vs
+**/.vscode
+**/dist
+*.md
+*.sqlite
+*.db
+Migrations/
+Data/MoneyManager.db
+Data/MoneyManagerEmpty.db
+identifier.sqlite
+setup-scaffold.bat

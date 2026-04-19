@@ -1,8 +1,8 @@
 using System.Text;
-using Microsoft.Extensions.Options;
-using MoneyManager.Model.AI;
+using System.Text.Json;
+using MoneyManager.Api.Model.AI;
 
-namespace MoneyManager.Services;
+namespace MoneyManager.Api.Services;
 
 /// <summary>
 /// Contains constants and methods for managing AI analysis prompts and temperature settings.
@@ -304,15 +304,16 @@ public static class AnalysisTypePrompts
 }
 
 /// <summary>
-/// Provides AI-powered financial analysis using OpenAI's API.
+/// Provides AI-powered financial analysis using configurable AI providers.
 /// </summary>
 /// <remarks>
 /// This service:
-/// - Integrates with OpenAI's chat completion API
+/// - Integrates with OpenAI-compatible chat completion APIs
 /// - Sends transaction data as CSV along with analysis prompts
 /// - Returns bilingual (English and Russian) financial analysis
 /// - Manages API requests, responses, and error handling
 /// - Uses configured temperature settings per analysis type
+/// - Reads API credentials from the database via AiProviderService
 /// 
 /// The service uses a certified financial advisor persona with:
 /// - Empathetic, non-judgmental tone
@@ -324,12 +325,12 @@ public static class AnalysisTypePrompts
 /// Thread Safety: This service uses a static HttpClient which is thread-safe.
 /// Each analysis call is independent and can run concurrently.
 /// 
-/// Dependencies: Requires OpenAISettings to be configured with ApiKey, ApiUrl, and Model.
+/// Dependencies: Requires AiProviderService for API credentials and DataService for transaction data.
 /// </remarks>
-public class AIService(IOptions<OpenAISettings> options, DataService dataService)
+public class AIService(AiProviderService aiProviderService, DataService dataService)
 {
     /// <summary>
-    /// The static HTTP client used for making API requests to OpenAI.
+    /// The static HTTP client used for making API requests to AI providers.
     /// </summary>
     /// <remarks>
     /// This is a static client reused across all instances to improve performance and avoid socket exhaustion.
@@ -338,41 +339,55 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
     private static readonly HttpClient httpClient = new();
 
     /// <summary>
-    /// Sends a request to the OpenAI API for financial analysis.
+    /// Sends a request to the AI API for financial analysis.
     /// </summary>
     /// <param name="prompt">The analysis prompt specifying what analysis to perform.</param>
     /// <param name="data">Optional CSV data containing transactions to analyze. Can be null or empty.</param>
     /// <param name="temperature">The temperature parameter controlling response creativity (0.0 to 1.0).</param>
+    /// <param name="providerId">Optional AI provider ID. If null, uses the default provider.</param>
     /// <returns>
     /// An AnalysisResult containing:
-    /// - Success: Whether the request was successful
-    /// - Content: The AI's analysis response (if successful) or error message (if failed)copilot
-    /// - Tokens: Total tokens used in the request/response
+    /// - IsSuccess: Whether the request was successful
+    /// - Result: The AI's analysis response (if successful) or error message (if failed)
+    /// - TotalTokens: Total tokens used in the request/response
     /// </returns>
     /// <remarks>
     /// This method:
-    /// 1. Creates a messages array with system prompt and user prompt
-    /// 2. Optionally adds transaction data as a separate user message if data is provided
-    /// 3. Constructs an OpenAI chat completion request
-    /// 4. Serializes request to JSON and sends to the configured API endpoint
-    /// 5. Parses the response and returns an AnalysisResult
+    /// 1. Retrieves the AI provider configuration from the database
+    /// 2. Creates a messages array with system prompt and user prompt
+    /// 3. Optionally adds transaction data as a separate user message if data is provided
+    /// 4. Constructs an OpenAI-compatible chat completion request
+    /// 5. Serializes request to JSON and sends to the configured API endpoint
+    /// 6. Parses the response and returns an AnalysisResult
     /// 
     /// The system prompt establishes:
     /// - Role: Certified financial advisor
     /// - Tone: Concise, encouraging, non-judgmental
     /// - Context: User lives in Canada, uses CAD, is not self-employed
     /// - Output: Bilingual (English and Russian), tables, bold text for emphasis
-    /// - Format: Summary, Detailed Analysis, Key Insights, Action Plan, Tips & Recommendations
+    /// - Format: Summary, Detailed Analysis, Key Insights, Action Plan, Tips and Recommendations
     /// 
     /// Error Handling:
+    /// - Returns success=false with error message if no provider is configured
     /// - Returns success=false with error message if API request fails
     /// - Returns success=false with "No choices in response" if response format is unexpected
     /// - Returns success=false with response content for unexpected error codes
     /// 
     /// The method does not throw exceptions; all errors are captured in the AnalysisResult.
     /// </remarks>
-    private async Task<AnalysisResult> GetAIResponse(string prompt, string? data, double temperature = 0.7)
+    private async Task<AnalysisResult> GetAIResponseAsync(string prompt, string? data, double temperature = 0.7, int? providerId = null)
     {
+        var provider = providerId.HasValue
+            ? await aiProviderService.GetProviderByIdAsync(providerId.Value)
+            : await aiProviderService.GetDefaultProviderAsync();
+
+        if (provider == null)
+            return new AnalysisResult(false, "No AI provider configured. Please add an AI provider in Settings.", 0);
+
+        var apiKey = provider.EncryptedApiKey; // TODO: decrypt in future
+        var apiUrl = provider.ApiUrl;
+        var model = provider.Model ?? "gpt-4o";
+
         var messages = new List<OpenAIMessage>
         {
             new()
@@ -433,13 +448,10 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
 
         var request = new OpenAIChatRequest
         {
-            model = options.Value.Model,
+            model = model,
             messages = messages,
             temperature = temperature
         };
-
-        var apiKey = options.Value.ApiKey;
-        var apiUrl = options.Value.ApiUrl;
 
         var json = JsonSerializer.Serialize(request);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -459,7 +471,7 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
                 return new AnalysisResult(true, result, doc.Usage.TotalTokens);
             }
 
-            return new AnalysisResult(false, "Error: No choices in response.", doc.Usage.TotalTokens);
+            return new AnalysisResult(false, "Error: No choices in response.", doc?.Usage?.TotalTokens ?? 0);
         }
 
         return new AnalysisResult(false, responseString, 0);
@@ -470,6 +482,7 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
     /// </summary>
     /// <param name="period">The period code (e.g., "12", "y1", "m1", "w", "a") specifying the time range to analyze.</param>
     /// <param name="analysisType">The type of analysis to perform (e.g., "SpendingGeneral", "DebtAnalysis", "TaxEfficiency").</param>
+    /// <param name="providerId">Optional AI provider ID. If null, uses the default provider.</param>
     /// <returns>
     /// An AnalysisResult containing the AI's bilingual financial analysis or an error message if the request failed.
     /// </returns>
@@ -478,7 +491,7 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
     /// 1. Retrieves the appropriate prompt for the analysis type from AnalysisTypePrompts
     /// 2. Retrieves the appropriate temperature setting for the analysis type
     /// 3. Fetches transaction data as CSV from the DataService for the specified period
-    /// 4. Sends the prompt and data to the OpenAI API
+    /// 4. Sends the prompt and data to the AI API
     /// 5. Returns the analysis result
     /// 
     /// Available analysis types:
@@ -489,119 +502,13 @@ public class AIService(IOptions<OpenAISettings> options, DataService dataService
     /// 
     /// The method handles all communication with the AI service and any errors that occur.
     /// </remarks>
-    public async Task<AnalysisResult> GetAnalysis(string period, string analysisType)
+    public async Task<AnalysisResult> GetAnalysisAsync(string period, string analysisType, int? providerId = null)
     {
         var prompt = AnalysisTypePrompts.GetPrompt(analysisType);
         var temperature = AnalysisTypePrompts.GetTemperature(analysisType);
 
-        var data = await dataService.AIGetTransactionsCSV(period);
-        var result = await GetAIResponse(prompt, data, temperature);
+        var data = await dataService.AIGetTransactionsCSVAsync(period);
+        var result = await GetAIResponseAsync(prompt, data, temperature, providerId);
         return result;
     }
 }
-
-/*
-  Available Analysis Types in AnalysisTypePrompts:
-  
-  SpendingGeneral (SpendingGeneral)
-    - Top spending categories by amount and frequency
-    - Overall spending habits and patterns
-    - Outlier identification
-    - Daily/weekly spending averages
-    - Spending velocity metrics
-  
-  SpendingBudget (SpendingBudget)
-    - 50/30/20 budgeting method tailored to situation
-    - Alternative methods: zero-based, envelope
-    - Actual vs recommended allocation
-    - Overspending identification
-  
-  SpendingTrends (SpendingTrends)
-    - Month-over-month spending comparison
-    - Year-over-year trends
-    - Inflation-adjusted changes
-    - Table: Month | Total Spending | Fixed/Regular | Baseline | Irregular
-    - Category drivers of change
-  
-  DebtAnalysis (DebtAnalysis)
-    - Credit card and loan balance analysis
-    - Avalanche vs snowball method comparison
-    - Payoff timeline at current payments
-    - Total interest calculation
-    - Optimized repayment schedule
-  
-  SavingsEmergencyFund (SavingsEmergencyFund)
-    - Emergency fund target (3-6 months)
-    - Current savings rate evaluation
-    - Goal tracking
-    - Time to build emergency fund
-    - Acceleration strategies
-  
-  CashFlowForecast (CashFlowForecast)
-    - 6-month cash flow prediction
-    - Recurring pattern identification
-    - Tight cash flow months
-    - Historical income/expense mismatches
-    - Large expense planning
-  
-  GoalBasedPlanning (GoalBasedPlanning)
-    - Current surplus analysis
-    - Monthly savings recommendations
-    - Goal timelines (car, house, vacation)
-    - Account allocation (TFSA, RRSP, FHSA)
-    - Goal prioritization
-  
-  RecurringIncome (RecurringIncome)
-    - Income source identification
-    - Monthly average and irregularity
-    - Bonus/commission patterns
-    - Income timing vs expenses
-    - Seasonality patterns
-    - Irregular income buffer strategy
-  
-  BehavioralInsights (BehavioralInsights)
-    - Weekend/weekday spending patterns
-    - Payday cycle spending
-    - Day of week/month analysis
-    - Impulse/emotional purchases
-    - Trigger event identification
-    - Spending habit awareness
-  
-  SubscriptionsOptimization (SubscriptionsOptimization)
-    - Complete subscription list
-    - Rarely used services
-    - Duplicate charges
-    - Keep/downgrade/cancel recommendations
-    - Potential savings calculation
-    - Automation opportunities
-  
-  AnomalyDetection (AnomalyDetection)
-    - Unusual/one-off transactions
-    - Category outliers
-    - Duplicate transactions
-    - Spending spikes
-    - Suspicious/unrecognized charges
-  
-  TaxEfficiency (TaxEfficiency)
-    - Tax-deductible expenses
-    - RRSP contribution tax savings
-    - TFSA contribution room
-    - Tax-efficient investment strategies
-    - Eligible deductions (medical, work, charitable)
-    - FHSA guidance
-  
-  RegisteredAccounts (RegisteredAccounts)
-    - RRSP/TFSA/FHSA analysis
-    - Contribution room usage
-    - Optimal account allocation
-    - RRSP vs TFSA timing
-    - Goal-based account selection
-  
-  SeasonalAnalysis (SeasonalAnalysis)
-    - Seasonal spending patterns
-    - Holiday spending peaks
-    - Tax season patterns
-    - Seasonal expenses (utilities, vacation, winter)
-    - Year-over-year seasonal comparison
-    - Seasonal planning recommendations
-*/

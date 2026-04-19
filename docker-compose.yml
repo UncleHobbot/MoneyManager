@@ -1,0 +1,12 @@
+services:
+  moneymanager:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./Data:/app/data
+      - ./backups:/app/backups
+      - ./csv-archive:/app/csv-archive
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/MoneyManager.db
