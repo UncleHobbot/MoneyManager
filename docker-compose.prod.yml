@@ -1,16 +1,16 @@
 services:
   moneymanager:
-    build: .
+    image: ghcr.io/unclehobbot/moneymanager:latest
     container_name: moneymanager
     restart: unless-stopped
     ports:
       - "8080:8080"
     volumes:
-      - ./Data:/app/data
-      - ./backups:/app/backups
-      - ./csv-archive:/app/csv-archive
+      - mm-data:/app/data
+      - mm-backups:/app/backups
+      - mm-csv-archive:/app/csv-archive
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__DefaultConnection=Data Source=/app/data/MoneyManager.db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
@@ -18,3 +18,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  mm-data:
+    driver: local
+  mm-backups:
+    driver: local
+  mm-csv-archive:
+    driver: local

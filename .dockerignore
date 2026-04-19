@@ -4,12 +4,44 @@
 **/.git
 **/.vs
 **/.vscode
+**/.idea
 **/dist
+
+# Documentation (except docs needed in build)
 *.md
+!README.md
+
+# Desktop app files (not needed for web build)
+*.resx
+*.Designer.cs
+MainForm.cs
+Main.razor
+_Imports.razor
+GlobalUsings.cs
+Icons.cs
+Pages/
+Components/
+Layout/
+Helpers/*.cs
+Model/
+Images/
+wwwroot/
+
+# Database files
 *.sqlite
 *.db
-Migrations/
-Data/MoneyManager.db
-Data/MoneyManagerEmpty.db
+!Data/MoneyManagerEmpty.db
 identifier.sqlite
+
+# IDE and OS files
+*.user
+*.DotSettings.user
+.dockerignore
+Dockerfile
+docker-compose*.yml
+
+# Misc
 setup-scaffold.bat
+Rebuild/
+docs/
+e2e/

@@ -39,6 +39,28 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Initialize database from template if it doesn't exist
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "";
+var dbMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Data Source=(.+?)(?:;|$)");
+if (dbMatch.Success)
+{
+    var dbPath = dbMatch.Groups[1].Value;
+    if (!File.Exists(dbPath))
+    {
+        var templatePath = Path.Combine(AppContext.BaseDirectory, "template", "MoneyManagerEmpty.db");
+        if (File.Exists(templatePath))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+            File.Copy(templatePath, dbPath);
+            app.Logger.LogInformation("Database initialized from template at {DbPath}", dbPath);
+        }
+        else
+        {
+            app.Logger.LogWarning("No database found at {DbPath} and no template available", dbPath);
+        }
+    }
+}
+
 // Warm the in-memory caches at startup
 using (var scope = app.Services.CreateScope())
 {
