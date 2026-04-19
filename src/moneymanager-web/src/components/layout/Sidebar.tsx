@@ -13,6 +13,7 @@ import {
   Landmark,
   Tags,
   BookOpen,
+  Upload,
   Menu,
   X,
 } from 'lucide-react'
@@ -96,6 +97,7 @@ export function Sidebar() {
           <NavItem to="/charts/spending" icon={<PieChart size={16} />} label="By Category" onClick={closeMobile} />
         </CollapsibleGroup>
 
+        <NavItem to="/import" icon={<Upload size={18} />} label="Import" onClick={closeMobile} />
         <NavItem to="/ai" icon={<Bot size={18} />} label="AI Analysis" onClick={closeMobile} />
 
         <CollapsibleGroup icon={<Settings size={18} />} label="Settings">

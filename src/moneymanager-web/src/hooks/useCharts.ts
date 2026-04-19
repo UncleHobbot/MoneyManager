@@ -23,8 +23,13 @@ export function useCumulativeSpending() {
   })
 }
 
+export interface SpendingByCategoryResponse {
+  income: CategoryChart[]
+  expenses: CategoryChart[]
+}
+
 export function useSpendingByCategory(period: string) {
-  return useQuery<CategoryChart[]>({
+  return useQuery<SpendingByCategoryResponse>({
     queryKey: ['charts', 'spending-by-category', period],
     queryFn: () =>
       api
