@@ -39,7 +39,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Initialize database from template if it doesn't exist
+// Initialize database — copy template if available, otherwise create schema via EF
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "";
 var dbMatch = System.Text.RegularExpressions.Regex.Match(connectionString, @"Data Source=(.+?)(?:;|$)");
 if (dbMatch.Success)
@@ -47,25 +47,33 @@ if (dbMatch.Success)
     var dbPath = dbMatch.Groups[1].Value;
     if (!File.Exists(dbPath))
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(dbPath) ?? ".");
         var templatePath = Path.Combine(AppContext.BaseDirectory, "template", "MoneyManagerEmpty.db");
         if (File.Exists(templatePath))
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
             File.Copy(templatePath, dbPath);
             app.Logger.LogInformation("Database initialized from template at {DbPath}", dbPath);
         }
-        else
-        {
-            app.Logger.LogWarning("No database found at {DbPath} and no template available", dbPath);
-        }
+    }
+
+    // Ensure schema exists (handles both fresh DBs and empty files)
+    using (var scope = app.Services.CreateScope())
+    {
+        var ctx = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<DataContext>>().CreateDbContextAsync();
+        await ctx.Database.EnsureCreatedAsync();
     }
 }
 
 // Warm the in-memory caches at startup
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var dataService = scope.ServiceProvider.GetRequiredService<DataService>();
     await dataService.WarmCacheAsync();
+}
+catch (Exception ex)
+{
+    app.Logger.LogWarning(ex, "Cache warm-up failed (empty database?) — will populate on first request");
 }
 
 if (app.Environment.IsDevelopment())
