@@ -139,7 +139,16 @@ describe('EditTransactionDialog', () => {
 
   it('offers creating a new rule when no matching rules exist', async () => {
     const user = userEvent.setup()
-    const createMutate = vi.fn((_rule, options) => options?.onSuccess?.([]))
+    const onClose = vi.fn()
+    const applyMutate = vi.fn((_vars, options) => options?.onSuccess?.(transaction))
+    const createMutate = vi.fn((_rule, options) => options?.onSuccess?.([{
+      id: 27,
+      originalDescription: 'GROCERY STORE #123',
+      newDescription: 'Grocery store',
+      compareType: 0,
+      compareTypeString: 'Contains',
+      category: { id: 12, parent: null, name: 'Transport', icon: null, isNew: false, pIcon: null },
+    }]))
     const refetch = vi.fn()
 
     vi.mocked(usePossibleRules).mockReturnValue({
@@ -149,7 +158,7 @@ describe('EditTransactionDialog', () => {
       refetch,
     } as never)
     vi.mocked(useApplyRuleToTransaction).mockReturnValue({
-      mutate: vi.fn(),
+      mutate: applyMutate,
       isPending: false,
     } as never)
     vi.mocked(useUpdateRule).mockReturnValue({
@@ -172,7 +181,7 @@ describe('EditTransactionDialog', () => {
         formatAmount={() => '-$45.67'}
         onDescriptionChange={vi.fn()}
         onCategoryChange={vi.fn()}
-        onClose={vi.fn()}
+        onClose={onClose}
         onSave={vi.fn()}
       />,
     )
@@ -197,7 +206,12 @@ describe('EditTransactionDialog', () => {
         }),
         expect.any(Object),
     )
-    expect(refetch).toHaveBeenCalled()
+    expect(applyMutate).toHaveBeenCalledWith(
+      { transactionId: transaction.id, ruleId: 27 },
+      expect.any(Object),
+    )
+    expect(onClose).toHaveBeenCalled()
+    expect(refetch).not.toHaveBeenCalled()
   })
 
   it('keeps the create-rule flow available when matching rules fail to load', async () => {

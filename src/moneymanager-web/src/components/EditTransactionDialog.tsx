@@ -29,6 +29,17 @@ interface EditTransactionDialogContentProps extends Omit<EditTransactionDialogPr
   transaction: TransactionDto
 }
 
+function findMatchingRule(rules: Rule[], ruleToMatch: Rule) {
+  return [...rules]
+    .sort((left, right) => right.id - left.id)
+    .find(rule =>
+      rule.originalDescription === ruleToMatch.originalDescription
+      && rule.newDescription === ruleToMatch.newDescription
+      && rule.compareType === ruleToMatch.compareType
+      && rule.category.id === ruleToMatch.category.id,
+    )
+}
+
 function EditTransactionDialogContent({
   transaction,
   description,
@@ -66,6 +77,7 @@ function EditTransactionDialogContent({
       ? 'create'
       : 'apply'
   const canCreateRule = newRuleOriginalDescription.trim() !== '' && newRuleCategoryId !== undefined
+  const isSavingRule = updateRule.isPending || applyRule.isPending
 
   function handleCreateRule() {
     const selectedCategory = categories.find(category => category.id === newRuleCategoryId)
@@ -84,9 +96,19 @@ function EditTransactionDialogContent({
     }
 
     updateRule.mutate(newRule, {
-      onSuccess: async () => {
-        await possibleRules.refetch()
-        setPreferredRulePanel('apply')
+      onSuccess: async (savedRules: Rule[]) => {
+        const createdRule = findMatchingRule(savedRules, newRule)
+          ?? findMatchingRule((await possibleRules.refetch()).data ?? [], newRule)
+
+        if (!createdRule) {
+          setPreferredRulePanel('apply')
+          return
+        }
+
+        applyRule.mutate(
+          { transactionId: transaction.id, ruleId: createdRule.id },
+          { onSuccess: () => onClose() },
+        )
       },
     })
   }
@@ -209,8 +231,8 @@ function EditTransactionDialogContent({
               <div className="flex justify-start">
                 <Button
                   onClick={handleCreateRule}
-                  loading={updateRule.isPending}
-                  disabled={!canCreateRule || updateRule.isPending}
+                  loading={isSavingRule}
+                  disabled={!canCreateRule || isSavingRule}
                 >
                   Save New Rule
                 </Button>
@@ -289,8 +311,8 @@ function EditTransactionDialogContent({
             <div className="flex justify-start">
               <Button
                 onClick={handleCreateRule}
-                loading={updateRule.isPending}
-                disabled={!canCreateRule || updateRule.isPending}
+                loading={isSavingRule}
+                disabled={!canCreateRule || isSavingRule}
               >
                 Save New Rule
               </Button>
