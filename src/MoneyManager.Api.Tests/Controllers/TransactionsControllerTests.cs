@@ -57,6 +57,61 @@ public class TransactionEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPossibleRules_ReturnsMatchingRulesForTransaction()
+    {
+        using var ctx = _svc.Factory.CreateDbContext();
+        var account = ctx.Accounts.First(a => a.Name == "RBC Chequing");
+        var transaction = new Transaction
+        {
+            Account = account,
+            Date = DateTime.Today,
+            Description = "Netflix",
+            OriginalDescription = "NETFLIX.COM SUBSCRIPTION",
+            Amount = 16.99m,
+            IsDebit = true,
+            IsRuleApplied = false
+        };
+
+        ctx.Transactions.Add(transaction);
+        await ctx.SaveChangesAsync();
+
+        var result = await TransactionEndpoints.GetPossibleRules(transaction.Id, _svc.DataService);
+
+        var ok = result.Should().BeOfType<Ok<List<Rule>>>().Subject;
+        ok.Value.Should().ContainSingle(rule => rule.OriginalDescription == "NETFLIX");
+    }
+
+    [Fact]
+    public async Task ApplyRule_AppliesSelectedRuleToTransaction()
+    {
+        using var ctx = _svc.Factory.CreateDbContext();
+        var account = ctx.Accounts.First(a => a.Name == "RBC Chequing");
+        var transaction = new Transaction
+        {
+            Account = account,
+            Date = DateTime.Today,
+            Description = "Netflix",
+            OriginalDescription = "NETFLIX.COM SUBSCRIPTION",
+            Amount = 16.99m,
+            IsDebit = true,
+            IsRuleApplied = false
+        };
+
+        ctx.Transactions.Add(transaction);
+        await ctx.SaveChangesAsync();
+
+        var rule = ctx.Rules.Include(r => r.Category).First(r => r.OriginalDescription == "NETFLIX");
+
+        var result = await TransactionEndpoints.ApplyRule(transaction.Id, rule.Id, _svc.DataService);
+
+        var ok = result.Should().BeOfType<Ok<TransactionDto>>().Subject;
+        ok.Value!.Description.Should().Be(rule.NewDescription);
+        ok.Value.IsRuleApplied.Should().BeTrue();
+        ok.Value.Category.Should().NotBeNull();
+        ok.Value.Category!.Name.Should().Be(rule.Category.Name);
+    }
+
+    [Fact]
     public async Task Update_UpdatesDescription()
     {
         using var ctx = _svc.Factory.CreateDbContext();

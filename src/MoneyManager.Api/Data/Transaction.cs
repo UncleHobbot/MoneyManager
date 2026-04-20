@@ -164,6 +164,7 @@ public class Transaction
         IsDebit = IsDebit,
         Category = Category,
         OriginalDescription = OriginalDescription,
+        IsRuleApplied = IsRuleApplied,
     };
 }
 

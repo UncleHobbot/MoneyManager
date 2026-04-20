@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import DashboardPage from '@/pages/DashboardPage'
 import { useCategories } from '@/hooks/useCategories'
 import { useInfiniteTransactions, useUpdateTransaction } from '@/hooks/useTransactions'
+import { useApplyRuleToTransaction, usePossibleRules, useUpdateRule } from '@/hooks/useRules'
 import type { Account, Category, Transaction, TransactionDto } from '@/types'
 
 vi.mock('react-apexcharts', () => ({ default: () => null }))
@@ -11,6 +12,11 @@ vi.mock('@/hooks/useCategories', () => ({ useCategories: vi.fn() }))
 vi.mock('@/hooks/useTransactions', () => ({
   useInfiniteTransactions: vi.fn(),
   useUpdateTransaction: vi.fn(),
+}))
+vi.mock('@/hooks/useRules', () => ({
+  usePossibleRules: vi.fn(),
+  useApplyRuleToTransaction: vi.fn(),
+  useUpdateRule: vi.fn(),
 }))
 vi.mock('@/hooks/useCharts', () => ({
   useNetIncome: () => ({ data: [], isLoading: false }),
@@ -98,6 +104,9 @@ describe('DashboardPage', () => {
     const mockedUseCategories = vi.mocked(useCategories)
     const mockedUseInfiniteTransactions = vi.mocked(useInfiniteTransactions)
     const mockedUseUpdateTransaction = vi.mocked(useUpdateTransaction)
+    const mockedUsePossibleRules = vi.mocked(usePossibleRules)
+    const mockedUseApplyRuleToTransaction = vi.mocked(useApplyRuleToTransaction)
+    const mockedUseUpdateRule = vi.mocked(useUpdateRule)
     const user = userEvent.setup()
     const mutate = vi.fn()
 
@@ -107,6 +116,20 @@ describe('DashboardPage', () => {
     } as never)
     mockedUseUpdateTransaction.mockReturnValue({
       mutate,
+      isPending: false,
+    } as never)
+    mockedUsePossibleRules.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as never)
+    mockedUseApplyRuleToTransaction.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as never)
+    mockedUseUpdateRule.mockReturnValue({
+      mutate: vi.fn(),
       isPending: false,
     } as never)
 
@@ -173,7 +196,7 @@ describe('DashboardPage', () => {
     expect(screen.getByLabelText('Account')).toHaveAttribute('readonly')
     expect(screen.getByLabelText('Amount')).toHaveValue('-$12.34')
     expect(screen.getByLabelText('Amount')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Description')).toHaveValue('Forgot to categorize me')
+    expect(screen.getAllByLabelText('Description')[0]).toHaveValue('Forgot to categorize me')
     expect(screen.getByLabelText('Original Description')).toHaveValue('Forgot to categorize me')
     expect(screen.getByLabelText('Original Description')).toHaveAttribute('readonly')
     expect(screen.getByLabelText('Rule was applied')).not.toBeChecked()
@@ -184,12 +207,29 @@ describe('DashboardPage', () => {
     const mockedUseCategories = vi.mocked(useCategories)
     const mockedUseInfiniteTransactions = vi.mocked(useInfiniteTransactions)
     const mockedUseUpdateTransaction = vi.mocked(useUpdateTransaction)
+    const mockedUsePossibleRules = vi.mocked(usePossibleRules)
+    const mockedUseApplyRuleToTransaction = vi.mocked(useApplyRuleToTransaction)
+    const mockedUseUpdateRule = vi.mocked(useUpdateRule)
 
     mockedUseCategories.mockReturnValue({
       data: [uncategorizedCategory, recentTransaction.category!],
       isLoading: false,
     } as never)
     mockedUseUpdateTransaction.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as never)
+    mockedUsePossibleRules.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as never)
+    mockedUseApplyRuleToTransaction.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as never)
+    mockedUseUpdateRule.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
     } as never)
@@ -242,12 +282,29 @@ describe('DashboardPage', () => {
     const mockedUseCategories = vi.mocked(useCategories)
     const mockedUseInfiniteTransactions = vi.mocked(useInfiniteTransactions)
     const mockedUseUpdateTransaction = vi.mocked(useUpdateTransaction)
+    const mockedUsePossibleRules = vi.mocked(usePossibleRules)
+    const mockedUseApplyRuleToTransaction = vi.mocked(useApplyRuleToTransaction)
+    const mockedUseUpdateRule = vi.mocked(useUpdateRule)
 
     mockedUseCategories.mockReturnValue({
       data: [uncategorizedCategory, recentTransaction.category!],
       isLoading: false,
     } as never)
     mockedUseUpdateTransaction.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as never)
+    mockedUsePossibleRules.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as never)
+    mockedUseApplyRuleToTransaction.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as never)
+    mockedUseUpdateRule.mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
     } as never)

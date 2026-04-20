@@ -135,11 +135,6 @@ export default function TransactionsPage() {
     [categories],
   )
 
-  const categorySelectOptions = useMemo(
-    () => (categories ?? []).map((c) => ({ label: c.name, value: c.id })),
-    [categories],
-  )
-
   const columns: Column<TransactionDto>[] = useMemo(
     () => [
       {
@@ -307,7 +302,7 @@ export default function TransactionsPage() {
         transaction={editRow}
         description={editDesc}
         categoryId={editCatId}
-        categoryOptions={categorySelectOptions}
+        categories={categories ?? []}
         isSaving={updateTx.isPending}
         formatDate={formatDate}
         formatAmount={formatSignedAmount}

@@ -1,4 +1,4 @@
-import { type ReactNode, type UIEvent, useMemo, useState } from 'react'
+import { type ReactNode, type UIEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Chart from 'react-apexcharts'
 import type { ApexOptions } from 'apexcharts'
@@ -181,10 +181,6 @@ function UncategorizedCard() {
   const uncategorizedCategory = categories?.find(
     category => category.name.toLowerCase() === 'uncategorized',
   )
-  const categoryOptions = useMemo(
-    () => (categories ?? []).map(category => ({ label: category.name, value: category.id })),
-    [categories],
-  )
   const {
     data,
     isLoading: isLoadingTransactions,
@@ -286,7 +282,7 @@ function UncategorizedCard() {
             transaction={editRow}
             description={editDesc}
             categoryId={editCatId}
-            categoryOptions={categoryOptions}
+            categories={categories ?? []}
             isSaving={updateTx.isPending}
             formatDate={(value) => formatDate(value, true)}
             formatAmount={formatCurrency}

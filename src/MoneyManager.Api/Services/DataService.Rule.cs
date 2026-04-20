@@ -133,8 +133,9 @@ public partial class DataService
         var ctx = await contextFactory.CreateDbContextAsync();
         var tran = await ctx.Transactions.FirstOrDefaultAsync(x => x.Id == transaction.Id);
         if (tran == null) return transaction;
+        var category = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == rule.Category.Id);
         tran.Description = rule.NewDescription;
-        tran.Category = rule.Category;
+        tran.Category = category;
         tran.IsRuleApplied = true;
         await ctx.SaveChangesAsync();
         return tran;

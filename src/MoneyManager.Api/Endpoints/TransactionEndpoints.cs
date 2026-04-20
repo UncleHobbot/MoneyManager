@@ -19,6 +19,8 @@ public static class TransactionEndpoints
 
         group.MapGet("/", GetAll);
         group.MapGet("/{id:int}", GetById);
+        group.MapGet("/{id:int}/possible-rules", GetPossibleRules);
+        group.MapPost("/{id:int}/apply-rule/{ruleId:int}", ApplyRule);
         group.MapPut("/{id:int}", Update);
         group.MapDelete("/{id:int}", Delete);
         group.MapDelete("/bulk", DeleteAll);
@@ -69,6 +71,41 @@ public static class TransactionEndpoints
         return transaction is null
             ? TypedResults.NotFound()
             : TypedResults.Ok(transaction.ToDto());
+    }
+
+    internal static async Task<IResult> GetPossibleRules(int id, DataService dataService)
+    {
+        var query = await dataService.GetTransactionsAsync();
+        var transaction = await query.FirstOrDefaultAsync(t => t.Id == id);
+
+        if (transaction is null)
+            return TypedResults.NotFound();
+
+        var rules = await dataService.GetPossibleRulesAsync(transaction);
+        return TypedResults.Ok(rules.ToList());
+    }
+
+    internal static async Task<IResult> ApplyRule(int id, int ruleId, DataService dataService)
+    {
+        var transactions = await dataService.GetTransactionsAsync();
+        var transaction = await transactions.FirstOrDefaultAsync(t => t.Id == id);
+
+        if (transaction is null)
+            return TypedResults.NotFound();
+
+        var rules = await dataService.GetRulesAsync();
+        var rule = await rules.FirstOrDefaultAsync(r => r.Id == ruleId);
+
+        if (rule is null)
+            return TypedResults.NotFound();
+
+        await dataService.ApplyRuleAsync(transaction, rule);
+
+        var refreshedTransactions = await dataService.GetTransactionsAsync();
+        var updated = await refreshedTransactions.FirstOrDefaultAsync(t => t.Id == id);
+        return updated is null
+            ? TypedResults.NotFound()
+            : TypedResults.Ok(updated.ToDto());
     }
 
     internal static async Task<IResult> Update(
