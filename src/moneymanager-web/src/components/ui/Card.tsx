@@ -5,9 +5,10 @@ interface CardProps {
   subtitle?: string
   children: ReactNode
   className?: string
+  bodyClassName?: string
 }
 
-export const Card: FC<CardProps> = ({ title, subtitle, children, className = '' }) => (
+export const Card: FC<CardProps> = ({ title, subtitle, children, className = '', bodyClassName = '' }) => (
   <div
     className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm ${className}`}
   >
@@ -17,6 +18,6 @@ export const Card: FC<CardProps> = ({ title, subtitle, children, className = '' 
         {subtitle && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
       </div>
     )}
-    <div className="px-6 py-4">{children}</div>
+    <div className={`px-6 py-4 ${bodyClassName}`}>{children}</div>
   </div>
 )

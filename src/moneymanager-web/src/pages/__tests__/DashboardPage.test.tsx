@@ -149,6 +149,7 @@ describe('DashboardPage', () => {
       50,
       true,
     )
+    expect(screen.getByRole('button', { name: /view more uncategorized/i })).toBeInTheDocument()
     expect(screen.getByLabelText('Uncategorized transactions list')).toHaveClass('overflow-y-auto')
     expect(screen.getByRole('region', { name: /uncategorized transactions list/i })).toHaveAttribute('tabindex', '0')
     expect(screen.getByText('Forgot to categorize me')).toBeInTheDocument()
@@ -213,10 +214,61 @@ describe('DashboardPage', () => {
     renderPage()
 
     expect(mockedUseInfiniteTransactions).toHaveBeenCalledWith('w2', undefined, undefined, 50)
+    expect(screen.getByRole('button', { name: /view more recent transactions/i })).toBeInTheDocument()
     expect(screen.getByLabelText('Recent transactions list')).toHaveClass('overflow-y-auto')
     expect(screen.getByRole('region', { name: /recent transactions list/i })).toHaveAttribute('tabindex', '0')
     expect(screen.getByText('Coffee shop')).toBeInTheDocument()
     expect(screen.getAllByText('Main Chequing').length).toBeGreaterThan(0)
     expect(screen.getByText('Food')).toBeInTheDocument()
+  })
+
+  it('announces incremental loading inside dashboard transaction lists', () => {
+    const mockedUseCategories = vi.mocked(useCategories)
+    const mockedUseInfiniteTransactions = vi.mocked(useInfiniteTransactions)
+    const mockedUseUpdateTransaction = vi.mocked(useUpdateTransaction)
+
+    mockedUseCategories.mockReturnValue({
+      data: [uncategorizedCategory, recentTransaction.category!],
+      isLoading: false,
+    } as never)
+    mockedUseUpdateTransaction.mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as never)
+
+    mockedUseInfiniteTransactions.mockImplementation((period, _accountId, categoryId, pageSize, enabled) => {
+      if (period === '12' && categoryId === uncategorizedCategory.id && pageSize === 50 && enabled === true) {
+        return {
+          data: { pages: [{ items: [transactionDto], totalCount: 1, page: 1, pageSize: 50 }] },
+          isLoading: false,
+          hasNextPage: true,
+          isFetchingNextPage: true,
+          fetchNextPage: vi.fn(),
+        } as never
+      }
+
+      if (period === 'w2' && categoryId === undefined && pageSize === 50) {
+        return {
+          data: { pages: [{ items: [recentTransaction], totalCount: 1, page: 1, pageSize: 50 }] },
+          isLoading: false,
+          hasNextPage: true,
+          isFetchingNextPage: true,
+          fetchNextPage: vi.fn(),
+        } as never
+      }
+
+      return {
+        data: { pages: [{ items: [], totalCount: 0, page: 1, pageSize }] },
+        isLoading: false,
+        hasNextPage: false,
+        isFetchingNextPage: false,
+        fetchNextPage: vi.fn(),
+      } as never
+    })
+
+    renderPage()
+
+    expect(screen.getAllByRole('status', { name: '' })).toHaveLength(2)
+    expect(screen.getAllByText('Loading more transactions...')).toHaveLength(2)
   })
 })

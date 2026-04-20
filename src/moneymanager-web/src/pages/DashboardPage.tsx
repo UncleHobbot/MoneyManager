@@ -66,9 +66,10 @@ function CardHeader({
       </div>
       <button
         onClick={() => navigate(to)}
+        aria-label={`View more ${title.toLowerCase()}`}
         className="flex items-center gap-0.5 text-xs text-blue-600 dark:text-blue-400 hover:underline"
       >
-        View More <ChevronRight size={14} />
+        View More <ChevronRight size={14} aria-hidden="true" />
       </button>
     </div>
   )
@@ -169,7 +170,7 @@ function UncategorizedCard() {
   }
 
   return (
-    <Card className="h-[400px] flex flex-col">
+    <Card className="h-[400px] flex flex-col" bodyClassName="flex min-h-0 flex-1 flex-col">
       <CardHeader icon={<AlertCircle size={16} />} title="Uncategorized" to="/transactions" />
       {isLoading ? (
         <div className="flex flex-1 items-center justify-center py-6"><Spinner size="sm" /></div>
@@ -186,7 +187,7 @@ function UncategorizedCard() {
             onScroll={(event) =>
               loadMoreOnScroll(event, Boolean(hasNextPage), isFetchingNextPage, fetchNextPage)
             }
-            className="min-h-0 flex-1 overflow-y-auto pr-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="min-h-0 flex-1 overflow-y-auto pr-1 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300/40 dark:focus-visible:ring-gray-600/30"
           >
             <ul className="divide-y divide-gray-100 dark:divide-gray-700">
               {items.map(t => (
@@ -223,7 +224,11 @@ function UncategorizedCard() {
               ))}
             </ul>
             {isFetchingNextPage && (
-              <div className="py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+              <div
+                role="status"
+                aria-live="polite"
+                className="py-3 text-center text-xs text-gray-500 dark:text-gray-400"
+              >
                 Loading more transactions...
               </div>
             )}
@@ -282,7 +287,7 @@ function RecentTransactionsCard() {
   const items = data?.pages.flatMap(page => page.items) ?? []
 
   return (
-    <Card className="h-[400px] flex flex-col">
+    <Card className="h-[400px] flex flex-col" bodyClassName="flex min-h-0 flex-1 flex-col">
       <CardHeader icon={<Clock size={16} />} title="Recent Transactions" to="/transactions" />
       {isLoading ? (
         <div className="flex flex-1 items-center justify-center py-6"><Spinner size="sm" /></div>
@@ -298,7 +303,7 @@ function RecentTransactionsCard() {
           onScroll={(event) =>
             loadMoreOnScroll(event, Boolean(hasNextPage), isFetchingNextPage, fetchNextPage)
           }
-          className="min-h-0 flex-1 overflow-y-auto pr-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="min-h-0 flex-1 overflow-y-auto pr-1 rounded-md focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-300/40 dark:focus-visible:ring-gray-600/30"
         >
           <ul className="divide-y divide-gray-100 dark:divide-gray-700">
             {items.map(t => (
@@ -345,7 +350,11 @@ function RecentTransactionsCard() {
             ))}
           </ul>
           {isFetchingNextPage && (
-            <div className="py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+            <div
+              role="status"
+              aria-live="polite"
+              className="py-3 text-center text-xs text-gray-500 dark:text-gray-400"
+            >
               Loading more transactions...
             </div>
           )}
