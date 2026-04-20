@@ -68,7 +68,7 @@ function markdownToHtml(text: string): string {
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>')
 
   // Unordered lists
-  html = html.replace(/^[\-\*] (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+  html = html.replace(/^[-*] (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
   // Ordered lists
   html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal">$1</li>')
 

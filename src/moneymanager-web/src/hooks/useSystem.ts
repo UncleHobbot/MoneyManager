@@ -11,10 +11,15 @@ export function useSettings() {
 
 export function useUpdateSettings() {
   const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (settings: SettingsModel) =>
-      api.put('/settings', settings).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['settings'] }),
+  return useMutation<SettingsModel, Error, SettingsModel>({
+    mutationFn: async (settings: SettingsModel) => {
+      await api.put('/settings', settings)
+      return settings
+    },
+    onSuccess: (settings) => {
+      qc.setQueryData(['settings'], settings)
+      qc.invalidateQueries({ queryKey: ['settings'] })
+    },
   })
 }
 

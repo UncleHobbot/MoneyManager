@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { Pencil, Trash2, Plus, Save } from 'lucide-react'
 import { useSettings, useUpdateSettings } from '@/hooks/useSystem'
 import { useAiProviders, useUpdateAiProvider, useDeleteAiProvider } from '@/hooks/useAI'
 import { Button, Input, Dialog, DialogFooter, DataTable, Spinner, Card, Badge } from '@/components/ui'
 import { Select } from '@/components/ui'
 import type { Column } from '@/components/ui'
-import type { AiProvider, AiProviderRequest } from '@/types'
+import type { AiProvider, AiProviderRequest, SettingsModel } from '@/types'
 
 const PROVIDER_TYPE_OPTIONS = [
   { label: 'OpenAI', value: 'OpenAI' },
@@ -22,6 +22,13 @@ const emptyProvider: AiProviderRequest = {
   isDefault: false,
 }
 
+function normalizeSettings(settings?: SettingsModel | null) {
+  return {
+    isDarkMode: settings?.isDarkMode ?? false,
+    backupPath: settings?.backupPath ?? null,
+  }
+}
+
 export default function SettingsPage() {
   const { data: settings, isLoading: settingsLoading } = useSettings()
   const updateSettings = useUpdateSettings()
@@ -29,8 +36,7 @@ export default function SettingsPage() {
   const updateProvider = useUpdateAiProvider()
   const deleteProvider = useDeleteAiProvider()
 
-  const [isDarkMode, setIsDarkMode] = useState(false)
-  const [backupPath, setBackupPath] = useState('')
+  const [settingsDraft, setSettingsDraft] = useState<SettingsModel | null>(null)
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | undefined>()
@@ -39,15 +45,22 @@ export default function SettingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deletingProvider, setDeletingProvider] = useState<AiProvider | null>(null)
 
-  useEffect(() => {
-    if (settings) {
-      setIsDarkMode(settings.isDarkMode)
-      setBackupPath(settings.backupPath ?? '')
-    }
+  const currentSettings = settingsDraft ?? normalizeSettings(settings)
+  const isDarkMode = currentSettings.isDarkMode
+  const backupPath = currentSettings.backupPath ?? ''
+
+  const updateSettingsDraft = useCallback((updates: Partial<SettingsModel>) => {
+    setSettingsDraft(current => ({
+      ...(current ?? normalizeSettings(settings)),
+      ...updates,
+    }))
   }, [settings])
 
   const handleSaveSettings = useCallback(() => {
-    updateSettings.mutate({ isDarkMode, backupPath: backupPath || null })
+    updateSettings.mutate(
+      { isDarkMode, backupPath: backupPath || null },
+      { onSuccess: () => setSettingsDraft(null) },
+    )
   }, [updateSettings, isDarkMode, backupPath])
 
   const openAddDialog = useCallback(() => {
@@ -132,7 +145,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={isDarkMode}
-              onChange={(e) => setIsDarkMode(e.target.checked)}
+              onChange={(e) => updateSettingsDraft({ isDarkMode: e.target.checked })}
               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
             />
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Dark Mode</span>
@@ -141,7 +154,7 @@ export default function SettingsPage() {
           <Input
             label="Backup Path"
             value={backupPath}
-            onChange={setBackupPath}
+            onChange={(value) => updateSettingsDraft({ backupPath: value || null })}
             placeholder="e.g. C:\Backups\MoneyManager"
           />
 

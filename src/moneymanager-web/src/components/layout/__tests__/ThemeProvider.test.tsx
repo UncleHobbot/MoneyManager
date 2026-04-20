@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ThemeProvider, useTheme } from '../ThemeProvider'
-
-const STORAGE_KEY = 'moneymanager-theme'
+import { ThemeProvider } from '../ThemeProvider'
+import { THEME_STORAGE_KEY } from '../ThemeContext'
+import { useTheme } from '../useTheme'
 
 function ThemeConsumer() {
   const { theme, toggleTheme } = useTheme()
@@ -31,7 +31,7 @@ describe('ThemeProvider', () => {
   })
 
   it('reads stored light theme from localStorage', () => {
-    localStorage.setItem(STORAGE_KEY, 'light')
+    localStorage.setItem(THEME_STORAGE_KEY, 'light')
     render(
       <ThemeProvider>
         <ThemeConsumer />
@@ -62,7 +62,7 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     )
     await user.click(screen.getByText('Toggle'))
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('light')
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light')
   })
 
   it('throws when useTheme is used outside ThemeProvider', () => {

@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom'
 import { Moon, Sun } from 'lucide-react'
-import { useTheme } from './ThemeProvider'
+import { useTheme } from './useTheme'
 
 const routeTitles: Record<string, string> = {
   '/': 'Dashboard',
