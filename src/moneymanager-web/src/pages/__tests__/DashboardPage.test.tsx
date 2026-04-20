@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import DashboardPage from '@/pages/DashboardPage'
@@ -151,14 +151,17 @@ describe('DashboardPage', () => {
     )
     expect(screen.getByRole('button', { name: /view more uncategorized/i })).toBeInTheDocument()
     expect(screen.getByLabelText('Uncategorized transactions list')).toHaveClass('overflow-y-auto')
-    expect(screen.getByRole('region', { name: /uncategorized transactions list/i })).toHaveAttribute('tabindex', '0')
+    const uncategorizedRegion = screen.getByRole('region', { name: /uncategorized transactions list/i })
+    expect(uncategorizedRegion).toHaveAttribute('tabindex', '0')
     expect(screen.getByText('Forgot to categorize me')).toBeInTheDocument()
-    expect(screen.getAllByText('Main Chequing').length).toBeGreaterThan(0)
+    expect(within(uncategorizedRegion).getByText('Main Chequing')).toBeInTheDocument()
+    expect(within(uncategorizedRegion).getByText(/^Mar \d{1,2}$/)).toBeInTheDocument()
+    expect(within(uncategorizedRegion).queryByText(/2026/)).not.toBeInTheDocument()
     const editButton = screen.getByRole('button', {
       name: /edit forgot to categorize me, .*2026, -?\$12\.34/i,
     })
     expect(editButton).toBeInTheDocument()
-    expect(screen.getByText(/2026/)).toBeInTheDocument()
+    expect(within(uncategorizedRegion).getByText('-$12.34')).toBeInTheDocument()
 
     await user.click(editButton)
 
@@ -215,11 +218,14 @@ describe('DashboardPage', () => {
 
     expect(mockedUseInfiniteTransactions).toHaveBeenCalledWith('w2', undefined, undefined, 50)
     expect(screen.getByRole('button', { name: /view more recent transactions/i })).toBeInTheDocument()
-    expect(screen.getByLabelText('Recent transactions list')).toHaveClass('overflow-y-auto')
-    expect(screen.getByRole('region', { name: /recent transactions list/i })).toHaveAttribute('tabindex', '0')
+    const recentRegion = screen.getByRole('region', { name: /recent transactions list/i })
+    expect(recentRegion).toHaveClass('overflow-y-auto')
+    expect(recentRegion).toHaveAttribute('tabindex', '0')
     expect(screen.getByText('Coffee shop')).toBeInTheDocument()
-    expect(screen.getAllByText('Main Chequing').length).toBeGreaterThan(0)
-    expect(screen.getByText('Food')).toBeInTheDocument()
+    expect(within(recentRegion).getByText('Main Chequing')).toBeInTheDocument()
+    expect(within(recentRegion).getByText(/^Mar \d{1,2}$/)).toBeInTheDocument()
+    expect(within(recentRegion).getByText('Food')).toBeInTheDocument()
+    expect(within(recentRegion).getByText('-$5.50')).toBeInTheDocument()
   })
 
   it('announces incremental loading inside dashboard transaction lists', () => {

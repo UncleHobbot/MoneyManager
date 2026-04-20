@@ -75,6 +75,64 @@ function CardHeader({
   )
 }
 
+function TransactionRow({
+  transaction,
+  showCategory = true,
+  action,
+}: {
+  transaction: TransactionDto
+  showCategory?: boolean
+  action?: ReactNode
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <span className="truncate text-sm text-gray-800 dark:text-gray-200">
+            {transaction.description}
+          </span>
+          <div className="flex shrink-0 items-start gap-2">
+            <span
+              className={`text-sm font-medium ${
+                transaction.amountExt >= 0
+                  ? 'text-green-600 dark:text-green-400'
+                  : 'text-red-600 dark:text-red-400'
+              }`}
+            >
+              {formatCurrency(transaction.amountExt)}
+            </span>
+            {action}
+          </div>
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+          <span>{formatDate(transaction.date)}</span>
+          <span>&middot;</span>
+          <span className="truncate">{transaction.account.shownName}</span>
+          {showCategory && (
+            <>
+              <span>&middot;</span>
+              {transaction.category ? (
+                <span className="inline-flex items-center gap-1">
+                  <span aria-hidden="true">
+                    <CategoryIcon
+                      icon={transaction.category.icon ?? transaction.category.pIcon ?? undefined}
+                      size={14}
+                      className="shrink-0"
+                    />
+                  </span>
+                  {transaction.category.name}
+                </span>
+              ) : (
+                <span className="italic">Uncategorized</span>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ImportCard() {
   const navigate = useNavigate()
   const backup = useCreateBackup()
@@ -192,34 +250,22 @@ function UncategorizedCard() {
             <ul className="divide-y divide-gray-100 dark:divide-gray-700">
               {items.map(t => (
                 <li key={t.id} className="py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
-                        {t.description}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span className="truncate">{t.account.shownName}</span>
-                        <span>&middot;</span>
-                        <span className="shrink-0">{formatDate(t.date, true)}</span>
-                        <span>&middot;</span>
-                        <span
-                          className={`shrink-0 ${t.amountExt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
-                        >
-                          {formatCurrency(t.amountExt)}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<Pencil size={14} />}
-                      className="shrink-0 px-2"
-                      aria-label={`Edit ${t.description}, ${formatDate(t.date, true)}, ${formatCurrency(t.amountExt)}`}
-                      onClick={() => openEdit(t)}
-                    >
-                      Edit
-                    </Button>
-                  </div>
+                  <TransactionRow
+                    transaction={t}
+                    showCategory={false}
+                    action={(
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Pencil size={14} />}
+                        className="px-2"
+                        aria-label={`Edit ${t.description}, ${formatDate(t.date, true)}, ${formatCurrency(t.amountExt)}`}
+                        onClick={() => openEdit(t)}
+                      >
+                        Edit
+                      </Button>
+                    )}
+                  />
                 </li>
               ))}
             </ul>
@@ -308,44 +354,7 @@ function RecentTransactionsCard() {
           <ul className="divide-y divide-gray-100 dark:divide-gray-700">
             {items.map(t => (
               <li key={t.id} className="py-3 first:pt-0 last:pb-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="truncate text-sm text-gray-800 dark:text-gray-200">
-                        {t.description}
-                      </span>
-                      <span
-                        className={`text-sm font-medium shrink-0 ${
-                          t.amountExt >= 0
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-red-600 dark:text-red-400'
-                        }`}
-                      >
-                        {formatCurrency(t.amountExt)}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-                      <span>{formatDate(t.date)}</span>
-                      <span>&middot;</span>
-                      <span className="truncate">{t.account.shownName}</span>
-                      <span>&middot;</span>
-                      {t.category ? (
-                        <span className="inline-flex items-center gap-1">
-                          <span aria-hidden="true">
-                            <CategoryIcon
-                              icon={t.category.icon ?? t.category.pIcon ?? undefined}
-                              size={14}
-                              className="shrink-0"
-                            />
-                          </span>
-                          {t.category.name}
-                        </span>
-                      ) : (
-                        <span className="italic">Uncategorized</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <TransactionRow transaction={t} />
               </li>
             ))}
           </ul>
