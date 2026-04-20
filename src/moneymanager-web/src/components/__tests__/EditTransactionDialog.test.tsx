@@ -140,7 +140,12 @@ describe('EditTransactionDialog', () => {
   it('offers creating a new rule when no matching rules exist', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
-    const applyMutate = vi.fn((_vars, options) => options?.onSuccess?.(transaction))
+    const appliedTransaction = {
+      ...transaction,
+      description: 'Grocery store',
+      category: { id: 12, parent: null, name: 'Transport', icon: null, isNew: false, pIcon: null },
+    }
+    const applyMutate = vi.fn((_vars, options) => options?.onSuccess?.(appliedTransaction))
     const createMutate = vi.fn((_rule, options) => options?.onSuccess?.([{
       id: 27,
       originalDescription: 'GROCERY STORE #123',
@@ -212,6 +217,86 @@ describe('EditTransactionDialog', () => {
     )
     expect(onClose).toHaveBeenCalled()
     expect(refetch).not.toHaveBeenCalled()
+  })
+
+  it('uses the current edit values when saving a new rule and closes after applying it', async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const onDescriptionChange = vi.fn()
+    const onCategoryChange = vi.fn()
+    const transportCategory = { id: 12, parent: null, name: 'Transport', icon: null, isNew: false, pIcon: null }
+    const appliedTransaction = {
+      ...transaction,
+      description: 'Edited grocery store',
+      category: transportCategory,
+    }
+    const applyMutate = vi.fn((_vars, options) => options?.onSuccess?.(appliedTransaction))
+    const createMutate = vi.fn((_rule, options) => options?.onSuccess?.([{
+      id: 27,
+      originalDescription: 'GROCERY STORE #123',
+      newDescription: 'Edited grocery store',
+      compareType: 0,
+      compareTypeString: 'Contains',
+      category: transportCategory,
+    }]))
+
+    vi.mocked(usePossibleRules).mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    } as never)
+    vi.mocked(useApplyRuleToTransaction).mockReturnValue({
+      mutate: applyMutate,
+      isPending: false,
+    } as never)
+    vi.mocked(useUpdateRule).mockReturnValue({
+      mutate: createMutate,
+      isPending: false,
+    } as never)
+
+    render(
+      <EditTransactionDialog
+        open
+        transaction={{ ...transaction, isRuleApplied: false }}
+        description="Edited grocery store"
+        categoryId={12}
+        categories={[
+          transaction.category!,
+          transportCategory,
+        ]}
+        isSaving={false}
+        formatDate={() => 'Mar 15, 2026'}
+        formatAmount={() => '-$45.67'}
+        onDescriptionChange={onDescriptionChange}
+        onCategoryChange={onCategoryChange}
+        onClose={onClose}
+        onSave={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Leave blank to use the current edited description: Edited grocery store')).toBeInTheDocument()
+    expect(screen.getByLabelText('Rule category')).toHaveValue('12')
+
+    await user.click(screen.getByRole('button', { name: 'Save New Rule' }))
+
+    expect(createMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 0,
+        originalDescription: 'GROCERY STORE #123',
+        newDescription: 'Edited grocery store',
+        compareType: 0,
+        category: expect.objectContaining({ id: 12, name: 'Transport' }),
+      }),
+      expect.any(Object),
+    )
+    expect(applyMutate).toHaveBeenCalledWith(
+      { transactionId: transaction.id, ruleId: 27 },
+      expect.any(Object),
+    )
+    expect(onDescriptionChange).toHaveBeenCalledWith('Edited grocery store')
+    expect(onCategoryChange).toHaveBeenCalledWith(12)
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('keeps the create-rule flow available when matching rules fail to load', async () => {

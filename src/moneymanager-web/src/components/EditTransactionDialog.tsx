@@ -57,7 +57,7 @@ function EditTransactionDialogContent({
   const [newRuleCompareType, setNewRuleCompareType] = useState(0)
   const [newRuleOriginalDescription, setNewRuleOriginalDescription] = useState(transaction.originalDescription)
   const [newRuleDescription, setNewRuleDescription] = useState('')
-  const [newRuleCategoryId, setNewRuleCategoryId] = useState<number | undefined>(transaction.category?.id)
+  const [newRuleCategoryId, setNewRuleCategoryId] = useState<number | undefined>()
 
   const categoryOptions = useMemo(
     () => categories.map(category => ({ label: category.name, value: category.id })),
@@ -71,16 +71,24 @@ function EditTransactionDialogContent({
   const hasDraftChanges = description !== transaction.description || categoryId !== transaction.category?.id
   const showApplyRulePanel = !transaction.isRuleApplied
   const hasMatchingRules = matchingRules.length > 0
+  const effectiveRuleDescription = newRuleDescription.trim() || description.trim()
+  const effectiveRuleCategoryId = newRuleCategoryId ?? categoryId ?? transaction.category?.id
   const activeRulePanel = transaction.isRuleApplied
     ? 'create'
     : preferredRulePanel === 'create' || (!possibleRules.isLoading && !possibleRules.isError && !hasMatchingRules)
       ? 'create'
       : 'apply'
-  const canCreateRule = newRuleOriginalDescription.trim() !== '' && newRuleCategoryId !== undefined
+  const canCreateRule = newRuleOriginalDescription.trim() !== '' && effectiveRuleCategoryId !== undefined
   const isSavingRule = updateRule.isPending || applyRule.isPending
 
+  function handleRuleApplied(updatedTransaction: TransactionDto) {
+    onDescriptionChange(updatedTransaction.description)
+    onCategoryChange(updatedTransaction.category?.id)
+    onClose()
+  }
+
   function handleCreateRule() {
-    const selectedCategory = categories.find(category => category.id === newRuleCategoryId)
+    const selectedCategory = categories.find(category => category.id === effectiveRuleCategoryId)
     if (!selectedCategory) {
       return
     }
@@ -89,7 +97,7 @@ function EditTransactionDialogContent({
     const newRule: Rule = {
       id: 0,
       originalDescription: newRuleOriginalDescription.trim(),
-      newDescription: newRuleDescription,
+      newDescription: effectiveRuleDescription,
       compareType: newRuleCompareType,
       compareTypeString: compareTypeLabel,
       category: selectedCategory,
@@ -107,7 +115,7 @@ function EditTransactionDialogContent({
 
         applyRule.mutate(
           { transactionId: transaction.id, ruleId: createdRule.id },
-          { onSuccess: () => onClose() },
+          { onSuccess: handleRuleApplied },
         )
       },
     })
@@ -124,7 +132,7 @@ function EditTransactionDialogContent({
 
     applyRule.mutate(
       { transactionId: transaction.id, ruleId },
-      { onSuccess: () => onClose() },
+      { onSuccess: handleRuleApplied },
     )
   }
 
@@ -220,11 +228,14 @@ function EditTransactionDialogContent({
                 value={newRuleDescription}
                 onChange={setNewRuleDescription}
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Leave blank to use the current edited description: {description}
+              </p>
               <Select
                 id="edit-rule-category"
                 label="Rule category"
                 options={categoryOptions}
-                value={newRuleCategoryId ?? ''}
+                value={effectiveRuleCategoryId ?? ''}
                 onChange={(value) => setNewRuleCategoryId(value ? Number(value) : undefined)}
                 placeholder="Select category"
               />
@@ -300,11 +311,14 @@ function EditTransactionDialogContent({
               value={newRuleDescription}
               onChange={setNewRuleDescription}
             />
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Leave blank to use the current edited description: {description}
+            </p>
             <Select
               id="edit-rule-category"
               label="Rule category"
               options={categoryOptions}
-              value={newRuleCategoryId ?? ''}
+              value={effectiveRuleCategoryId ?? ''}
               onChange={(value) => setNewRuleCategoryId(value ? Number(value) : undefined)}
               placeholder="Select category"
             />
