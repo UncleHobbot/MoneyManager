@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
 import type {
   PaginatedResult,
@@ -22,6 +22,30 @@ export function useTransactions(
           params: { period, accountId, categoryId, page, pageSize },
         })
         .then(r => r.data),
+  })
+}
+
+export function useInfiniteTransactions(
+  period: string,
+  accountId?: number,
+  categoryId?: number,
+  pageSize = 50,
+  enabled = true,
+) {
+  return useInfiniteQuery<PaginatedResult<TransactionDto>>({
+    queryKey: ['transactions', 'infinite', period, accountId, categoryId, pageSize],
+    initialPageParam: 1,
+    enabled,
+    queryFn: ({ pageParam }) =>
+      api
+        .get('/transactions', {
+          params: { period, accountId, categoryId, page: pageParam, pageSize },
+        })
+        .then(r => r.data),
+    getNextPageParam: (lastPage) => {
+      const loadedCount = lastPage.page * lastPage.pageSize
+      return loadedCount < lastPage.totalCount ? lastPage.page + 1 : undefined
+    },
   })
 }
 

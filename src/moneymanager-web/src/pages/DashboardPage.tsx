@@ -1,11 +1,13 @@
+import { type ReactNode, type UIEvent, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Chart from 'react-apexcharts'
 import type { ApexOptions } from 'apexcharts'
-import { useTransactions } from '@/hooks/useTransactions'
+import { useInfiniteTransactions, useUpdateTransaction } from '@/hooks/useTransactions'
 import { useNetIncome, useCumulativeSpending, useSpendingByCategory } from '@/hooks/useCharts'
 import { useCategories } from '@/hooks/useCategories'
 import { useCreateBackup } from '@/hooks/useSystem'
-import { Card, Spinner, Button, Badge } from '@/components/ui'
+import { Card, Spinner, Button, Badge, CategoryIcon, Dialog, DialogFooter, Input, Select } from '@/components/ui'
+import type { TransactionDto } from '@/types'
 import {
   Upload,
   HardDrive,
@@ -15,14 +17,35 @@ import {
   BarChart3,
   PieChart,
   ChevronRight,
+  Pencil,
 } from 'lucide-react'
+
+const DASHBOARD_LIST_PAGE_SIZE = 50
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(value)
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })
+function formatDate(dateStr: string, includeYear = false): string {
+  return new Date(dateStr).toLocaleDateString('en-CA', {
+    month: 'short',
+    day: 'numeric',
+    ...(includeYear ? { year: 'numeric' } : {}),
+  })
+}
+
+function loadMoreOnScroll(
+  event: UIEvent<HTMLDivElement>,
+  hasNextPage: boolean,
+  isFetchingNextPage: boolean,
+  fetchNextPage: () => Promise<unknown>,
+) {
+  const target = event.currentTarget
+  const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 120
+
+  if (isNearBottom && hasNextPage && !isFetchingNextPage) {
+    void fetchNextPage()
+  }
 }
 
 function CardHeader({
@@ -30,7 +53,7 @@ function CardHeader({
   title,
   to,
 }: {
-  icon: React.ReactNode
+  icon: ReactNode
   title: string
   to: string
 }) {
@@ -91,83 +114,242 @@ function ImportCard() {
 
 function UncategorizedCard() {
   const { data: categories, isLoading: isLoadingCategories } = useCategories()
+  const updateTx = useUpdateTransaction()
+  const [editRow, setEditRow] = useState<TransactionDto | null>(null)
+  const [editDesc, setEditDesc] = useState('')
+  const [editCatId, setEditCatId] = useState<number | undefined>()
   const uncategorizedCategory = categories?.find(
     category => category.name.toLowerCase() === 'uncategorized',
   )
-  const { data, isLoading: isLoadingTransactions } = useTransactions(
+  const categoryOptions = useMemo(
+    () => (categories ?? []).map(category => ({ label: category.name, value: category.id })),
+    [categories],
+  )
+  const {
+    data,
+    isLoading: isLoadingTransactions,
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteTransactions(
     '12',
     undefined,
     uncategorizedCategory?.id ?? -1,
-    1,
-    5,
+    DASHBOARD_LIST_PAGE_SIZE,
+    !isLoadingCategories && !!uncategorizedCategory,
   )
+  const items = data?.pages.flatMap(page => page.items) ?? []
   const isLoading = isLoadingCategories || isLoadingTransactions
 
+  function openEdit(row: TransactionDto) {
+    setEditRow(row)
+    setEditDesc(row.description)
+    setEditCatId(row.category?.id)
+  }
+
+  function closeEdit() {
+    setEditRow(null)
+  }
+
+  function saveEdit() {
+    if (!editRow) {
+      return
+    }
+
+    updateTx.mutate(
+      {
+        id: editRow.id,
+        data: {
+          description: editDesc,
+          categoryId: editCatId,
+        },
+      },
+      { onSuccess: () => closeEdit() },
+    )
+  }
+
   return (
-    <Card className="h-full">
+    <Card className="h-[400px] flex flex-col">
       <CardHeader icon={<AlertCircle size={16} />} title="Uncategorized" to="/transactions" />
       {isLoading ? (
-        <div className="flex justify-center py-6"><Spinner size="sm" /></div>
-      ) : !data?.items.length ? (
+        <div className="flex flex-1 items-center justify-center py-6"><Spinner size="sm" /></div>
+      ) : !items.length ? (
         <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
           All transactions categorized!
         </p>
       ) : (
-        <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-          {data.items.slice(0, 5).map(t => (
-            <li key={t.id} className="py-2 first:pt-0 last:pb-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
-                  {formatDate(t.date)}
-                </span>
-                <span className="text-sm text-gray-800 dark:text-gray-200 truncate flex-1 text-right">
-                  {t.description}
-                </span>
+        <>
+          <div
+            role="region"
+            aria-label="Uncategorized transactions list"
+            tabIndex={0}
+            onScroll={(event) =>
+              loadMoreOnScroll(event, Boolean(hasNextPage), isFetchingNextPage, fetchNextPage)
+            }
+            className="min-h-0 flex-1 overflow-y-auto pr-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+              {items.map(t => (
+                <li key={t.id} className="py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
+                        {t.description}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span className="truncate">{t.account.shownName}</span>
+                        <span>&middot;</span>
+                        <span className="shrink-0">{formatDate(t.date, true)}</span>
+                        <span>&middot;</span>
+                        <span
+                          className={`shrink-0 ${t.amountExt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}
+                        >
+                          {formatCurrency(t.amountExt)}
+                        </span>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<Pencil size={14} />}
+                      className="shrink-0 px-2"
+                      aria-label={`Edit ${t.description}, ${formatDate(t.date, true)}, ${formatCurrency(t.amountExt)}`}
+                      onClick={() => openEdit(t)}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {isFetchingNextPage && (
+              <div className="py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+                Loading more transactions...
               </div>
-            </li>
-          ))}
-        </ul>
+            )}
+          </div>
+
+          <Dialog open={!!editRow} onClose={closeEdit} title="Edit Transaction">
+            {editRow && (
+              <>
+                <div className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                  {formatDate(editRow.date, true)} &middot; {editRow.account.shownName} &middot;{' '}
+                  <span className={editRow.isDebit ? 'text-red-500' : 'text-green-500'}>
+                    {formatCurrency(editRow.amountExt)}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <Input
+                    label="Description"
+                    value={editDesc}
+                    onChange={setEditDesc}
+                    autoFocus
+                  />
+                  <Select
+                    label="Category"
+                    options={categoryOptions}
+                    value={editCatId ?? ''}
+                    onChange={(value) => setEditCatId(value ? Number(value) : undefined)}
+                    placeholder="Select category"
+                  />
+                </div>
+
+                <DialogFooter>
+                  <Button variant="secondary" onClick={closeEdit}>
+                    Cancel
+                  </Button>
+                  <Button onClick={saveEdit} loading={updateTx.isPending}>
+                    Save
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
+          </Dialog>
+        </>
       )}
     </Card>
   )
 }
 
 function RecentTransactionsCard() {
-  const { data, isLoading } = useTransactions('w2', undefined, undefined, 1, 6)
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteTransactions(
+    'w2',
+    undefined,
+    undefined,
+    DASHBOARD_LIST_PAGE_SIZE,
+  )
+  const items = data?.pages.flatMap(page => page.items) ?? []
 
   return (
-    <Card className="h-full">
+    <Card className="h-[400px] flex flex-col">
       <CardHeader icon={<Clock size={16} />} title="Recent Transactions" to="/transactions" />
       {isLoading ? (
-        <div className="flex justify-center py-6"><Spinner size="sm" /></div>
-      ) : !data?.items.length ? (
+        <div className="flex flex-1 items-center justify-center py-6"><Spinner size="sm" /></div>
+      ) : !items.length ? (
         <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
           No recent transactions
         </p>
       ) : (
-        <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-          {data.items.slice(0, 6).map(t => (
-            <li key={t.id} className="py-2 first:pt-0 last:pb-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
-                  {formatDate(t.date)}
-                </span>
-                <span className="text-sm text-gray-800 dark:text-gray-200 truncate flex-1">
-                  {t.description}
-                </span>
-                <span
-                  className={`text-sm font-medium shrink-0 ${
-                    t.amountExt >= 0
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}
-                >
-                  {formatCurrency(t.amountExt)}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div
+          role="region"
+          aria-label="Recent transactions list"
+          tabIndex={0}
+          onScroll={(event) =>
+            loadMoreOnScroll(event, Boolean(hasNextPage), isFetchingNextPage, fetchNextPage)
+          }
+          className="min-h-0 flex-1 overflow-y-auto pr-1 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+            {items.map(t => (
+              <li key={t.id} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="truncate text-sm text-gray-800 dark:text-gray-200">
+                        {t.description}
+                      </span>
+                      <span
+                        className={`text-sm font-medium shrink-0 ${
+                          t.amountExt >= 0
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-red-600 dark:text-red-400'
+                        }`}
+                      >
+                        {formatCurrency(t.amountExt)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                      <span>{formatDate(t.date)}</span>
+                      <span>&middot;</span>
+                      <span className="truncate">{t.account.shownName}</span>
+                      <span>&middot;</span>
+                      {t.category ? (
+                        <span className="inline-flex items-center gap-1">
+                          <span aria-hidden="true">
+                            <CategoryIcon
+                              icon={t.category.icon ?? t.category.pIcon ?? undefined}
+                              size={14}
+                              className="shrink-0"
+                            />
+                          </span>
+                          {t.category.name}
+                        </span>
+                      ) : (
+                        <span className="italic">Uncategorized</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {isFetchingNextPage && (
+            <div className="py-3 text-center text-xs text-gray-500 dark:text-gray-400">
+              Loading more transactions...
+            </div>
+          )}
+        </div>
       )}
     </Card>
   )
