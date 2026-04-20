@@ -112,8 +112,26 @@ app.MapImportEndpoints();
 app.MapSystemEndpoints();
 app.MapAIEndpoints();
 
-// SPA fallback — serve index.html for client-side routes
-app.MapFallbackToFile("index.html");
+// SPA fallback — serve index.html for client-side routes, but never mask missing API routes.
+app.MapFallback(async context =>
+{
+    if (context.Request.Path.StartsWithSegments("/api"))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+    var indexPath = Path.Combine(webRootPath, "index.html");
+    if (!File.Exists(indexPath))
+    {
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
+        return;
+    }
+
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.SendFileAsync(indexPath);
+}).WithMetadata(new HttpMethodMetadata([HttpMethods.Get, HttpMethods.Head]));
 
 // Health check
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
