@@ -33,7 +33,7 @@ WORKDIR /app
 
 COPY --from=backend --chown=appuser:appgroup /publish .
 COPY --from=frontend --chown=appuser:appgroup /app/frontend/dist ./wwwroot
-COPY --chown=appuser:appgroup Data/MoneyManagerEmpty.db /app/template/MoneyManagerEmpty.db
+COPY --chown=appuser:appgroup legacy/Data/MoneyManagerEmpty.db /app/template/MoneyManagerEmpty.db
 COPY --chown=appuser:appgroup docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 

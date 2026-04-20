@@ -30,7 +30,7 @@ wwwroot/
 # Database files
 *.sqlite
 *.db
-!Data/MoneyManagerEmpty.db
+!legacy/Data/MoneyManagerEmpty.db
 identifier.sqlite
 
 # IDE and OS files
