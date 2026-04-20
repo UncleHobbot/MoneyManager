@@ -3,6 +3,7 @@ import Chart from 'react-apexcharts'
 import type { ApexOptions } from 'apexcharts'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useNetIncome, useCumulativeSpending, useSpendingByCategory } from '@/hooks/useCharts'
+import { useCategories } from '@/hooks/useCategories'
 import { useCreateBackup } from '@/hooks/useSystem'
 import { Card, Spinner, Button, Badge } from '@/components/ui'
 import {
@@ -89,7 +90,18 @@ function ImportCard() {
 }
 
 function UncategorizedCard() {
-  const { data, isLoading } = useTransactions('m1', undefined, -1, 1, 5)
+  const { data: categories, isLoading: isLoadingCategories } = useCategories()
+  const uncategorizedCategory = categories?.find(
+    category => category.name.toLowerCase() === 'uncategorized',
+  )
+  const { data, isLoading: isLoadingTransactions } = useTransactions(
+    '12',
+    undefined,
+    uncategorizedCategory?.id ?? -1,
+    1,
+    5,
+  )
+  const isLoading = isLoadingCategories || isLoadingTransactions
 
   return (
     <Card className="h-full">
