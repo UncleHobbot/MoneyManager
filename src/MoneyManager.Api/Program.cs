@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using MoneyManager.Api.Data;
+using MoneyManager.Api.Endpoints;
 using MoneyManager.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-    });
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddMemoryCache();
@@ -102,7 +102,15 @@ app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.MapControllers();
+// Minimal API endpoint groups
+app.MapAccountEndpoints();
+app.MapCategoryEndpoints();
+app.MapTransactionEndpoints();
+app.MapRuleEndpoints();
+app.MapChartEndpoints();
+app.MapImportEndpoints();
+app.MapSystemEndpoints();
+app.MapAIEndpoints();
 
 // SPA fallback — serve index.html for client-side routes
 app.MapFallbackToFile("index.html");

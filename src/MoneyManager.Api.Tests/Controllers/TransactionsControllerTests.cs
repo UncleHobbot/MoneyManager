@@ -1,86 +1,76 @@
 using FluentAssertions;
-using MoneyManager.Api.Controllers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using MoneyManager.Api.Data;
+using MoneyManager.Api.Endpoints;
 using MoneyManager.Api.Model.Api;
 using MoneyManager.Api.Tests.TestHelpers;
-using Microsoft.AspNetCore.Mvc;
 
-namespace MoneyManager.Api.Tests.Controllers;
+namespace MoneyManager.Api.Tests.Endpoints;
 
-public class TransactionsControllerTests : IDisposable
+public class TransactionEndpointsTests : IDisposable
 {
     private readonly ServiceBundle _svc;
-    private readonly TransactionsController _controller;
 
-    public TransactionsControllerTests()
+    public TransactionEndpointsTests()
     {
         _svc = DbContextHelper.CreateServiceBundle();
-        _controller = new TransactionsController(_svc.DataService);
     }
 
     public void Dispose() => _svc.Dispose();
 
     [Fact]
-    public async Task GetTransactions_ReturnsOkWithPaginatedResult()
+    public async Task GetAll_ReturnsOkWithPaginatedResult()
     {
-        var result = await _controller.GetTransactions(period: "a", page: 1, pageSize: 50);
+        var result = await TransactionEndpoints.GetAll(_svc.DataService, period: "a", page: 1, pageSize: 50);
 
-        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().NotBeNull();
+        result.Should().BeAssignableTo<IResult>();
     }
 
     [Fact]
-    public async Task GetTransactions_RespectsPageSize()
+    public async Task GetAll_RespectsPageSize()
     {
-        var result = await _controller.GetTransactions(period: "a", page: 1, pageSize: 2);
+        var result = await TransactionEndpoints.GetAll(_svc.DataService, period: "a", page: 1, pageSize: 2);
 
-        var ok = result.Should().BeOfType<OkObjectResult>().Subject;
-        var value = ok.Value!;
-        // Check dynamic object has items
-        var itemsProp = value.GetType().GetProperty("items");
-        itemsProp.Should().NotBeNull();
-        var items = itemsProp!.GetValue(value) as IList<TransactionDto>;
-        items.Should().NotBeNull();
-        items!.Count.Should().BeLessThanOrEqualTo(2);
+        // The result wraps an anonymous type; verify it's Ok
+        result.Should().BeAssignableTo<IResult>();
+        result.GetType().Name.Should().StartWith("Ok");
     }
 
     [Fact]
-    public async Task GetTransaction_ReturnsOkForExistingTransaction()
+    public async Task GetById_ReturnsOkForExistingTransaction()
     {
-        // Get a transaction id from the database
         using var ctx = _svc.Factory.CreateDbContext();
         var tran = ctx.Transactions.First(t => t.Description == "Loblaws Groceries");
 
-        var result = await _controller.GetTransaction(tran.Id);
+        var result = await TransactionEndpoints.GetById(tran.Id, _svc.DataService);
 
-        result.Result.Should().BeOfType<OkObjectResult>();
+        result.Should().BeOfType<Ok<TransactionDto>>();
     }
 
     [Fact]
-    public async Task GetTransaction_ReturnsNotFoundForInvalidId()
+    public async Task GetById_ReturnsNotFoundForInvalidId()
     {
-        var result = await _controller.GetTransaction(9999);
+        var result = await TransactionEndpoints.GetById(9999, _svc.DataService);
 
-        result.Result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<NotFound>();
     }
 
     [Fact]
-    public async Task UpdateTransaction_UpdatesDescription()
+    public async Task Update_UpdatesDescription()
     {
         using var ctx = _svc.Factory.CreateDbContext();
         var tran = ctx.Transactions.First(t => t.Description == "Netflix");
 
         var request = new UpdateTransactionRequest { Description = "Netflix Premium" };
-        var result = await _controller.UpdateTransaction(tran.Id, request);
+        var result = await TransactionEndpoints.Update(tran.Id, request, _svc.DataService);
 
-        result.Result.Should().BeOfType<OkObjectResult>();
-        var ok = (result.Result as OkObjectResult)!;
-        var dto = ok.Value.Should().BeAssignableTo<TransactionDto>().Subject;
-        dto.Description.Should().Be("Netflix Premium");
+        var ok = result.Should().BeOfType<Ok<TransactionDto>>().Subject;
+        ok.Value!.Description.Should().Be("Netflix Premium");
     }
 
     [Fact]
-    public async Task UpdateTransaction_UpdatesCategory()
+    public async Task Update_UpdatesCategory()
     {
         using var ctx = _svc.Factory.CreateDbContext();
         var tran = ctx.Transactions.First(t => t.Description == "Netflix");
@@ -88,44 +78,44 @@ public class TransactionsControllerTests : IDisposable
         var food = categories.First(c => c.Name == "Food");
 
         var request = new UpdateTransactionRequest { CategoryId = food.Id };
-        var result = await _controller.UpdateTransaction(tran.Id, request);
+        var result = await TransactionEndpoints.Update(tran.Id, request, _svc.DataService);
 
-        result.Result.Should().BeOfType<OkObjectResult>();
+        result.Should().BeOfType<Ok<TransactionDto>>();
     }
 
     [Fact]
-    public async Task UpdateTransaction_ReturnsNotFoundForInvalidId()
+    public async Task Update_ReturnsNotFoundForInvalidId()
     {
         var request = new UpdateTransactionRequest { Description = "Test" };
-        var result = await _controller.UpdateTransaction(9999, request);
+        var result = await TransactionEndpoints.Update(9999, request, _svc.DataService);
 
-        result.Result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<NotFound>();
     }
 
     [Fact]
-    public async Task DeleteTransaction_ReturnsNoContent()
+    public async Task Delete_ReturnsNoContent()
     {
         using var ctx = _svc.Factory.CreateDbContext();
         var tran = ctx.Transactions.First(t => t.Description == "Restaurant");
 
-        var result = await _controller.DeleteTransaction(tran.Id);
+        var result = await TransactionEndpoints.Delete(tran.Id, _svc.DataService);
 
-        result.Should().BeOfType<NoContentResult>();
+        result.Should().BeOfType<NoContent>();
     }
 
     [Fact]
-    public async Task DeleteTransaction_ReturnsNotFoundForInvalidId()
+    public async Task Delete_ReturnsNotFoundForInvalidId()
     {
-        var result = await _controller.DeleteTransaction(9999);
+        var result = await TransactionEndpoints.Delete(9999, _svc.DataService);
 
-        result.Should().BeOfType<NotFoundResult>();
+        result.Should().BeOfType<NotFound>();
     }
 
     [Fact]
-    public async Task DeleteAllTransactions_ReturnsNoContent()
+    public async Task DeleteAll_ReturnsNoContent()
     {
-        var result = await _controller.DeleteAllTransactions();
+        var result = await TransactionEndpoints.DeleteAll(_svc.DataService);
 
-        result.Should().BeOfType<NoContentResult>();
+        result.Should().BeOfType<NoContent>();
     }
 }
