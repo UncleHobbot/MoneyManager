@@ -382,3 +382,8 @@ FodyWeavers.xsd
 /Data/MoneyManagerBackup_20240417183501.db
 /Data/MoneyManagerBackup_20240417183508.db
 /Data/MoneyManagerBackup_20240417183514.db
+
+# API runtime database
+src/MoneyManager.Api/Data/MoneyManager.db
+src/MoneyManager.Api/Data/MoneyManager.db-shm
+src/MoneyManager.Api/Data/MoneyManager.db-wal

@@ -61,6 +61,20 @@ if (dbMatch.Success)
     {
         var ctx = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<DataContext>>().CreateDbContextAsync();
         await ctx.Database.EnsureCreatedAsync();
+
+        // For existing databases (e.g. migrated from legacy), create new tables that EnsureCreated skips
+        await ctx.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS AiProviders (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL,
+                ProviderType TEXT NOT NULL,
+                EncryptedApiKey TEXT NOT NULL,
+                ApiUrl TEXT NOT NULL,
+                Model TEXT NOT NULL,
+                IsDefault INTEGER NOT NULL DEFAULT 0,
+                CreatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """);
     }
 }
 
