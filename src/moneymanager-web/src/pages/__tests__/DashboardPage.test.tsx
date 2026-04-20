@@ -166,8 +166,18 @@ describe('DashboardPage', () => {
     await user.click(editButton)
 
     expect(screen.getByRole('heading', { name: /edit transaction/i })).toBeInTheDocument()
+    const dateInput = screen.getByLabelText('Date') as HTMLInputElement
+    expect(dateInput.value).toMatch(/2026/)
+    expect(dateInput).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Account')).toHaveValue('Main Chequing')
+    expect(screen.getByLabelText('Account')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Amount')).toHaveValue('-$12.34')
+    expect(screen.getByLabelText('Amount')).toHaveAttribute('readonly')
     expect(screen.getByLabelText('Description')).toHaveValue('Forgot to categorize me')
-    expect(screen.getAllByText(/2026/).length).toBeGreaterThan(0)
+    expect(screen.getByLabelText('Original Description')).toHaveValue('Forgot to categorize me')
+    expect(screen.getByLabelText('Original Description')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Rule was applied')).not.toBeChecked()
+    expect(screen.getByLabelText('Rule was applied')).toBeDisabled()
   })
 
   it('shows all recent transactions in a scrollable card with account and category metadata', () => {

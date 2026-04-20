@@ -18,15 +18,13 @@ import { useChartPeriods } from '@/hooks/useCharts'
 import {
   Button,
   Select,
-  Dialog,
-  DialogFooter,
   DataTable,
   Badge,
   Card,
   Spinner,
-  Input,
   CategoryIcon,
 } from '@/components/ui'
+import { EditTransactionDialog } from '@/components/EditTransactionDialog'
 import type { Column } from '@/components/ui'
 import type { TransactionDto } from '@/types'
 
@@ -37,6 +35,10 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'USD',
   }).format(Math.abs(value))
+}
+
+function formatSignedAmount(value: number): string {
+  return `${value < 0 ? '-' : ''}${formatCurrency(value)}`
 }
 
 function formatDate(iso: string): string {
@@ -300,43 +302,20 @@ export default function TransactionsPage() {
       )}
 
       {/* Edit Dialog */}
-      <Dialog open={!!editRow} onClose={closeEdit} title="Edit Transaction">
-        {editRow && (
-          <>
-            <div className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-              {formatDate(editRow.date)} &middot; {editRow.account.shownName} &middot;{' '}
-              <span className={editRow.isDebit ? 'text-red-500' : 'text-green-500'}>
-                {editRow.isDebit ? '-' : '+'}
-                {formatCurrency(editRow.amount)}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <Input
-                label="Description"
-                value={editDesc}
-                onChange={setEditDesc}
-              />
-              <Select
-                label="Category"
-                options={categorySelectOptions}
-                value={editCatId ?? ''}
-                onChange={(v) => setEditCatId(v ? Number(v) : undefined)}
-                placeholder="Select category"
-              />
-            </div>
-
-            <DialogFooter>
-              <Button variant="secondary" onClick={closeEdit}>
-                Cancel
-              </Button>
-              <Button onClick={saveEdit} loading={updateTx.isPending}>
-                Save
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </Dialog>
+      <EditTransactionDialog
+        open={!!editRow}
+        transaction={editRow}
+        description={editDesc}
+        categoryId={editCatId}
+        categoryOptions={categorySelectOptions}
+        isSaving={updateTx.isPending}
+        formatDate={formatDate}
+        formatAmount={formatSignedAmount}
+        onDescriptionChange={setEditDesc}
+        onCategoryChange={setEditCatId}
+        onClose={closeEdit}
+        onSave={saveEdit}
+      />
     </div>
   )
 }

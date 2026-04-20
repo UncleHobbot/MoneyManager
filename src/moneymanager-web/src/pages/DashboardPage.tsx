@@ -6,7 +6,8 @@ import { useInfiniteTransactions, useUpdateTransaction } from '@/hooks/useTransa
 import { useNetIncome, useCumulativeSpending, useSpendingByCategory } from '@/hooks/useCharts'
 import { useCategories } from '@/hooks/useCategories'
 import { useCreateBackup } from '@/hooks/useSystem'
-import { Card, Spinner, Button, Badge, CategoryIcon, Dialog, DialogFooter, Input, Select } from '@/components/ui'
+import { Card, Spinner, Button, Badge, CategoryIcon } from '@/components/ui'
+import { EditTransactionDialog } from '@/components/EditTransactionDialog'
 import type { TransactionDto } from '@/types'
 import {
   Upload,
@@ -280,43 +281,20 @@ function UncategorizedCard() {
             )}
           </div>
 
-          <Dialog open={!!editRow} onClose={closeEdit} title="Edit Transaction">
-            {editRow && (
-              <>
-                <div className="mb-3 text-xs text-gray-500 dark:text-gray-400">
-                  {formatDate(editRow.date, true)} &middot; {editRow.account.shownName} &middot;{' '}
-                  <span className={editRow.isDebit ? 'text-red-500' : 'text-green-500'}>
-                    {formatCurrency(editRow.amountExt)}
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <Input
-                    label="Description"
-                    value={editDesc}
-                    onChange={setEditDesc}
-                    autoFocus
-                  />
-                  <Select
-                    label="Category"
-                    options={categoryOptions}
-                    value={editCatId ?? ''}
-                    onChange={(value) => setEditCatId(value ? Number(value) : undefined)}
-                    placeholder="Select category"
-                  />
-                </div>
-
-                <DialogFooter>
-                  <Button variant="secondary" onClick={closeEdit}>
-                    Cancel
-                  </Button>
-                  <Button onClick={saveEdit} loading={updateTx.isPending}>
-                    Save
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </Dialog>
+          <EditTransactionDialog
+            open={!!editRow}
+            transaction={editRow}
+            description={editDesc}
+            categoryId={editCatId}
+            categoryOptions={categoryOptions}
+            isSaving={updateTx.isPending}
+            formatDate={(value) => formatDate(value, true)}
+            formatAmount={formatCurrency}
+            onDescriptionChange={setEditDesc}
+            onCategoryChange={setEditCatId}
+            onClose={closeEdit}
+            onSave={saveEdit}
+          />
         </>
       )}
     </Card>
