@@ -24,8 +24,8 @@ LABEL org.opencontainers.image.title="MoneyManager" \
 
 RUN apt-get update && apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/* && \
-    groupadd --gid 1654 --system appgroup && \
-    useradd --uid 1654 --system --gid appgroup --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin appuser && \
+    groupadd --system appgroup && \
+    useradd --system --gid appgroup --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin appuser && \
     mkdir -p /app/data /app/backups /app/csv-archive /app/template && \
     chown -R appuser:appgroup /app
 
