@@ -9,15 +9,25 @@ export interface Column<T> {
   className?: string
 }
 
+type SortDir = 'asc' | 'desc'
+
 interface DataTableProps<T> {
   columns: Column<T>[]
   data: T[]
   onRowClick?: (row: T) => void
   emptyMessage?: string
   className?: string
+  /** Stable React key for each row. Falls back to the row index when omitted. */
+  rowKey?: (row: T, index: number) => string | number
+  /**
+   * When provided, sorting is controlled by the parent (e.g. server-side sorting).
+   * The table renders `data` as-is and reports header clicks via `onSortChange`
+   * instead of sorting locally.
+   */
+  sortKey?: string | null
+  sortDir?: SortDir
+  onSortChange?: (key: string, dir: SortDir) => void
 }
-
-type SortDir = 'asc' | 'desc'
 
 export function DataTable<T>({
   columns,
@@ -25,33 +35,44 @@ export function DataTable<T>({
   onRowClick,
   emptyMessage = 'No data found',
   className = '',
+  rowKey,
+  sortKey: controlledSortKey,
+  sortDir: controlledSortDir,
+  onSortChange,
 }: DataTableProps<T>) {
-  const [sortKey, setSortKey] = useState<string | null>(null)
-  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const isControlled = onSortChange !== undefined
+  const [localSortKey, setLocalSortKey] = useState<string | null>(null)
+  const [localSortDir, setLocalSortDir] = useState<SortDir>('asc')
+
+  const sortKey = isControlled ? controlledSortKey ?? null : localSortKey
+  const sortDir = isControlled ? controlledSortDir ?? 'asc' : localSortDir
 
   const handleSort = useCallback(
     (key: string) => {
-      if (sortKey === key) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+      const nextDir: SortDir = sortKey === key && sortDir === 'asc' ? 'desc' : 'asc'
+      if (isControlled) {
+        onSortChange(key, sortKey === key ? nextDir : 'asc')
       } else {
-        setSortKey(key)
-        setSortDir('asc')
+        setLocalSortKey(key)
+        setLocalSortDir(sortKey === key ? nextDir : 'asc')
       }
     },
-    [sortKey],
+    [isControlled, onSortChange, sortKey, sortDir],
   )
 
-  const sorted = sortKey
-    ? [...data].sort((a, b) => {
-        const av = (a as Record<string, unknown>)[sortKey]
-        const bv = (b as Record<string, unknown>)[sortKey]
-        if (av == null && bv == null) return 0
-        if (av == null) return 1
-        if (bv == null) return -1
-        const cmp = av < bv ? -1 : av > bv ? 1 : 0
-        return sortDir === 'asc' ? cmp : -cmp
-      })
-    : data
+  // In controlled mode the parent already returns sorted data; only sort locally otherwise.
+  const sorted =
+    !isControlled && sortKey
+      ? [...data].sort((a, b) => {
+          const av = (a as Record<string, unknown>)[sortKey]
+          const bv = (b as Record<string, unknown>)[sortKey]
+          if (av == null && bv == null) return 0
+          if (av == null) return 1
+          if (bv == null) return -1
+          const cmp = av < bv ? -1 : av > bv ? 1 : 0
+          return sortDir === 'asc' ? cmp : -cmp
+        })
+      : data
 
   const SortIcon = ({ colKey }: { colKey: string }) => {
     if (sortKey !== colKey) return <ArrowUpDown size={14} className="opacity-40" />
@@ -92,11 +113,23 @@ export function DataTable<T>({
           ) : (
             sorted.map((row, i) => (
               <tr
-                key={i}
+                key={rowKey ? rowKey(row, i) : i}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          onRowClick(row)
+                        }
+                      }
+                    : undefined
+                }
+                tabIndex={onRowClick ? 0 : undefined}
+                role={onRowClick ? 'button' : undefined}
                 className={`transition-colors duration-150 ${
                   onRowClick
-                    ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-800'
                     : ''
                 }`}
               >

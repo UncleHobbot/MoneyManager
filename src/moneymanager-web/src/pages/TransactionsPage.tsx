@@ -6,17 +6,25 @@ import {
   TrendingDown,
   DollarSign,
   Hash,
+  Search,
+  Download,
+  X,
 } from 'lucide-react'
 import {
   useTransactions,
   useTransactionStats,
   useUpdateTransaction,
+  useExportTransactions,
+  type SortDir,
+  type TransactionFilters,
 } from '@/hooks/useTransactions'
 import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useChartPeriods } from '@/hooks/useCharts'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import {
   Button,
+  Input,
   Select,
   DataTable,
   Badge,
@@ -31,9 +39,9 @@ import type { TransactionDto } from '@/types'
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('en-CA', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'CAD',
   }).format(Math.abs(value))
 }
 
@@ -53,28 +61,49 @@ export default function TransactionsPage() {
   const [period, setPeriod] = useState('12')
   const [accountFilter, setAccountFilter] = useState<number | undefined>()
   const [categoryFilter, setCategoryFilter] = useState<number | undefined>()
+  const [searchInput, setSearchInput] = useState('')
+  const [uncategorized, setUncategorized] = useState(false)
+  const [sortBy, setSortBy] = useState('date')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
   const [editRow, setEditRow] = useState<TransactionDto | null>(null)
   const [editDesc, setEditDesc] = useState('')
   const [editCatId, setEditCatId] = useState<number | undefined>()
+  const [editError, setEditError] = useState<string | null>(null)
+
+  const search = useDebouncedValue(searchInput.trim(), 300)
+
+  const filters: TransactionFilters = useMemo(
+    () => ({
+      period,
+      accountId: accountFilter,
+      categoryId: categoryFilter,
+      search,
+      uncategorized,
+      sortBy,
+      sortDir,
+    }),
+    [period, accountFilter, categoryFilter, search, uncategorized, sortBy, sortDir],
+  )
 
   const { data: periods } = useChartPeriods()
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
-  const { data: stats } = useTransactionStats(period)
-  const { data: txPage, isLoading } = useTransactions(
-    period,
-    accountFilter,
-    categoryFilter,
-    page,
-    pageSize,
-  )
+  const { data: stats } = useTransactionStats(filters)
+  const { data: txPage, isLoading, isFetching } = useTransactions(filters, page, pageSize)
   const updateTx = useUpdateTransaction()
+  const exportTx = useExportTransactions(period)
 
   const totalPages = txPage ? Math.max(1, Math.ceil(txPage.totalCount / pageSize)) : 1
 
-  // Reset to page 1 when filters change
+  const hasActiveFilters =
+    accountFilter !== undefined ||
+    categoryFilter !== undefined ||
+    searchInput.trim() !== '' ||
+    uncategorized
+
+  // Any change that narrows or reorders results returns to the first page.
   const handlePeriodChange = useCallback((v: string) => {
     setPeriod(v)
     setPage(1)
@@ -87,8 +116,30 @@ export default function TransactionsPage() {
     setCategoryFilter(v ? Number(v) : undefined)
     setPage(1)
   }, [])
+  const handleSearchChange = useCallback((v: string) => {
+    setSearchInput(v)
+    setPage(1)
+  }, [])
+  const handleUncategorizedChange = useCallback((checked: boolean) => {
+    setUncategorized(checked)
+    setPage(1)
+  }, [])
   const handlePageSizeChange = useCallback((v: string) => {
     setPageSize(Number(v))
+    setPage(1)
+  }, [])
+
+  const clearFilters = useCallback(() => {
+    setAccountFilter(undefined)
+    setCategoryFilter(undefined)
+    setSearchInput('')
+    setUncategorized(false)
+    setPage(1)
+  }, [])
+
+  const handleSortChange = useCallback((key: string, dir: SortDir) => {
+    setSortBy(key)
+    setSortDir(dir)
     setPage(1)
   }, [])
 
@@ -96,12 +147,14 @@ export default function TransactionsPage() {
     setEditRow(row)
     setEditDesc(row.description)
     setEditCatId(row.category?.id)
+    setEditError(null)
   }, [])
 
   const closeEdit = useCallback(() => setEditRow(null), [])
 
   const saveEdit = useCallback(() => {
     if (!editRow) return
+    setEditError(null)
     updateTx.mutate(
       {
         id: editRow.id,
@@ -110,9 +163,25 @@ export default function TransactionsPage() {
           categoryId: editCatId,
         },
       },
-      { onSuccess: () => closeEdit() },
+      {
+        onSuccess: () => closeEdit(),
+        onError: () => setEditError('Failed to save changes. Please try again.'),
+      },
     )
   }, [editRow, editDesc, editCatId, updateTx, closeEdit])
+
+  const handleExport = useCallback(() => {
+    exportTx.mutate(undefined, {
+      onSuccess: (blob) => {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `transactions-${period}.csv`
+        link.click()
+        URL.revokeObjectURL(url)
+      },
+    })
+  }, [exportTx, period])
 
   const periodOptions = useMemo(
     () => (periods ?? []).map((p) => ({ label: p.label, value: p.code })),
@@ -151,7 +220,7 @@ export default function TransactionsPage() {
         render: (row) => row.account.shownName,
       },
       {
-        key: 'amountExt',
+        key: 'amount',
         header: 'Amount',
         sortable: true,
         className: 'whitespace-nowrap text-right w-28',
@@ -202,6 +271,20 @@ export default function TransactionsPage() {
       {/* Header & Filters */}
       <div className="flex flex-wrap items-end gap-3">
         <h1 className="text-2xl font-semibold dark:text-white mr-auto">Transactions</h1>
+        <div className="relative">
+          <Search
+            size={16}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <Input
+            id="transaction-search"
+            type="search"
+            placeholder="Search description..."
+            value={searchInput}
+            onChange={handleSearchChange}
+            className="!pl-9 w-56"
+          />
+        </div>
         <Select
           options={periodOptions}
           value={period}
@@ -217,6 +300,44 @@ export default function TransactionsPage() {
           value={categoryFilter ?? ''}
           onChange={handleCategoryChange}
         />
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleExport}
+          loading={exportTx.isPending}
+          icon={<Download size={16} />}
+        >
+          Export
+        </Button>
+      </div>
+
+      {/* Secondary filter row */}
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <label className="inline-flex cursor-pointer items-center gap-2 text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={uncategorized}
+            onChange={(e) => handleUncategorizedChange(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+          />
+          Uncategorized only
+        </label>
+        {isFetching && !isLoading && (
+          <span className="inline-flex items-center gap-1.5 text-gray-400">
+            <Spinner size="sm" /> Updating…
+          </span>
+        )}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            icon={<X size={14} />}
+            className="ml-auto"
+          >
+            Clear filters
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -228,6 +349,10 @@ export default function TransactionsPage() {
         <DataTable
           columns={columns}
           data={rows}
+          rowKey={(row) => row.id}
+          sortKey={sortBy}
+          sortDir={sortDir}
+          onSortChange={handleSortChange}
           onRowClick={openEdit}
           emptyMessage="No transactions found for the selected filters."
         />
@@ -304,6 +429,7 @@ export default function TransactionsPage() {
         categoryId={editCatId}
         categories={categories ?? []}
         isSaving={updateTx.isPending}
+        errorMessage={editError}
         formatDate={formatDate}
         formatAmount={formatSignedAmount}
         onDescriptionChange={setEditDesc}

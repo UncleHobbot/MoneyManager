@@ -1,4 +1,10 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import api from '@/api/client'
 import type {
   PaginatedResult,
@@ -7,21 +13,58 @@ import type {
   UpdateTransactionRequest,
 } from '@/types'
 
-export function useTransactions(
-  period: string,
-  accountId?: number,
-  categoryId?: number,
-  page = 1,
-  pageSize = 50,
-) {
+export type SortDir = 'asc' | 'desc'
+
+export interface TransactionFilters {
+  period: string
+  accountId?: number
+  categoryId?: number
+  search?: string
+  uncategorized?: boolean
+  sortBy?: string
+  sortDir?: SortDir
+}
+
+export function useTransactions(filters: TransactionFilters, page = 1, pageSize = 50) {
+  const {
+    period,
+    accountId,
+    categoryId,
+    search,
+    uncategorized,
+    sortBy = 'date',
+    sortDir = 'desc',
+  } = filters
   return useQuery<PaginatedResult<TransactionDto>>({
-    queryKey: ['transactions', period, accountId, categoryId, page, pageSize],
+    queryKey: [
+      'transactions',
+      period,
+      accountId,
+      categoryId,
+      search,
+      uncategorized,
+      sortBy,
+      sortDir,
+      page,
+      pageSize,
+    ],
     queryFn: () =>
       api
         .get('/transactions', {
-          params: { period, accountId, categoryId, page, pageSize },
+          params: {
+            period,
+            accountId,
+            categoryId,
+            search: search || undefined,
+            uncategorized: uncategorized || undefined,
+            sortBy,
+            sortDir,
+            page,
+            pageSize,
+          },
         })
         .then(r => r.data),
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -49,11 +92,23 @@ export function useInfiniteTransactions(
   })
 }
 
-export function useTransactionStats(period: string) {
+export function useTransactionStats(filters: TransactionFilters) {
+  const { period, accountId, categoryId, search, uncategorized } = filters
   return useQuery<TransactionStats>({
-    queryKey: ['transactions', 'stats', period],
+    queryKey: ['transactions', 'stats', period, accountId, categoryId, search, uncategorized],
     queryFn: () =>
-      api.get('/transactions/stats', { params: { period } }).then(r => r.data),
+      api
+        .get('/transactions/stats', {
+          params: {
+            period,
+            accountId,
+            categoryId,
+            search: search || undefined,
+            uncategorized: uncategorized || undefined,
+          },
+        })
+        .then(r => r.data),
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -62,14 +117,6 @@ export function useUpdateTransaction() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateTransactionRequest }) =>
       api.put(`/transactions/${id}`, data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
-  })
-}
-
-export function useDeleteTransaction() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: number) => api.delete(`/transactions/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
   })
 }

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http.HttpResults;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Endpoints;
@@ -35,6 +36,54 @@ public class TransactionEndpointsTests : IDisposable
         // The result wraps an anonymous type; verify it's Ok
         result.Should().BeAssignableTo<IResult>();
         result.GetType().Name.Should().StartWith("Ok");
+    }
+
+    [Fact]
+    public async Task GetAll_FiltersBySearch()
+    {
+        var result = await TransactionEndpoints.GetAll(_svc.DataService, period: "a", search: "Loblaws");
+
+        var items = GetItems(result);
+        items.Should().NotBeEmpty();
+        items.Should().OnlyContain(t =>
+            t.Description.Contains("Loblaws", StringComparison.OrdinalIgnoreCase) ||
+            t.OriginalDescription.Contains("Loblaws", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task GetAll_FiltersUncategorized()
+    {
+        var result = await TransactionEndpoints.GetAll(_svc.DataService, period: "a", uncategorized: true);
+
+        var items = GetItems(result);
+        items.Should().OnlyContain(t => t.Category == null);
+    }
+
+    [Fact]
+    public async Task GetAll_SortsByAmountAscending()
+    {
+        var result = await TransactionEndpoints.GetAll(_svc.DataService, period: "a", sortBy: "amount", sortDir: "asc");
+
+        var items = GetItems(result);
+        var signed = items.Select(t => t.AmountExt).ToList();
+        signed.Should().BeInAscendingOrder();
+    }
+
+    [Fact]
+    public async Task GetStats_RespectsSearchFilter()
+    {
+        var result = await TransactionEndpoints.GetStats(_svc.DataService, period: "a", search: "Loblaws");
+
+        result.GetType().Name.Should().StartWith("Ok");
+        var value = result.GetType().GetProperty("Value")!.GetValue(result)!;
+        var count = (int)value.GetType().GetProperty("count")!.GetValue(value)!;
+        count.Should().BeGreaterThan(0);
+    }
+
+    private static List<TransactionDto> GetItems(IResult result)
+    {
+        var value = result.GetType().GetProperty("Value")!.GetValue(result)!;
+        return (List<TransactionDto>)value.GetType().GetProperty("items")!.GetValue(value)!;
     }
 
     [Fact]
@@ -147,30 +196,4 @@ public class TransactionEndpointsTests : IDisposable
         result.Should().BeOfType<NotFound>();
     }
 
-    [Fact]
-    public async Task Delete_ReturnsNoContent()
-    {
-        using var ctx = _svc.Factory.CreateDbContext();
-        var tran = ctx.Transactions.First(t => t.Description == "Restaurant");
-
-        var result = await TransactionEndpoints.Delete(tran.Id, _svc.DataService);
-
-        result.Should().BeOfType<NoContent>();
-    }
-
-    [Fact]
-    public async Task Delete_ReturnsNotFoundForInvalidId()
-    {
-        var result = await TransactionEndpoints.Delete(9999, _svc.DataService);
-
-        result.Should().BeOfType<NotFound>();
-    }
-
-    [Fact]
-    public async Task DeleteAll_ReturnsNoContent()
-    {
-        var result = await TransactionEndpoints.DeleteAll(_svc.DataService);
-
-        result.Should().BeOfType<NoContent>();
-    }
 }

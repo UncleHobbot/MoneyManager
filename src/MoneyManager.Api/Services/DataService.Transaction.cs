@@ -54,35 +54,4 @@ public partial class DataService
         return await GetTransactionsAsync();
     }
 
-    /// <summary>
-    /// Deletes a transaction by ID.
-    /// </summary>
-    /// <param name="id">The unique identifier of the transaction to delete.</param>
-    /// <returns>
-    /// <c>true</c> if the transaction was found and deleted; <c>false</c> if no transaction
-    /// with the specified ID exists.
-    /// </returns>
-    public async Task<bool> DeleteTransactionAsync(int id)
-    {
-        var ctx = await contextFactory.CreateDbContextAsync();
-        var transaction = await ctx.Transactions.FindAsync(id);
-        if (transaction == null) return false;
-        ctx.Transactions.Remove(transaction);
-        await ctx.SaveChangesAsync();
-        return true;
-    }
-
-    /// <summary>
-    /// Deletes all transactions from the database.
-    /// </summary>
-    /// <remarks>
-    /// This is a destructive operation that removes every transaction record.
-    /// Use with caution — there is no undo.
-    /// </remarks>
-    public async Task DeleteAllTransactionsAsync()
-    {
-        var ctx = await contextFactory.CreateDbContextAsync();
-        ctx.Transactions.RemoveRange(ctx.Transactions);
-        await ctx.SaveChangesAsync();
-    }
 }

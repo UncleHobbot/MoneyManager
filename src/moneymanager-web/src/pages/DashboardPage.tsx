@@ -178,6 +178,7 @@ function UncategorizedCard() {
   const [editRow, setEditRow] = useState<TransactionDto | null>(null)
   const [editDesc, setEditDesc] = useState('')
   const [editCatId, setEditCatId] = useState<number | undefined>()
+  const [editError, setEditError] = useState<string | null>(null)
   const uncategorizedCategory = categories?.find(
     category => category.name.toLowerCase() === 'uncategorized',
   )
@@ -201,6 +202,7 @@ function UncategorizedCard() {
     setEditRow(row)
     setEditDesc(row.description)
     setEditCatId(row.category?.id)
+    setEditError(null)
   }
 
   function closeEdit() {
@@ -212,6 +214,7 @@ function UncategorizedCard() {
       return
     }
 
+    setEditError(null)
     updateTx.mutate(
       {
         id: editRow.id,
@@ -220,7 +223,10 @@ function UncategorizedCard() {
           categoryId: editCatId,
         },
       },
-      { onSuccess: () => closeEdit() },
+      {
+        onSuccess: () => closeEdit(),
+        onError: () => setEditError('Failed to save changes. Please try again.'),
+      },
     )
   }
 
@@ -284,6 +290,7 @@ function UncategorizedCard() {
             categoryId={editCatId}
             categories={categories ?? []}
             isSaving={updateTx.isPending}
+            errorMessage={editError}
             formatDate={(value) => formatDate(value, true)}
             formatAmount={formatCurrency}
             onDescriptionChange={setEditDesc}

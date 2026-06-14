@@ -17,6 +17,7 @@ interface EditTransactionDialogProps {
   categoryId?: number
   categories: Category[]
   isSaving: boolean
+  errorMessage?: string | null
   formatDate: (value: string) => string
   formatAmount: (value: number) => string
   onDescriptionChange: (value: string) => void
@@ -46,6 +47,7 @@ function EditTransactionDialogContent({
   categoryId,
   categories,
   isSaving,
+  errorMessage,
   formatDate,
   formatAmount,
   onDescriptionChange,
@@ -143,6 +145,9 @@ function EditTransactionDialogContent({
         <Input id="edit-transaction-account" label="Account" value={transaction.account.shownName} readOnly />
         <Input id="edit-transaction-amount" label="Amount" value={formatAmount(transaction.amountExt)} readOnly />
       </div>
+      <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+        Date, account and amount come from the imported bank record and can&apos;t be edited.
+      </p>
 
       <div className="mt-4 flex flex-col gap-4">
         <Select
@@ -335,8 +340,14 @@ function EditTransactionDialogContent({
         )}
       </div>
 
+      {errorMessage && (
+        <p className="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">
+          {errorMessage}
+        </p>
+      )}
+
       <DialogFooter>
-        <Button variant="secondary" onClick={onClose}>
+        <Button variant="secondary" onClick={onClose} disabled={isSaving}>
           Cancel
         </Button>
         <Button onClick={onSave} loading={isSaving}>
