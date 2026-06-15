@@ -92,8 +92,7 @@ describe('EditTransactionDialog', () => {
         onDescriptionChange={onDescriptionChange}
         onCategoryChange={onCategoryChange}
         onClose={onClose}
-        onSave={onSave}
-      />,
+        onSave={onSave}      />,
     )
 
     expect(screen.getByLabelText('Date')).toHaveValue('Mar 15, 2026')
@@ -187,8 +186,7 @@ describe('EditTransactionDialog', () => {
         onDescriptionChange={vi.fn()}
         onCategoryChange={vi.fn()}
         onClose={onClose}
-        onSave={vi.fn()}
-      />,
+        onSave={vi.fn()}      />,
     )
 
     expect(screen.getByRole('heading', { name: 'Rule management' })).toBeInTheDocument()
@@ -271,8 +269,7 @@ describe('EditTransactionDialog', () => {
         onDescriptionChange={onDescriptionChange}
         onCategoryChange={onCategoryChange}
         onClose={onClose}
-        onSave={vi.fn()}
-      />,
+        onSave={vi.fn()}      />,
     )
 
     expect(screen.getByText('Leave blank to use the current edited description: Edited grocery store')).toBeInTheDocument()
@@ -330,8 +327,7 @@ describe('EditTransactionDialog', () => {
         onDescriptionChange={vi.fn()}
         onCategoryChange={vi.fn()}
         onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
+        onSave={vi.fn()}      />,
     )
 
     await user.click(screen.getByRole('button', { name: 'Apply rule' }))
@@ -385,8 +381,7 @@ describe('EditTransactionDialog', () => {
         onDescriptionChange={vi.fn()}
         onCategoryChange={vi.fn()}
         onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
+        onSave={vi.fn()}      />,
     )
 
     await user.click(screen.getByRole('button', { name: 'Apply rule for Food: Groceries' }))

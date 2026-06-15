@@ -158,6 +158,15 @@ export interface UpdateTransactionRequest {
   categoryId?: number
 }
 
+export interface CreateTransactionRequest {
+  accountId: number
+  date: string
+  description: string
+  amount: number
+  isDebit: boolean
+  categoryId?: number
+}
+
 export interface AiProviderRequest {
   name: string
   providerType: string

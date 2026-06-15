@@ -75,35 +75,6 @@ public class DataServiceTransactionTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteTransactionAsync_DeletesExistingTransaction()
-    {
-        var query = await _svc.DataService.GetTransactionsAsync();
-        var transaction = await query.FirstAsync(t => t.Description == "Netflix");
-
-        var deleted = await _svc.DataService.DeleteTransactionAsync(transaction.Id);
-
-        deleted.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task DeleteTransactionAsync_ReturnsFalseForNonExistent()
-    {
-        var deleted = await _svc.DataService.DeleteTransactionAsync(9999);
-
-        deleted.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task DeleteAllTransactionsAsync_RemovesAllTransactions()
-    {
-        await _svc.DataService.DeleteAllTransactionsAsync();
-
-        using var ctx = _svc.Factory.CreateDbContext();
-        var count = await ctx.Transactions.CountAsync();
-        count.Should().Be(0);
-    }
-
-    [Fact]
     public async Task GetTransactionsAsync_TransactionToDtoWorks()
     {
         var query = await _svc.DataService.GetTransactionsAsync();

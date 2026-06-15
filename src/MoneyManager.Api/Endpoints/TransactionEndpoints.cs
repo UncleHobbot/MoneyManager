@@ -18,12 +18,11 @@ public static class TransactionEndpoints
         var group = app.MapGroup("api/transactions").WithTags("Transactions");
 
         group.MapGet("/", GetAll);
+        group.MapPost("/", Create);
         group.MapGet("/{id:int}", GetById);
         group.MapGet("/{id:int}/possible-rules", GetPossibleRules);
         group.MapPost("/{id:int}/apply-rule/{ruleId:int}", ApplyRule);
         group.MapPut("/{id:int}", Update);
-        group.MapDelete("/{id:int}", Delete);
-        group.MapDelete("/bulk", DeleteAll);
         group.MapGet("/stats", GetStats);
         group.MapGet("/export", ExportCsv).Produces<string>(200, "text/csv");
     }
@@ -33,24 +32,21 @@ public static class TransactionEndpoints
         string period = "12",
         int? accountId = null,
         int? categoryId = null,
+        string? search = null,
+        bool uncategorized = false,
+        string sortBy = "date",
+        string sortDir = "desc",
         int page = 1,
         int pageSize = 50)
     {
         dataService.GetDates(period, out var startDate, out var endDate);
 
         var query = await dataService.GetTransactionsAsync();
-        query = query.Where(t => t.Date >= startDate && t.Date < endDate);
-
-        if (accountId.HasValue)
-            query = query.Where(t => t.Account.Id == accountId.Value);
-
-        if (categoryId.HasValue)
-            query = query.Where(t => t.Category != null && t.Category.Id == categoryId.Value);
+        query = ApplyFilters(query, startDate, endDate, accountId, categoryId, search, uncategorized);
 
         var totalCount = await query.CountAsync();
 
-        var items = await query
-            .OrderByDescending(t => t.Date)
+        var items = await ApplySort(query, sortBy, sortDir)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -62,6 +58,87 @@ public static class TransactionEndpoints
             page,
             pageSize
         });
+    }
+
+    /// <summary>
+    /// Applies the shared date/account/category/search/uncategorized filters used by
+    /// both the listing and the stats endpoints so the two stay consistent.
+    /// </summary>
+    private static IQueryable<Transaction> ApplyFilters(
+        IQueryable<Transaction> query,
+        DateTime startDate,
+        DateTime endDate,
+        int? accountId,
+        int? categoryId,
+        string? search,
+        bool uncategorized)
+    {
+        query = query.Where(t => t.Date >= startDate && t.Date < endDate);
+
+        if (accountId.HasValue)
+            query = query.Where(t => t.Account.Id == accountId.Value);
+
+        if (categoryId.HasValue)
+            query = query.Where(t => t.Category != null && t.Category.Id == categoryId.Value);
+
+        // "Uncategorized" covers both a missing category and the dedicated
+        // "Uncategorized" category (which is how the dashboard identifies them).
+        if (uncategorized)
+            query = query.Where(t => t.Category == null || t.Category.Name.ToLower() == "uncategorized");
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var pattern = $"%{search.Trim()}%";
+            query = query.Where(t =>
+                EF.Functions.Like(t.Description, pattern) ||
+                EF.Functions.Like(t.OriginalDescription, pattern));
+        }
+
+        return query;
+    }
+
+    private static IQueryable<Transaction> ApplySort(
+        IQueryable<Transaction> query,
+        string sortBy,
+        string sortDir)
+    {
+        var ascending = string.Equals(sortDir, "asc", StringComparison.OrdinalIgnoreCase);
+
+        return sortBy?.ToLowerInvariant() switch
+        {
+            "amount" => ascending
+                ? query.OrderBy(t => t.IsDebit ? -t.Amount : t.Amount)
+                : query.OrderByDescending(t => t.IsDebit ? -t.Amount : t.Amount),
+            "description" => ascending
+                ? query.OrderBy(t => t.Description)
+                : query.OrderByDescending(t => t.Description),
+            _ => ascending
+                ? query.OrderBy(t => t.Date).ThenBy(t => t.Id)
+                : query.OrderByDescending(t => t.Date).ThenByDescending(t => t.Id),
+        };
+    }
+
+    internal static async Task<IResult> Create(
+        CreateTransactionRequest request,
+        DataService dataService)
+    {
+        if (string.IsNullOrWhiteSpace(request.Description))
+            return TypedResults.BadRequest("Description is required.");
+
+        if (request.Amount <= 0)
+            return TypedResults.BadRequest("Amount must be greater than zero.");
+
+        var created = await dataService.AddTransactionAsync(
+            request.AccountId,
+            request.Date,
+            request.Description.Trim(),
+            request.Amount,
+            request.IsDebit,
+            request.CategoryId);
+
+        return created is null
+            ? TypedResults.BadRequest("Account not found.")
+            : TypedResults.Created($"/api/transactions/{created.Id}", created.ToDto());
     }
 
     internal static async Task<IResult> GetById(int id, DataService dataService)
@@ -133,25 +210,18 @@ public static class TransactionEndpoints
         return TypedResults.Ok(transaction.ToDto());
     }
 
-    internal static async Task<IResult> Delete(int id, DataService dataService)
-    {
-        var deleted = await dataService.DeleteTransactionAsync(id);
-        return deleted ? TypedResults.NoContent() : TypedResults.NotFound();
-    }
-
-    internal static async Task<IResult> DeleteAll(DataService dataService)
-    {
-        await dataService.DeleteAllTransactionsAsync();
-        return TypedResults.NoContent();
-    }
-
-    internal static async Task<IResult> GetStats(DataService dataService, string period = "12")
+    internal static async Task<IResult> GetStats(
+        DataService dataService,
+        string period = "12",
+        int? accountId = null,
+        int? categoryId = null,
+        string? search = null,
+        bool uncategorized = false)
     {
         dataService.GetDates(period, out var startDate, out var endDate);
 
         var query = await dataService.GetTransactionsAsync();
-        var transactions = await query
-            .Where(t => t.Date >= startDate && t.Date < endDate)
+        var transactions = await ApplyFilters(query, startDate, endDate, accountId, categoryId, search, uncategorized)
             .ToListAsync();
 
         var income = transactions.Where(t => !t.IsDebit).Sum(t => t.Amount);
