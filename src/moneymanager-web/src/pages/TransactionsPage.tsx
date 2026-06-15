@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, type ReactNode } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,11 +8,14 @@ import {
   Hash,
   Search,
   Download,
+  Pencil,
+  Plus,
   X,
 } from 'lucide-react'
 import {
   useTransactions,
   useTransactionStats,
+  useCreateTransaction,
   useUpdateTransaction,
   useExportTransactions,
   type SortDir,
@@ -33,8 +36,9 @@ import {
   CategoryIcon,
 } from '@/components/ui'
 import { EditTransactionDialog } from '@/components/EditTransactionDialog'
+import { AddTransactionDialog } from '@/components/AddTransactionDialog'
 import type { Column } from '@/components/ui'
-import type { TransactionDto } from '@/types'
+import type { CreateTransactionRequest, TransactionDto } from '@/types'
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
 
@@ -57,6 +61,59 @@ function formatDate(iso: string): string {
   })
 }
 
+/** A cell value that filters the grid when clicked. */
+function FilterCell({
+  onClick,
+  title,
+  children,
+}: {
+  onClick: () => void
+  title: string
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="inline-flex items-center gap-1.5 rounded text-left hover:text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:text-blue-400"
+    >
+      {children}
+    </button>
+  )
+}
+
+/** A column header with an optional ✕ button to clear that column's filter. */
+function ClearableHeader({
+  label,
+  active,
+  onClear,
+}: {
+  label: string
+  active: boolean
+  onClear: () => void
+}) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {label}
+      {active && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onClear()
+          }}
+          title={`Clear ${label} filter`}
+          aria-label={`Clear ${label} filter`}
+          className="rounded p-0.5 text-blue-600 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-blue-400 dark:hover:bg-blue-900/40"
+        >
+          <X size={12} />
+        </button>
+      )}
+    </span>
+  )
+}
+
 export default function TransactionsPage() {
   const [period, setPeriod] = useState('12')
   const [accountFilter, setAccountFilter] = useState<number | undefined>()
@@ -71,6 +128,8 @@ export default function TransactionsPage() {
   const [editDesc, setEditDesc] = useState('')
   const [editCatId, setEditCatId] = useState<number | undefined>()
   const [editError, setEditError] = useState<string | null>(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
 
   const search = useDebouncedValue(searchInput.trim(), 300)
 
@@ -93,6 +152,7 @@ export default function TransactionsPage() {
   const { data: stats } = useTransactionStats(filters)
   const { data: txPage, isLoading, isFetching } = useTransactions(filters, page, pageSize)
   const updateTx = useUpdateTransaction()
+  const createTx = useCreateTransaction()
   const exportTx = useExportTransactions(period)
 
   const totalPages = txPage ? Math.max(1, Math.ceil(txPage.totalCount / pageSize)) : 1
@@ -143,6 +203,39 @@ export default function TransactionsPage() {
     setPage(1)
   }, [])
 
+  // Click-a-cell-to-filter handlers (kept in sync with the top filter bar).
+  const filterByAccount = useCallback((id: number) => {
+    setAccountFilter(id)
+    setPage(1)
+  }, [])
+  const clearAccountFilter = useCallback(() => {
+    setAccountFilter(undefined)
+    setPage(1)
+  }, [])
+  const filterByCategory = useCallback((id: number) => {
+    setCategoryFilter(id)
+    setUncategorized(false)
+    setPage(1)
+  }, [])
+  const filterUncategorized = useCallback(() => {
+    setUncategorized(true)
+    setCategoryFilter(undefined)
+    setPage(1)
+  }, [])
+  const clearCategoryFilter = useCallback(() => {
+    setCategoryFilter(undefined)
+    setUncategorized(false)
+    setPage(1)
+  }, [])
+  const filterByDescription = useCallback((text: string) => {
+    setSearchInput(text)
+    setPage(1)
+  }, [])
+  const clearSearchFilter = useCallback(() => {
+    setSearchInput('')
+    setPage(1)
+  }, [])
+
   const openEdit = useCallback((row: TransactionDto) => {
     setEditRow(row)
     setEditDesc(row.description)
@@ -169,6 +262,24 @@ export default function TransactionsPage() {
       },
     )
   }, [editRow, editDesc, editCatId, updateTx, closeEdit])
+
+  const openAdd = useCallback(() => {
+    setAddError(null)
+    setAddOpen(true)
+  }, [])
+
+  const closeAdd = useCallback(() => setAddOpen(false), [])
+
+  const createTransaction = useCallback(
+    (data: CreateTransactionRequest) => {
+      setAddError(null)
+      createTx.mutate(data, {
+        onSuccess: () => setAddOpen(false),
+        onError: () => setAddError('Failed to add transaction. Please try again.'),
+      })
+    },
+    [createTx],
+  )
 
   const handleExport = useCallback(() => {
     exportTx.mutate(undefined, {
@@ -215,9 +326,22 @@ export default function TransactionsPage() {
       },
       {
         key: 'account',
-        header: 'Account',
+        header: (
+          <ClearableHeader
+            label="Account"
+            active={accountFilter !== undefined}
+            onClear={clearAccountFilter}
+          />
+        ),
         className: 'whitespace-nowrap',
-        render: (row) => row.account.shownName,
+        render: (row) => (
+          <FilterCell
+            onClick={() => filterByAccount(row.account.id)}
+            title={`Filter by account: ${row.account.shownName}`}
+          >
+            {row.account.shownName}
+          </FilterCell>
+        ),
       },
       {
         key: 'amount',
@@ -233,24 +357,46 @@ export default function TransactionsPage() {
       },
       {
         key: 'category',
-        header: 'Category',
+        header: (
+          <ClearableHeader
+            label="Category"
+            active={categoryFilter !== undefined || uncategorized}
+            onClear={clearCategoryFilter}
+          />
+        ),
         className: 'whitespace-nowrap',
         render: (row) =>
           row.category ? (
-            <span className="inline-flex items-center gap-1.5">
+            <FilterCell
+              onClick={() => filterByCategory(row.category!.id)}
+              title={`Filter by category: ${row.category.name}`}
+            >
               <CategoryIcon icon={row.category.icon ?? row.category.pIcon ?? undefined} size={16} />
               {row.category.name}
-            </span>
+            </FilterCell>
           ) : (
-            <span className="text-gray-400 italic">Uncategorized</span>
+            <FilterCell onClick={filterUncategorized} title="Filter by uncategorized">
+              <span className="italic text-gray-400">Uncategorized</span>
+            </FilterCell>
           ),
       },
       {
         key: 'description',
-        header: 'Description',
+        header: (
+          <ClearableHeader
+            label="Description"
+            active={searchInput.trim() !== ''}
+            onClear={clearSearchFilter}
+          />
+        ),
         sortable: true,
         render: (row) => (
-          <span className="line-clamp-1">{row.description}</span>
+          <FilterCell
+            onClick={() => filterByDescription(row.description)}
+            title={`Filter descriptions containing: ${row.description}`}
+          >
+            <span className="line-clamp-1">{row.description}</span>
+          </FilterCell>
         ),
       },
       {
@@ -260,8 +406,37 @@ export default function TransactionsPage() {
         render: (row) =>
           row.isRuleApplied ? <Badge variant="blue">Rule</Badge> : null,
       },
+      {
+        key: 'actions',
+        header: '',
+        className: 'w-20 text-right',
+        render: (row) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Pencil size={14} />}
+            aria-label={`Edit ${row.description}`}
+            onClick={() => openEdit(row)}
+          >
+            Edit
+          </Button>
+        ),
+      },
     ],
-    [],
+    [
+      accountFilter,
+      categoryFilter,
+      uncategorized,
+      searchInput,
+      filterByAccount,
+      clearAccountFilter,
+      filterByCategory,
+      filterUncategorized,
+      clearCategoryFilter,
+      filterByDescription,
+      clearSearchFilter,
+      openEdit,
+    ],
   )
 
   const rows = txPage?.items ?? []
@@ -300,6 +475,13 @@ export default function TransactionsPage() {
           value={categoryFilter ?? ''}
           onChange={handleCategoryChange}
         />
+        <Button
+          size="sm"
+          onClick={openAdd}
+          icon={<Plus size={16} />}
+        >
+          Add
+        </Button>
         <Button
           variant="secondary"
           size="sm"
@@ -353,7 +535,6 @@ export default function TransactionsPage() {
           sortKey={sortBy}
           sortDir={sortDir}
           onSortChange={handleSortChange}
-          onRowClick={openEdit}
           emptyMessage="No transactions found for the selected filters."
         />
       )}
@@ -436,6 +617,17 @@ export default function TransactionsPage() {
         onCategoryChange={setEditCatId}
         onClose={closeEdit}
         onSave={saveEdit}
+      />
+
+      {/* Add Dialog */}
+      <AddTransactionDialog
+        open={addOpen}
+        accounts={accounts ?? []}
+        categories={categories ?? []}
+        isSaving={createTx.isPending}
+        errorMessage={addError}
+        onClose={closeAdd}
+        onCreate={createTransaction}
       />
     </div>
   )

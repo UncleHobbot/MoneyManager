@@ -18,6 +18,7 @@ public static class TransactionEndpoints
         var group = app.MapGroup("api/transactions").WithTags("Transactions");
 
         group.MapGet("/", GetAll);
+        group.MapPost("/", Create);
         group.MapGet("/{id:int}", GetById);
         group.MapGet("/{id:int}/possible-rules", GetPossibleRules);
         group.MapPost("/{id:int}/apply-rule/{ruleId:int}", ApplyRule);
@@ -80,8 +81,10 @@ public static class TransactionEndpoints
         if (categoryId.HasValue)
             query = query.Where(t => t.Category != null && t.Category.Id == categoryId.Value);
 
+        // "Uncategorized" covers both a missing category and the dedicated
+        // "Uncategorized" category (which is how the dashboard identifies them).
         if (uncategorized)
-            query = query.Where(t => t.Category == null);
+            query = query.Where(t => t.Category == null || t.Category.Name.ToLower() == "uncategorized");
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -113,6 +116,29 @@ public static class TransactionEndpoints
                 ? query.OrderBy(t => t.Date).ThenBy(t => t.Id)
                 : query.OrderByDescending(t => t.Date).ThenByDescending(t => t.Id),
         };
+    }
+
+    internal static async Task<IResult> Create(
+        CreateTransactionRequest request,
+        DataService dataService)
+    {
+        if (string.IsNullOrWhiteSpace(request.Description))
+            return TypedResults.BadRequest("Description is required.");
+
+        if (request.Amount <= 0)
+            return TypedResults.BadRequest("Amount must be greater than zero.");
+
+        var created = await dataService.AddTransactionAsync(
+            request.AccountId,
+            request.Date,
+            request.Description.Trim(),
+            request.Amount,
+            request.IsDebit,
+            request.CategoryId);
+
+        return created is null
+            ? TypedResults.BadRequest("Account not found.")
+            : TypedResults.Created($"/api/transactions/{created.Id}", created.ToDto());
     }
 
     internal static async Task<IResult> GetById(int id, DataService dataService)

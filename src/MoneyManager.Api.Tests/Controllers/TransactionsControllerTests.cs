@@ -56,7 +56,8 @@ public class TransactionEndpointsTests : IDisposable
         var result = await TransactionEndpoints.GetAll(_svc.DataService, period: "a", uncategorized: true);
 
         var items = GetItems(result);
-        items.Should().OnlyContain(t => t.Category == null);
+        items.Should().OnlyContain(t =>
+            t.Category == null || t.Category.Name.ToLower() == "uncategorized");
     }
 
     [Fact]
@@ -84,6 +85,101 @@ public class TransactionEndpointsTests : IDisposable
     {
         var value = result.GetType().GetProperty("Value")!.GetValue(result)!;
         return (List<TransactionDto>)value.GetType().GetProperty("items")!.GetValue(value)!;
+    }
+
+    [Fact]
+    public async Task Create_AddsTransactionWithCategory()
+    {
+        int accountId, categoryId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+        {
+            accountId = ctx.Accounts.First(a => a.Name == "RBC Chequing").Id;
+            categoryId = ctx.Categories.First(c => c.Name == "Food").Id;
+        }
+
+        var request = new CreateTransactionRequest
+        {
+            AccountId = accountId,
+            Date = DateTime.Today,
+            Description = "Manual Coffee",
+            Amount = 4.50m,
+            IsDebit = true,
+            CategoryId = categoryId,
+        };
+
+        var result = await TransactionEndpoints.Create(request, _svc.DataService);
+
+        var created = result.Should().BeOfType<Created<TransactionDto>>().Subject;
+        created.Value!.Description.Should().Be("Manual Coffee");
+        created.Value.Amount.Should().Be(4.50m);
+        created.Value.IsDebit.Should().BeTrue();
+        created.Value.AmountExt.Should().Be(-4.50m);
+        created.Value.Category!.Name.Should().Be("Food");
+
+        using var verify = _svc.Factory.CreateDbContext();
+        verify.Transactions.Any(t => t.Description == "Manual Coffee").Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Create_AddsIncomeWithoutCategory()
+    {
+        int accountId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+            accountId = ctx.Accounts.First(a => a.Name == "RBC Chequing").Id;
+
+        var request = new CreateTransactionRequest
+        {
+            AccountId = accountId,
+            Date = DateTime.Today,
+            Description = "Manual Income",
+            Amount = 100m,
+            IsDebit = false,
+        };
+
+        var result = await TransactionEndpoints.Create(request, _svc.DataService);
+
+        var created = result.Should().BeOfType<Created<TransactionDto>>().Subject;
+        created.Value!.Amount.Should().Be(100m);
+        created.Value.AmountExt.Should().Be(100m);
+        created.Value.Category.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Create_ReturnsBadRequestForUnknownAccount()
+    {
+        var request = new CreateTransactionRequest
+        {
+            AccountId = 99999,
+            Date = DateTime.Today,
+            Description = "Nope",
+            Amount = 5m,
+            IsDebit = true,
+        };
+
+        var result = await TransactionEndpoints.Create(request, _svc.DataService);
+
+        result.Should().BeOfType<BadRequest<string>>();
+    }
+
+    [Fact]
+    public async Task Create_ReturnsBadRequestForInvalidAmount()
+    {
+        int accountId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+            accountId = ctx.Accounts.First(a => a.Name == "RBC Chequing").Id;
+
+        var request = new CreateTransactionRequest
+        {
+            AccountId = accountId,
+            Date = DateTime.Today,
+            Description = "Zero",
+            Amount = 0m,
+            IsDebit = true,
+        };
+
+        var result = await TransactionEndpoints.Create(request, _svc.DataService);
+
+        result.Should().BeOfType<BadRequest<string>>();
     }
 
     [Fact]

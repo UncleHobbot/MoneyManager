@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query'
 import api from '@/api/client'
 import type {
+  CreateTransactionRequest,
   PaginatedResult,
   TransactionDto,
   TransactionStats,
@@ -109,6 +110,15 @@ export function useTransactionStats(filters: TransactionFilters) {
         })
         .then(r => r.data),
     placeholderData: keepPreviousData,
+  })
+}
+
+export function useCreateTransaction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: CreateTransactionRequest) =>
+      api.post('/transactions', data).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
   })
 }
 
