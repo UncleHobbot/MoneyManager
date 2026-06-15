@@ -66,158 +66,158 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## Project Overview
 
-MoneyManager is a personal financial management desktop application designed as a Mint.com replacement. It enables users to track financial transactions, manage accounts/categories, visualize spending patterns, and receive AI-powered financial insights.
+MoneyManager is a personal financial management app (Mint.com replacement): track transactions, manage accounts/categories, auto-categorize via rules, visualize spending, and get AI-powered insights.
+
+**The current product is a web app** — an ASP.NET Core Minimal-API backend (`src/MoneyManager.Api`) plus a React + Vite single-page app (`src/moneymanager-web`). The original .NET 10 / Windows Forms + Blazor Hybrid **desktop** app has been retired to `legacy/`; **do not modify `legacy/`** unless explicitly asked.
+
+## Repository Layout (monorepo)
+
+- `src/MoneyManager.Api/` — ASP.NET Core Minimal API; also serves the built SPA in production
+- `src/moneymanager-web/` — React + TypeScript + Vite frontend
+- `src/MoneyManager.Api.Tests/` — xUnit backend tests
+- `src/e2e/` — end-to-end tests
+- `legacy/` — retired Blazor Hybrid / WinForms desktop app (do not modify)
+- `docs/`, `Dockerfile`, `docker-compose*.yml`, `MoneyManager.sln`
 
 ## Technology Stack
 
-- **.NET 10.0** (Windows target) with **Windows Forms** shell
-- **Blazor Hybrid** for UI components
-- **Entity Framework Core 10** with **SQLite** for persistence
-- **Microsoft Fluent UI Blazor** for modern UI components
-- **ApexCharts** for data visualization
-- **OpenAI API** for AI-powered financial analysis
+**Backend** (`src/MoneyManager.Api`)
+- **.NET 10** with **ASP.NET Core Minimal APIs**
+- **Entity Framework Core 10** + **SQLite** (`IDbContextFactory`, context per operation)
+- **Serilog** logging
+- Tests: **xUnit** + **FluentAssertions** + **NSubstitute**
+
+**Frontend** (`src/moneymanager-web`)
+- **React 19** + **TypeScript**, **Vite 8**
+- **Tailwind CSS v4**
+- **TanStack Query v5** (server state), **React Router v7**
+- **Axios** (`src/api/client.ts`, `baseURL: '/api'`)
+- **ApexCharts**, **lucide-react** icons
+- Tests: **Vitest** + **Testing Library** (+ **MSW**)
+
+**AI** — OpenAI-compatible chat completions via `AIService`; provider config (base URL / model / key) stored as `AiProvider` entities, so the provider is pluggable.
 
 ## Architecture
 
-Service-based architecture with dependency injection:
-
 ```
-Program.cs → MainForm.cs → Main.razor → Blazor Pages/Components
-                              ↓
-                         Services Layer
-                              ↓
-                    Entity Framework Core
-                              ↓
-                         SQLite Database
+React SPA (Vite dev server :5173, proxies /api → :5000)
+        ↓  HTTP /api
+ASP.NET Core Minimal API endpoints (src/MoneyManager.Api/Endpoints/*.cs)
+        ↓
+DataService / TransactionService / AIService (DI)
+        ↓
+EF Core (DataContext via IDbContextFactory)
+        ↓
+SQLite
 ```
 
-## Key Directories
+In **production** the API also serves the built SPA from `wwwroot` (`UseDefaultFiles` + `UseStaticFiles` + `MapFallback` to `index.html`). **CORS** is enabled for local dev where the SPA runs on a separate port.
 
-- `/Data/` - EF Core models and DbContext
-- `/Services/` - Business logic (partial classes for organization)
-- `/Pages/` - Blazor pages (Home, Transactions, Accounts, Categories, Rules, Settings, AI, Charts/)
-- `/Components/` - Reusable Blazor components
-- `/Model/` - DTOs and enums
-- `/Helpers/` - Utility classes
-- `/Migrations/` - EF Core migrations
+## Backend Layout (`src/MoneyManager.Api`)
 
-## Important Files
+- `Endpoints/` — Minimal-API route groups, one static class per resource: `TransactionEndpoints`, `AccountEndpoints`, `CategoryEndpoints`, `RuleEndpoints`, `ChartEndpoints`, `ImportEndpoints`, `AIEndpoints`, `SystemEndpoints`. Each maps routes under `api/<resource>` and holds the `internal static` handlers (unit-tested directly).
+- `Services/`
+  - `DataService` (partial): `.cs` (core + `IMemoryCache` caching), `.Account`, `.Transaction`, `.Category`, `.Rule`, `.Chart`, `.AI`
+  - `TransactionService` (partial): `.cs` (duplicate detection) + `.Mint`, `.RBC`, `.CIBC` bank CSV imports
+  - `AIService`, `AiProviderService`, `DBService` (backup/restore), `SettingsService`
+- `Data/` — EF entities + `DataContext`: `Transaction`, `Account`, `Category`, `Rule`, `Balance`, `AiProvider`
+- `Model/` — request/response DTOs (e.g. `Model/Api/TransactionRequest.cs` → `CreateTransactionRequest`, `UpdateTransactionRequest`)
+- `Helpers/`, `Migrations/`, `Program.cs`, `appsettings*.json`, `wwwroot/` (built SPA)
 
-### Data Models (`/Data/`)
-- `DBContext.cs` - EF Core context with query interceptors
-- `Transaction.cs` - Financial transaction entity with TransactionDto
-- `Account.cs` - Bank account with alternative names support
-- `Category.cs` - Hierarchical categories with icons (22 types)
-- `Rule.cs` - Auto-categorization rules (Contains, StartsWith, EndsWith, Equals)
-- `Balance.cs` - Account balance snapshots
+## Frontend Layout (`src/moneymanager-web/src`)
 
-### Services (`/Services/`)
-DataService is a partial class split into:
-- `DataService.cs` - Core service with static caching
-- `DataService.Account.cs` - Account CRUD
-- `DataService.Transaction.cs` - Transaction management
-- `DataService.Category.cs` - Category management
-- `DataService.Rule.cs` - Rule management
-- `DataService.Chart.cs` - Chart data aggregation
-- `DataService.AI.cs` - AI data preparation
-
-TransactionService handles bank imports:
-- `TransactionService.cs` - Core processing with duplicate detection
-- `TransactionService.Mint.cs` - Mint.com CSV import
-- `TransactionService.RBC.cs` - RBC bank import
-- `TransactionService.CIBC.cs` - CIBC bank import
-
-Other services:
-- `AIService.cs` - OpenAI integration
-- `DBService.cs` - Database backup
-- `SettingsService.cs` - User preferences
+- `pages/` — one component per route (`DashboardPage`, `TransactionsPage`, `AccountsPage`, `CategoriesPage`, `RulesPage`, `ImportPage`, `SettingsPage`, `AIAnalysisPage`, chart pages)
+- `components/` — shared components; `components/ui/` is the design system (`Button`, `Input`, `Select`, `Dialog`, `DataTable`, `Badge`, `Card`, `Spinner`, `CategoryIcon`, …); `components/layout/` is the nav/shell
+- `hooks/` — one TanStack Query hook module per resource (`useTransactions`, `useAccounts`, `useCategories`, `useCharts`, …) plus helpers (`useDebouncedValue`)
+- `api/client.ts` — axios instance, `baseURL: '/api'`
+- `types/` — shared TS types/DTOs; `test/` — Vitest setup; tests live in `__tests__/` next to the code
 
 ## Coding Patterns
 
-1. **Partial classes** - Services split across multiple files for organization
-2. **Static caching** - `DataService.Accounts` and `DataService.Categories` cached in memory
-3. **DTO pattern** - `TransactionDto` for UI binding
-4. **Async/await** - All database operations are async
-5. **IDbContextFactory** - Context created per-operation for thread safety
-6. **Fluent UI components** - Use `<FluentDataGrid>`, `<FluentDialog>`, `<FluentTextField>`, etc.
+**Backend**
+1. Endpoints are static `Map*Endpoints` extension classes; handlers are `internal static` so tests call them directly.
+2. `DataService` / `TransactionService` are partial classes split by concern.
+3. `IDbContextFactory<DataContext>` → a fresh context per operation (thread safety). Accounts/Categories cached via `IMemoryCache`.
+4. Entities expose `ToDto()`; endpoints return DTOs, never raw entities.
+5. Amounts are stored **positive**; the signed value is `AmountExt => IsDebit ? -Amount : Amount`.
 
-## Database Schema
+**Frontend**
+1. Server state via TanStack Query hooks; mutations invalidate keys like `['transactions']`. Use `placeholderData: keepPreviousData` to avoid list flicker on refetch.
+2. Filtering/sorting/paging are **server-side** (query params). `DataTable` supports controlled sort via `sortKey`/`onSortChange`.
+3. Build UI from the `components/ui` primitives + Tailwind utilities; match existing component style.
 
-Tables: Accounts, Categories, Transactions, Rules, Balances
+## Database
 
-Key relationships:
-- Transactions → Accounts (many-to-one)
-- Transactions → Categories (many-to-one)
+Tables: **Accounts, Categories, Transactions, Rules, Balances, AiProviders**
+
+Relationships:
+- Transactions → Accounts (n:1)
+- Transactions → Categories (n:1, nullable)
 - Categories → Categories (self-referencing hierarchy)
-- Rules → Categories (many-to-one)
+- Rules → Categories (n:1)
 
-## Configuration
+- DB file (dev): `src/MoneyManager.Api/Data/MoneyManager.db`. Docker/prod: `/app/data/MoneyManager.db` (see `appsettings.json` vs `appsettings.Development.json`).
+- **No EF migration files currently exist** — the schema comes from `DataContext` / the shipped SQLite file. If you introduce migrations, target the API project.
+- Backups (`DBService`): default dir is `{AppContext.BaseDirectory}/backups`, i.e. **inside `bin/.../backups` in dev** (`BackupPath` is unset). Gotcha: backups live in build output, and in Docker land in `/app/backups` rather than the mounted `/app/data` volume. Files: `MoneyManagerBackup_yyyyMMddHHmmss.db`; newest 10 kept.
 
-- `appsettings.json` - Connection strings, OpenAI config, Serilog
-- User Secrets - API keys (UserSecretsId in csproj)
-- `SettingsService` - Runtime settings (dark mode, backup path)
+## Domain Gotchas (learned)
 
-## AI Development Workflow
+- **"Uncategorized" is a real category named "Uncategorized", not a `null` category.** In practice ~no transactions have `Category == null`; uncategorized ones point at the "Uncategorized" category (this is how the dashboard finds them). Any "uncategorized only" filter must match `Category == null || Category.Name == "Uncategorized"`.
+- **Transactions cannot be deleted.** There is intentionally no delete endpoint / UI / service method — they are real historical data.
+- Accounts with `IsHideFromGraph == true` are excluded from transaction listings and charts. A transaction added to a hidden account won't appear in the grid.
+- Chart period codes: `m1` (month), `y1` (year), `12` (last 12 months), `w` (7 days), `a` (all).
+- The Transfer category is filtered out of spending charts. AI prompts use Canadian context (RRSP, TFSA, FHSA).
 
-**IMPORTANT**: After making code changes, always attempt to build the project to verify changes:
+## Build, Test & Run
 
+Both halves must run for the app to work locally.
+
+**Backend** (`src/MoneyManager.Api`)
 ```bash
 dotnet build
+dotnet test src/MoneyManager.Api.Tests
+dotnet run --project src/MoneyManager.Api --urls http://localhost:5000
 ```
 
-If build errors occur:
-1. Read and analyze the error messages
-2. Fix the errors (common issues: syntax errors, type mismatches, missing namespaces, Razor compilation errors)
-3. Build again to verify the fix
-4. Repeat until the build succeeds
+**Frontend** (`src/moneymanager-web`)
+```bash
+npm install
+npm run dev      # Vite dev server on :5173, proxies /api → :5000
+npm run build    # tsc -b && vite build
+npm run lint     # eslint
+npm test         # vitest
+```
 
-This ensures all changes are syntactically correct and the project remains in a working state.
+After any change, build + test the affected side (and `npm run lint` for the web) before considering it done. If the API is already running, stop it before rebuilding — a locked `MoneyManager.Api.exe` fails the build.
+
+**Gotcha:** the test project pins EF Core packages to match the API (e.g. `Microsoft.EntityFrameworkCore.Sqlite` `10.0.6`). Keep them aligned or `dotnet test` fails with an NU1605 "package downgrade" error.
 
 ## Common Tasks
 
-### Adding a new bank import format
-1. Create `TransactionService.{BankName}.cs` as partial class
-2. Add import method following existing patterns (see Mint, RBC, CIBC)
-3. Update csproj with `<DependentUpon>` for file grouping
+### Add an API endpoint
+1. Add/extend a `*Endpoints.cs` static class and map the route in `Map*Endpoints`.
+2. Put logic in the matching `DataService.*` / service; return `ToDto()`.
+3. Add an xUnit test in `MoneyManager.Api.Tests` (call the handler directly).
 
-### Adding a new page
-1. Create `.razor` file in `/Pages/`
-2. Add route with `@page "/route"`
-3. Inject services: `@inject DataService DataService`
-4. Add navigation in `NavMenu.razor`
+### Add a web page
+1. Create `src/moneymanager-web/src/pages/Foo.tsx` and register the route in `App.tsx`.
+2. Add navigation in `components/layout`.
+3. Add a TanStack Query hook in `hooks/`.
 
-### Adding a new category icon
-1. Add enum value to `CategoryIconEnum` in `Category.cs`
-2. Add icon mapping in `CategoryHelper.CategoryIcon()` switch
+### Add a bank import format
+Create `TransactionService.{Bank}.cs` as a partial class following the Mint / RBC / CIBC pattern.
 
-### Working with transactions
-```csharp
-// Get transactions with filters
-await DataService.GetTransactionsAsync(accountId, categoryId, startDate, endDate);
+### Add a category icon
+Extend `CategoryIconEnum` in `Category.cs` + the `CategoryHelper` icon switch (backend) and the `CategoryIcon` component (frontend).
 
-// Apply rules to uncategorized
-await DataService.ApplyRulesAsync();
-```
+## Recommended Claude Code Skills
 
-## Build & Run
+Most useful for working on MoneyManager (all available globally — nothing is vendored into this repo):
 
-```bash
-dotnet build
-dotnet run
-```
-
-## EF Core Migrations
-
-```bash
-dotnet ef migrations add MigrationName
-dotnet ef database update
-```
-
-## Notes
-
-- Database location: `Data/MoneyManager.db`
-- Empty template: `Data/MoneyManagerEmpty.db`
-- Chart periods: m1 (month), y1 (year), 12 (last 12 months), w (7 days), a (all)
-- Transfer category is filtered from spending charts
-- Canadian financial context in AI prompts (RRSP, TFSA, FHSA)
-
+- **webapp-testing** — Playwright-drive the React SPA (`src/moneymanager-web`) to verify UI behavior, capture screenshots, and debug the frontend.
+- **test-driven-development** / **diagnose** — red-green-refactor and disciplined bug/perf diagnosis loops; apply to both the xUnit and Vitest suites.
+- **vercel-react-best-practices** — React performance guidance (note: Next.js-flavored; this app is Vite + React Router, so the Next-specific rules don't apply).
+- **pdf** / **pdf-to-markdown** — extract transactions from bank/credit-card PDF statements to extend the CSV importers (`TransactionService.{Mint,RBC,CIBC}.cs`).
+- **xlsx** — read/produce spreadsheet financial reports beyond the CSV export.
+- **frontend-design** — polished Tailwind/React UI for new pages and components.
+- **claude-api** — reference for the AI-insights feature (`AIService.cs`) when adding or migrating providers.

@@ -1,0 +1,3 @@
+# Keeps the data/ directory in the repo so local dev and the docker-compose
+# host mount (./data:/app/data) have a place for the SQLite database.
+# The database files themselves are gitignored.
