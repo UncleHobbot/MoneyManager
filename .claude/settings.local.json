@@ -8,7 +8,8 @@
       "WebFetch(domain:github.com)",
       "mcp__microsoft_docs__microsoft_docs_search",
       "mcp__microsoft_docs__microsoft_code_sample_search",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "PowerShell(dotnet build src/MoneyManager.Api/MoneyManager.Api.csproj -v q --nologo 2>&1)"
     ]
   }
 }
