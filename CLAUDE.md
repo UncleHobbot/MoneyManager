@@ -75,6 +75,8 @@ MoneyManager is a personal financial management app (Mint.com replacement): trac
 - `src/MoneyManager.Api/` — ASP.NET Core Minimal API; also serves the built SPA in production
 - `src/moneymanager-web/` — React + TypeScript + Vite frontend
 - `src/MoneyManager.Api.Tests/` — xUnit backend tests
+- `src/MoneyManager.AppHost/` — **.NET Aspire** dev-time orchestrator (runs API + Vite + dashboard). **Dev only — not built or shipped in the Docker image.**
+- `src/MoneyManager.ServiceDefaults/` — Aspire shared defaults (OpenTelemetry, health checks, HTTP resilience); referenced by the API
 - `src/e2e/` — end-to-end tests
 - `legacy/` — retired Blazor Hybrid / WinForms desktop app (do not modify)
 - `docs/`, `Dockerfile`, `docker-compose*.yml`, `MoneyManager.sln`
@@ -188,6 +190,12 @@ npm run lint     # eslint
 npm test         # vitest
 ```
 
+**One-command dev (optional, .NET Aspire)**
+```bash
+dotnet run --project src/MoneyManager.AppHost   # API (:5000) + Vite (:5173) + Aspire dashboard
+```
+The AppHost pins the API to **:5000** (unproxied, `ASPNETCORE_ENVIRONMENT=Development`) so the existing Vite proxy keeps working unchanged, and starts the SPA via `npm run dev`. It's **dev-only**; production still ships via the Dockerfile. OTEL is instrumented but only exports when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (the dashboard sets it automatically in dev). See `docs/adr/0001-dotnet-aspire-dev-only-orchestration.md`.
+
 After any change, build + test the affected side (and `npm run lint` for the web) before considering it done. If the API is already running, stop it before rebuilding — a locked `MoneyManager.Api.exe` fails the build.
 
 **Gotcha:** the test project pins EF Core packages to match the API (e.g. `Microsoft.EntityFrameworkCore.Sqlite` `10.0.6`). Keep them aligned or `dotnet test` fails with an NU1605 "package downgrade" error.
@@ -215,9 +223,25 @@ Extend `CategoryIconEnum` in `Category.cs` + the `CategoryHelper` icon switch (b
 Most useful for working on MoneyManager (all available globally — nothing is vendored into this repo):
 
 - **webapp-testing** — Playwright-drive the React SPA (`src/moneymanager-web`) to verify UI behavior, capture screenshots, and debug the frontend.
-- **test-driven-development** / **diagnose** — red-green-refactor and disciplined bug/perf diagnosis loops; apply to both the xUnit and Vitest suites.
+- **tdd** / **diagnosing-bugs** — red-green-refactor and disciplined bug/perf diagnosis loops; apply to both the xUnit and Vitest suites.
 - **vercel-react-best-practices** — React performance guidance (note: Next.js-flavored; this app is Vite + React Router, so the Next-specific rules don't apply).
 - **pdf** / **pdf-to-markdown** — extract transactions from bank/credit-card PDF statements to extend the CSV importers (`TransactionService.{Mint,RBC,CIBC}.cs`).
 - **xlsx** — read/produce spreadsheet financial reports beyond the CSV export.
 - **frontend-design** — polished Tailwind/React UI for new pages and components.
 - **claude-api** — reference for the AI-insights feature (`AIService.cs`) when adding or migrating providers.
+
+## Agent skills
+
+Configuration for Matt Pocock's engineering skills (`to-issues`, `triage`, `to-prd`, `diagnosing-bugs`, `tdd`, …). Run `/setup-matt-pocock-skills` to change any of these.
+
+### Issue tracker
+
+Issues and PRDs live as local markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.

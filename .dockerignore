@@ -40,6 +40,9 @@ identifier.sqlite
 Dockerfile
 docker-compose*.yml
 
+# Dev-only Aspire orchestrator (not part of the runtime image)
+src/MoneyManager.AppHost/
+
 # Misc
 setup-scaffold.bat
 Rebuild/

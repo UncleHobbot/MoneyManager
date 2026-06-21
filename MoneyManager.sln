@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoneyManager.Api", "src\Mon
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoneyManager.Api.Tests", "src\MoneyManager.Api.Tests\MoneyManager.Api.Tests.csproj", "{3F88B777-2311-49E2-936E-8770CC33B65A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoneyManager.ServiceDefaults", "src\MoneyManager.ServiceDefaults\MoneyManager.ServiceDefaults.csproj", "{918DD3C0-24A6-4236-AD38-829299DAE28C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MoneyManager.AppHost", "src\MoneyManager.AppHost\MoneyManager.AppHost.csproj", "{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +61,30 @@ Global
 		{3F88B777-2311-49E2-936E-8770CC33B65A}.Release|x64.Build.0 = Release|Any CPU
 		{3F88B777-2311-49E2-936E-8770CC33B65A}.Release|x86.ActiveCfg = Release|Any CPU
 		{3F88B777-2311-49E2-936E-8770CC33B65A}.Release|x86.Build.0 = Release|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Debug|x64.Build.0 = Debug|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Debug|x86.Build.0 = Debug|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Release|x64.ActiveCfg = Release|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Release|x64.Build.0 = Release|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Release|x86.ActiveCfg = Release|Any CPU
+		{918DD3C0-24A6-4236-AD38-829299DAE28C}.Release|x86.Build.0 = Release|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Debug|x64.Build.0 = Debug|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Debug|x86.Build.0 = Debug|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Release|x64.ActiveCfg = Release|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Release|x64.Build.0 = Release|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Release|x86.ActiveCfg = Release|Any CPU
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -64,6 +92,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{94B1D41D-EB93-48CB-A60B-5EF14DA132F5} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{3F88B777-2311-49E2-936E-8770CC33B65A} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{918DD3C0-24A6-4236-AD38-829299DAE28C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{E18CB4DB-FF2F-4365-9CD8-CC39C4BFC94A} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {9B3624E0-52D8-4B64-8871-B8CC05200FF6}
