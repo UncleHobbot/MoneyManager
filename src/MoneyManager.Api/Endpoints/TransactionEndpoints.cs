@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Model.Api;
+using MoneyManager.Api.Model.Query;
 using MoneyManager.Api.Services;
 
 namespace MoneyManager.Api.Endpoints;
@@ -29,6 +30,7 @@ public static class TransactionEndpoints
 
     internal static async Task<IResult> GetAll(
         DataService dataService,
+        TransactionQueryService queryService,
         string period = "12",
         int? accountId = null,
         int? categoryId = null,
@@ -41,22 +43,28 @@ public static class TransactionEndpoints
     {
         dataService.GetDates(period, out var startDate, out var endDate);
 
-        var query = await dataService.GetTransactionsAsync();
-        query = ApplyFilters(query, startDate, endDate, accountId, categoryId, search, uncategorized);
+        var filters = new TransactionFilters(
+            StartDate: startDate,
+            EndDate: endDate,
+            AccountId: accountId,
+            CategoryId: categoryId,
+            Search: search,
+            Uncategorized: uncategorized);
 
-        var totalCount = await query.CountAsync();
+        var direction = string.Equals(sortDir, "asc", StringComparison.OrdinalIgnoreCase)
+            ? SortDirection.Ascending
+            : SortDirection.Descending;
+        var sort = new TransactionSort(sortBy ?? "date", direction);
+        var paging = new Paging(page, pageSize);
 
-        var items = await ApplySort(query, sortBy, sortDir)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var result = await queryService.GetPageAsync(filters, sort, paging);
 
         return TypedResults.Ok(new
         {
-            items = items.Select(t => t.ToDto()).ToList(),
-            totalCount,
-            page,
-            pageSize
+            items = result.Items,
+            totalCount = result.TotalCount,
+            page = result.PageNumber,
+            pageSize = result.PageSize
         });
     }
 
