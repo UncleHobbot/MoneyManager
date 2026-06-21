@@ -27,6 +27,7 @@ builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<AiProviderService>();
 builder.Services.AddScoped<AIService>();
 builder.Services.AddScoped<TransactionService>();
+builder.Services.AddScoped<TransactionQueryService>();
 builder.Services.AddSingleton<DBService>();
 builder.Services.AddSingleton<SettingsService>();
 
