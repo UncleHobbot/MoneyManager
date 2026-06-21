@@ -68,64 +68,6 @@ public static class TransactionEndpoints
         });
     }
 
-    /// <summary>
-    /// Applies the shared date/account/category/search/uncategorized filters used by
-    /// both the listing and the stats endpoints so the two stay consistent.
-    /// </summary>
-    private static IQueryable<Transaction> ApplyFilters(
-        IQueryable<Transaction> query,
-        DateTime startDate,
-        DateTime endDate,
-        int? accountId,
-        int? categoryId,
-        string? search,
-        bool uncategorized)
-    {
-        query = query.Where(t => t.Date >= startDate && t.Date < endDate);
-
-        if (accountId.HasValue)
-            query = query.Where(t => t.Account.Id == accountId.Value);
-
-        if (categoryId.HasValue)
-            query = query.Where(t => t.Category != null && t.Category.Id == categoryId.Value);
-
-        // "Uncategorized" covers both a missing category and the dedicated
-        // "Uncategorized" category (which is how the dashboard identifies them).
-        if (uncategorized)
-            query = query.Where(t => t.Category == null || t.Category.Name.ToLower() == "uncategorized");
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var pattern = $"%{search.Trim()}%";
-            query = query.Where(t =>
-                EF.Functions.Like(t.Description, pattern) ||
-                EF.Functions.Like(t.OriginalDescription, pattern));
-        }
-
-        return query;
-    }
-
-    private static IQueryable<Transaction> ApplySort(
-        IQueryable<Transaction> query,
-        string sortBy,
-        string sortDir)
-    {
-        var ascending = string.Equals(sortDir, "asc", StringComparison.OrdinalIgnoreCase);
-
-        return sortBy?.ToLowerInvariant() switch
-        {
-            "amount" => ascending
-                ? query.OrderBy(t => t.IsDebit ? -t.Amount : t.Amount)
-                : query.OrderByDescending(t => t.IsDebit ? -t.Amount : t.Amount),
-            "description" => ascending
-                ? query.OrderBy(t => t.Description)
-                : query.OrderByDescending(t => t.Description),
-            _ => ascending
-                ? query.OrderBy(t => t.Date).ThenBy(t => t.Id)
-                : query.OrderByDescending(t => t.Date).ThenByDescending(t => t.Id),
-        };
-    }
-
     internal static async Task<IResult> Create(
         CreateTransactionRequest request,
         DataService dataService)
