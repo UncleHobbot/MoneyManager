@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Endpoints;
 using MoneyManager.Api.Model.Api;
+using MoneyManager.Api.Model.Query;
 using MoneyManager.Api.Tests.TestHelpers;
 
 namespace MoneyManager.Api.Tests.Endpoints;
@@ -73,12 +74,10 @@ public class TransactionEndpointsTests : IDisposable
     [Fact]
     public async Task GetStats_RespectsSearchFilter()
     {
-        var result = await TransactionEndpoints.GetStats(_svc.DataService, period: "a", search: "Loblaws");
+        var result = await TransactionEndpoints.GetStats(_svc.DataService, _svc.QueryService, period: "a", search: "Loblaws");
 
-        result.GetType().Name.Should().StartWith("Ok");
-        var value = result.GetType().GetProperty("Value")!.GetValue(result)!;
-        var count = (int)value.GetType().GetProperty("count")!.GetValue(value)!;
-        count.Should().BeGreaterThan(0);
+        var ok = result.Should().BeOfType<Ok<TransactionStats>>().Subject;
+        ok.Value!.Count.Should().BeGreaterThan(0);
     }
 
     private static List<TransactionDto> GetItems(IResult result)

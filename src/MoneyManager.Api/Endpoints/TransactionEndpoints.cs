@@ -220,6 +220,7 @@ public static class TransactionEndpoints
 
     internal static async Task<IResult> GetStats(
         DataService dataService,
+        TransactionQueryService queryService,
         string period = "12",
         int? accountId = null,
         int? categoryId = null,
@@ -228,20 +229,16 @@ public static class TransactionEndpoints
     {
         dataService.GetDates(period, out var startDate, out var endDate);
 
-        var query = await dataService.GetTransactionsAsync();
-        var transactions = await ApplyFilters(query, startDate, endDate, accountId, categoryId, search, uncategorized)
-            .ToListAsync();
+        var filters = new TransactionFilters(
+            StartDate: startDate,
+            EndDate: endDate,
+            AccountId: accountId,
+            CategoryId: categoryId,
+            Search: search,
+            Uncategorized: uncategorized);
 
-        var income = transactions.Where(t => !t.IsDebit).Sum(t => t.Amount);
-        var expenses = transactions.Where(t => t.IsDebit).Sum(t => t.Amount);
-
-        return TypedResults.Ok(new
-        {
-            income,
-            expenses,
-            net = income - expenses,
-            count = transactions.Count
-        });
+        var stats = await queryService.GetStatsAsync(filters);
+        return TypedResults.Ok(stats);
     }
 
     internal static async Task<IResult> ExportCsv(DataService dataService, string period = "12")
