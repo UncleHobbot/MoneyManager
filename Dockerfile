@@ -7,12 +7,17 @@ COPY src/moneymanager-web/ .
 RUN npm run build
 
 # Stage 2: Build .NET API
+# The API references MoneyManager.ServiceDefaults (Aspire OTEL/health/resilience),
+# so both projects are copied preserving their sibling layout. The Aspire AppHost is
+# dev-only and intentionally not built or published here.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend
 WORKDIR /src
-COPY src/MoneyManager.Api/MoneyManager.Api.csproj ./
-RUN dotnet restore
-COPY src/MoneyManager.Api/ .
-RUN dotnet publish -c Release -o /publish --no-restore
+COPY src/MoneyManager.Api/MoneyManager.Api.csproj MoneyManager.Api/
+COPY src/MoneyManager.ServiceDefaults/MoneyManager.ServiceDefaults.csproj MoneyManager.ServiceDefaults/
+RUN dotnet restore MoneyManager.Api/MoneyManager.Api.csproj
+COPY src/MoneyManager.Api/ MoneyManager.Api/
+COPY src/MoneyManager.ServiceDefaults/ MoneyManager.ServiceDefaults/
+RUN dotnet publish MoneyManager.Api/MoneyManager.Api.csproj -c Release -o /publish --no-restore
 
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

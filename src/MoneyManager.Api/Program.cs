@@ -5,6 +5,10 @@ using MoneyManager.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Aspire service defaults: OpenTelemetry, health checks, service discovery, HTTP resilience.
+// OTLP export is inert unless OTEL_EXPORTER_OTLP_ENDPOINT is set (e.g. the dev dashboard).
+builder.AddServiceDefaults();
+
 // Add services
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -133,7 +137,10 @@ app.MapFallback(async context =>
     await context.Response.SendFileAsync(indexPath);
 }).WithMetadata(new HttpMethodMetadata([HttpMethods.Get, HttpMethods.Head]));
 
-// Health check
+// Health check (used by the Docker HEALTHCHECK)
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
+
+// Aspire default health endpoints (/health, /alive) — mapped in Development only.
+app.MapDefaultEndpoints();
 
 app.Run();

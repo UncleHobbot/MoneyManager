@@ -75,6 +75,8 @@ MoneyManager is a personal financial management app (Mint.com replacement): trac
 - `src/MoneyManager.Api/` — ASP.NET Core Minimal API; also serves the built SPA in production
 - `src/moneymanager-web/` — React + TypeScript + Vite frontend
 - `src/MoneyManager.Api.Tests/` — xUnit backend tests
+- `src/MoneyManager.AppHost/` — **.NET Aspire** dev-time orchestrator (runs API + Vite + dashboard). **Dev only — not built or shipped in the Docker image.**
+- `src/MoneyManager.ServiceDefaults/` — Aspire shared defaults (OpenTelemetry, health checks, HTTP resilience); referenced by the API
 - `src/e2e/` — end-to-end tests
 - `legacy/` — retired Blazor Hybrid / WinForms desktop app (do not modify)
 - `docs/`, `Dockerfile`, `docker-compose*.yml`, `MoneyManager.sln`
@@ -187,6 +189,12 @@ npm run build    # tsc -b && vite build
 npm run lint     # eslint
 npm test         # vitest
 ```
+
+**One-command dev (optional, .NET Aspire)**
+```bash
+dotnet run --project src/MoneyManager.AppHost   # API (:5000) + Vite (:5173) + Aspire dashboard
+```
+The AppHost pins the API to **:5000** (unproxied, `ASPNETCORE_ENVIRONMENT=Development`) so the existing Vite proxy keeps working unchanged, and starts the SPA via `npm run dev`. It's **dev-only**; production still ships via the Dockerfile. OTEL is instrumented but only exports when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (the dashboard sets it automatically in dev). See `docs/adr/0001-dotnet-aspire-dev-only-orchestration.md`.
 
 After any change, build + test the affected side (and `npm run lint` for the web) before considering it done. If the API is already running, stop it before rebuilding — a locked `MoneyManager.Api.exe` fails the build.
 
