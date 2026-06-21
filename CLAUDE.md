@@ -215,7 +215,7 @@ Extend `CategoryIconEnum` in `Category.cs` + the `CategoryHelper` icon switch (b
 Most useful for working on MoneyManager (all available globally — nothing is vendored into this repo):
 
 - **webapp-testing** — Playwright-drive the React SPA (`src/moneymanager-web`) to verify UI behavior, capture screenshots, and debug the frontend.
-- **test-driven-development** / **diagnose** — red-green-refactor and disciplined bug/perf diagnosis loops; apply to both the xUnit and Vitest suites.
+- **tdd** / **diagnosing-bugs** — red-green-refactor and disciplined bug/perf diagnosis loops; apply to both the xUnit and Vitest suites.
 - **vercel-react-best-practices** — React performance guidance (note: Next.js-flavored; this app is Vite + React Router, so the Next-specific rules don't apply).
 - **pdf** / **pdf-to-markdown** — extract transactions from bank/credit-card PDF statements to extend the CSV importers (`TransactionService.{Mint,RBC,CIBC}.cs`).
 - **xlsx** — read/produce spreadsheet financial reports beyond the CSV export.
