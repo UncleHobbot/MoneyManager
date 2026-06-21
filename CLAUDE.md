@@ -221,3 +221,19 @@ Most useful for working on MoneyManager (all available globally — nothing is v
 - **xlsx** — read/produce spreadsheet financial reports beyond the CSV export.
 - **frontend-design** — polished Tailwind/React UI for new pages and components.
 - **claude-api** — reference for the AI-insights feature (`AIService.cs`) when adding or migrating providers.
+
+## Agent skills
+
+Configuration for Matt Pocock's engineering skills (`to-issues`, `triage`, `to-prd`, `diagnosing-bugs`, `tdd`, …). Run `/setup-matt-pocock-skills` to change any of these.
+
+### Issue tracker
+
+Issues and PRDs live as local markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage` / `needs-info` / `ready-for-agent` / `ready-for-human` / `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
