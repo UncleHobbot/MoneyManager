@@ -38,6 +38,13 @@ public interface IBankImporter
     bool UseFuzzyDateMatch { get; }
 
     /// <summary>
+    /// If <c>true</c>, the CSV has a header row that the pipeline should
+    /// subtract from the line count when computing <see cref="ImportResult.TotalCount"/>.
+    /// Mint and RBC have headers; CIBC does not.
+    /// </summary>
+    bool HasHeaderRecord { get; }
+
+    /// <summary>
     /// Validates that <paramref name="stream"/> has the expected structure
     /// for this bank's CSV format. Throws <see cref="InvalidOperationException"/>
     /// with a human-readable message if the structure is wrong. Resets the

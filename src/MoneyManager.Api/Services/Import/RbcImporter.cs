@@ -15,6 +15,7 @@ public sealed class RbcImporter : IBankImporter
     public string BankType => "RBC";
     public bool ApplyRules => true;
     public bool UseFuzzyDateMatch => false;
+    public bool HasHeaderRecord => true;
 
     private static readonly string[] ExpectedColumns =
         ["Account Type", "Account Number", "Transaction Date", "Cheque Number", "Description 1", "Description 2", "CAD$", "USD$"];

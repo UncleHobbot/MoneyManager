@@ -48,7 +48,7 @@ public partial class TransactionService
             var records = csv.EnumerateRecords(record);
             foreach (var r in records)
             {
-                var account = await GetAccountAsync(r.AccountName, context, isCreateAccounts);
+                var account = await GetAccountAsync(r.AccountName, context, _accounts, isCreateAccounts);
 
                 if (account == null)
                 {
@@ -56,7 +56,7 @@ public partial class TransactionService
                     continue;
                 }
 
-                var category = await GetCategoryAsync(r.Category, context);
+                var category = await GetCategoryAsync(r.Category, context, _categories);
                 var isDebit = r.TransactionType == "debit";
 
                 var isExist = IsTransactionExists(r.Date, r.Amount, isDebit, r.OriginalDescription, account, context);

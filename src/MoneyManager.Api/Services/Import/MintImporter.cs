@@ -15,6 +15,7 @@ public sealed class MintImporter : IBankImporter
     public string BankType => "Mint";
     public bool ApplyRules => false;
     public bool UseFuzzyDateMatch => false;
+    public bool HasHeaderRecord => true;
 
     public void Validate(Stream stream)
     {

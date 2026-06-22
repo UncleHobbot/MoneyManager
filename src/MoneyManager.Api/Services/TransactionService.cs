@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Model.Api;
+using MoneyManager.Api.Services.Import;
 
 namespace MoneyManager.Api.Services;
 
@@ -18,7 +19,11 @@ namespace MoneyManager.Api.Services;
 /// <item><description>Stream-based input for web API file upload compatibility</description></item>
 /// </list>
 ///
-/// Thread Safety: This service is not thread-safe. Import operations should run sequentially.
+/// Thread Safety: <see cref="ImportAsync(Stream, IBankImporter, bool)"/> is thread-safe -
+/// each call uses method-local caches. The legacy per-bank methods
+/// (<c>ImportMintCsvAsync</c>, <c>ImportRbcCsvAsync</c>, <c>ImportCibcCsvAsync</c>) are not
+/// thread-safe - they share instance state and must run sequentially. The legacy methods
+/// will be removed once the endpoint migrates to <see cref="ImportAsync(Stream, IBankImporter, bool)"/>.
 /// </remarks>
 public partial class TransactionService(
     IDbContextFactory<DataContext> contextFactory,
@@ -29,28 +34,99 @@ public partial class TransactionService(
     private Dictionary<string, Category> _categories = [];
 
     /// <summary>
-    /// Retrieves or creates an account based on the provided name.
+    /// Imports transactions from a CSV stream using the supplied
+    /// <paramref name="importer"/> for bank-specific parsing. This is the
+    /// post-migration pipeline that replaces the per-bank
+    /// <c>Import{Mint,Rbc,Cibc}CsvAsync</c> methods.
     /// </summary>
-    /// <param name="name">The account name, number, or alternative name to look up.</param>
-    /// <param name="ctx">The database context to use for operations.</param>
-    /// <param name="isCreateAccount">If <c>true</c>, creates a new account when not found; otherwise returns <c>null</c>.</param>
-    /// <returns>
-    /// The matched or newly created <see cref="Account"/>, or <c>null</c> if not found and <paramref name="isCreateAccount"/> is <c>false</c>.
-    /// </returns>
     /// <remarks>
-    /// Matching strategies (in order):
-    /// <list type="number">
-    /// <item><description>In-memory cache lookup by exact name</description></item>
-    /// <item><description>Database lookup by Name, Number (dashes removed), or AlternativeName1–5 (case-insensitive)</description></item>
-    /// <item><description>Auto-creation if <paramref name="isCreateAccount"/> is <c>true</c></description></item>
-    /// </list>
+    /// The pipeline owns: backup, validation (via adapter), line counting,
+    /// account/category resolution (with per-call caches), dedup,
+    /// optional rule application, batch save. The adapter owns: CSV parsing,
+    /// sign convention, description composition, category source.
+    /// Per-call state (the <paramref name="accounts"/>/<paramref name="categories"/>
+    /// caches) lives in method-local variables, so concurrent imports do not
+    /// corrupt each other.
     /// </remarks>
-    private async Task<Account?> GetAccountAsync(string? name, DataContext ctx, bool isCreateAccount = true)
+    public async Task<ImportResult> ImportAsync(
+        Stream csvStream,
+        IBankImporter importer,
+        bool isCreateAccounts = true)
+    {
+        await dbService.BackupAsync();
+
+        importer.Validate(csvStream);
+
+        var total = CountStreamLines(csvStream, hasHeader: importer.HasHeaderRecord);
+
+        var accounts = new Dictionary<string, Account>();
+        var categories = new Dictionary<string, Category>();
+
+        await using var ctx = await contextFactory.CreateDbContextAsync();
+        var defaultCategory = await GetDefaultCategoryAsync(ctx, categories);
+
+        var transactions = new List<Transaction>();
+
+        foreach (var row in importer.ReadRows(csvStream))
+        {
+            var account = await GetAccountAsync(row.AccountName, ctx, accounts, isCreateAccounts);
+            if (account is null)
+                continue;
+
+            var category = string.IsNullOrEmpty(row.CategoryHint)
+                ? defaultCategory
+                : await GetCategoryAsync(row.CategoryHint, ctx, categories);
+
+            if (IsTransactionExists(row.Date, row.Amount, row.IsDebit, row.OriginalDescription, account, ctx, importer.UseFuzzyDateMatch))
+                continue;
+
+            var transaction = new Transaction
+            {
+                Account = account,
+                Date = row.Date,
+                Description = row.Description,
+                OriginalDescription = row.OriginalDescription,
+                Amount = row.Amount,
+                IsDebit = row.IsDebit,
+                Category = category,
+                IsRuleApplied = false,
+            };
+
+            if (importer.ApplyRules)
+                await dataService.ApplyRuleAsync(transaction, ctx);
+
+            transactions.Add(transaction);
+        }
+
+        if (transactions.Count > 0)
+        {
+            ctx.Transactions.AddRange(transactions);
+            await ctx.SaveChangesAsync();
+        }
+
+        return new ImportResult
+        {
+            ImportedCount = transactions.Count,
+            SkippedCount = total - transactions.Count,
+            TotalCount = total,
+            BankType = importer.BankType,
+        };
+    }
+
+    /// <summary>
+    /// Retrieves or creates an account based on the provided name, using
+    /// <paramref name="accountCache"/> for in-call memoization.
+    /// </summary>
+    private async Task<Account?> GetAccountAsync(
+        string? name,
+        DataContext ctx,
+        Dictionary<string, Account> accountCache,
+        bool isCreateAccount = true)
     {
         if (string.IsNullOrWhiteSpace(name))
             return null;
 
-        if (_accounts.TryGetValue(name, out var existingAccount))
+        if (accountCache.TryGetValue(name, out var existingAccount))
             return existingAccount;
 
         var accountInDB = await ctx.Accounts.FirstOrDefaultAsync(c => c.Name == name
@@ -63,7 +139,7 @@ public partial class TransactionService(
 
         if (accountInDB != null)
         {
-            _accounts.Add(name, accountInDB);
+            accountCache.Add(name, accountInDB);
             return accountInDB;
         }
 
@@ -72,7 +148,7 @@ public partial class TransactionService(
             var account = new Account { Name = name, ShownName = name };
             ctx.Accounts.Add(account);
             await ctx.SaveChangesAsync();
-            _accounts.Add(name, account);
+            accountCache.Add(name, account);
             return account;
         }
 
@@ -80,61 +156,43 @@ public partial class TransactionService(
     }
 
     /// <summary>
-    /// Retrieves or creates a category based on the provided name.
+    /// Retrieves or creates a category based on the provided name, using
+    /// <paramref name="categoryCache"/> for in-call memoization.
     /// </summary>
-    /// <param name="name">The category name to look up or create.</param>
-    /// <param name="ctx">The database context to use for operations.</param>
-    /// <returns>
-    /// The matched or newly created <see cref="Category"/>, or <c>null</c> if <paramref name="name"/> is empty/whitespace.
-    /// </returns>
-    /// <remarks>
-    /// Categories are always created if not found (no opt-out parameter).
-    /// Newly created categories have <see cref="Category.IsNew"/> set to <c>true</c> for user review.
-    /// </remarks>
-    private async Task<Category?> GetCategoryAsync(string? name, DataContext ctx)
+    private async Task<Category?> GetCategoryAsync(
+        string? name,
+        DataContext ctx,
+        Dictionary<string, Category> categoryCache)
     {
         if (string.IsNullOrWhiteSpace(name))
             return null;
 
-        if (_categories.TryGetValue(name, out var existingCategory))
+        if (categoryCache.TryGetValue(name, out var existingCategory))
             return existingCategory;
 
         var categoryInDB = await ctx.Categories.FirstOrDefaultAsync(c => c.Name == name);
         if (categoryInDB != null)
         {
-            _categories.Add(name, categoryInDB);
+            categoryCache.Add(name, categoryInDB);
             return categoryInDB;
         }
 
         var category = new Category { Name = name, IsNew = true };
         ctx.Categories.Add(category);
         await ctx.SaveChangesAsync();
-        _categories.Add(name, category);
+        categoryCache.Add(name, category);
         return category;
     }
 
     /// <summary>
     /// Retrieves the default "Uncategorized" category, creating it if necessary.
     /// </summary>
-    /// <param name="ctx">The database context to use for operations.</param>
-    /// <returns>The "Uncategorized" <see cref="Category"/>.</returns>
-    private async Task<Category?> GetDefaultCategoryAsync(DataContext ctx) => await GetCategoryAsync("Uncategorized", ctx);
+    private async Task<Category?> GetDefaultCategoryAsync(DataContext ctx, Dictionary<string, Category> categoryCache)
+        => await GetCategoryAsync("Uncategorized", ctx, categoryCache);
 
     /// <summary>
     /// Checks if a transaction already exists to prevent duplicates during import.
     /// </summary>
-    /// <param name="date">The transaction date.</param>
-    /// <param name="amount">The transaction amount.</param>
-    /// <param name="isDebit">Whether the transaction is a debit.</param>
-    /// <param name="originalDescription">The original description from the import file.</param>
-    /// <param name="account">The account the transaction belongs to.</param>
-    /// <param name="ctx">The database context to use for queries.</param>
-    /// <param name="isDateFuzzy">If <c>true</c>, allows a ±5 day window for date matching.</param>
-    /// <returns><c>true</c> if a matching transaction exists; otherwise <c>false</c>.</returns>
-    /// <remarks>
-    /// Description matching uses two strategies: exact trimmed match, or the import description containing
-    /// the existing description. Fuzzy date matching is used for banks with inconsistent posting dates (e.g., CIBC).
-    /// </remarks>
     private bool IsTransactionExists(DateTime date, decimal amount, bool isDebit, string? originalDescription,
         Account? account, DataContext ctx, bool isDateFuzzy = false)
     {
@@ -156,9 +214,6 @@ public partial class TransactionService(
     /// <summary>
     /// Counts the number of data lines in a stream (total lines minus header row).
     /// </summary>
-    /// <param name="stream">The stream to count lines in. Position is reset to 0 after counting.</param>
-    /// <param name="hasHeader">If <c>true</c>, subtracts 1 for the header row.</param>
-    /// <returns>The number of data lines.</returns>
     private static int CountStreamLines(Stream stream, bool hasHeader = true)
     {
         var count = 0;
@@ -169,3 +224,4 @@ public partial class TransactionService(
         return hasHeader ? count - 1 : count;
     }
 }
+

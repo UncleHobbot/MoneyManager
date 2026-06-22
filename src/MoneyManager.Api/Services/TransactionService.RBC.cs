@@ -76,7 +76,7 @@ public partial class TransactionService
         var total = CountStreamLines(csvStream, hasHeader: true);
 
         var context = await contextFactory.CreateDbContextAsync();
-        var uCategory = await GetDefaultCategoryAsync(context);
+        var uCategory = await GetDefaultCategoryAsync(context, _categories);
 
         var transactions = new List<Transaction>();
         var skipped = 0;
@@ -88,7 +88,7 @@ public partial class TransactionService
             var records = csv.EnumerateRecords(record);
             foreach (var r in records)
             {
-                var account = await GetAccountAsync(r.AccountNumber, context, isCreateAccounts);
+                var account = await GetAccountAsync(r.AccountNumber, context, _accounts, isCreateAccounts);
 
                 if (account == null)
                 {

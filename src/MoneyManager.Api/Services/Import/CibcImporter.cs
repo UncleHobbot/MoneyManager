@@ -18,6 +18,7 @@ public sealed class CibcImporter : IBankImporter
     public string BankType => "CIBC";
     public bool ApplyRules => true;
     public bool UseFuzzyDateMatch => true;
+    public bool HasHeaderRecord => false;
 
     public void Validate(Stream stream)
     {
