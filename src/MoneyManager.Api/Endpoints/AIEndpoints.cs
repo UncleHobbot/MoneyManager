@@ -1,4 +1,5 @@
 using MoneyManager.Api.Data;
+using MoneyManager.Api.Model.AI;
 using MoneyManager.Api.Model.Api;
 using MoneyManager.Api.Services;
 
@@ -9,24 +10,6 @@ namespace MoneyManager.Api.Endpoints;
 /// </summary>
 public static class AIEndpoints
 {
-    private static readonly object[] AnalysisTypes =
-    [
-        new { type = AnalysisTypePrompts.SpendingGeneral,  name = "General Spending",  group = "Spending Analysis",        description = "Comprehensive overview of spending habits, top categories, outliers, and daily/weekly averages." },
-        new { type = AnalysisTypePrompts.SpendingBudget,   name = "Budget Analysis",   group = "Spending Analysis",        description = "Compares actual spending to budgeting methods (50/30/20, zero-based, envelope) with recommendations." },
-        new { type = AnalysisTypePrompts.SpendingTrends,   name = "Spending Trends",   group = "Spending Analysis",        description = "Month-over-month and year-over-year comparisons with inflation-adjusted real spending changes." },
-        new { type = AnalysisTypePrompts.DebtAnalysis,         name = "Debt Analysis",         group = "Debt & Savings", description = "Evaluates debt situation and recommends avalanche vs snowball payoff strategies with timelines." },
-        new { type = AnalysisTypePrompts.SavingsEmergencyFund, name = "Savings & Emergency Fund", group = "Debt & Savings", description = "Evaluates emergency fund position, savings rate, and strategies to reach 3\u20136 months of expenses." },
-        new { type = AnalysisTypePrompts.CashFlowForecast, name = "Cash Flow Forecast",  group = "Planning & Forecasting", description = "Predicts cash flow over the next 6 months, identifying potential shortfalls and surplus periods." },
-        new { type = AnalysisTypePrompts.GoalBasedPlanning, name = "Goal-Based Planning", group = "Planning & Forecasting", description = "Creates savings plans for specific goals (car, house, vacation) with timelines and account allocation." },
-        new { type = AnalysisTypePrompts.RecurringIncome,   name = "Recurring Income",    group = "Planning & Forecasting", description = "Analyzes income patterns, sources, and irregularities for better forecasting." },
-        new { type = AnalysisTypePrompts.BehavioralInsights,        name = "Behavioral Insights",        group = "Behavior & Optimization", description = "Analyzes weekend/weekday patterns, trigger events, and psychological spending behaviors." },
-        new { type = AnalysisTypePrompts.SubscriptionsOptimization, name = "Subscriptions Optimization", group = "Behavior & Optimization", description = "Identifies all subscriptions, evaluates usage value, and suggests cancellations or downgrades." },
-        new { type = AnalysisTypePrompts.AnomalyDetection,          name = "Anomaly Detection",          group = "Behavior & Optimization", description = "Identifies unusual, duplicate, or suspicious transactions and spending spikes." },
-        new { type = AnalysisTypePrompts.TaxEfficiency,      name = "Tax Efficiency",      group = "Canadian-Specific", description = "Analyzes Canadian tax-deductible expenses and registered account (RRSP, TFSA, FHSA) recommendations." },
-        new { type = AnalysisTypePrompts.RegisteredAccounts, name = "Registered Accounts", group = "Canadian-Specific", description = "RRSP vs TFSA vs FHSA optimization, contribution room analysis, and allocation strategy." },
-        new { type = AnalysisTypePrompts.SeasonalAnalysis,   name = "Seasonal Analysis",   group = "Canadian-Specific", description = "Identifies seasonal spending patterns, holiday impacts, and weather-related expense fluctuations." }
-    ];
-
     /// <summary>
     /// Maps all AI-related endpoints under <c>/api/ai</c>.
     /// </summary>
@@ -88,7 +71,7 @@ public static class AIEndpoints
 
     internal static async Task<IResult> Analyze(AnalysisRequest request, AIService aiService)
     {
-        if (string.IsNullOrWhiteSpace(AnalysisTypePrompts.GetPrompt(request.AnalysisType)))
+        if (AnalysisType.Find(request.AnalysisType) is null)
             return TypedResults.BadRequest(new { error = $"Unknown analysis type: {request.AnalysisType}" });
 
         var result = await aiService.GetAnalysisAsync(
@@ -101,7 +84,17 @@ public static class AIEndpoints
 
     internal static IResult GetAnalysisTypes()
     {
-        return TypedResults.Ok(AnalysisTypes);
+        // Project the catalog to the wire format the frontend expects.
+        // Fields (type, name, group, description) are kept on AnalysisType
+        // so this endpoint and the prompt-resolution path share one source
+        // of truth. Prompt and Temperature are intentionally not exposed.
+        return TypedResults.Ok(AnalysisType.All.Select(a => new
+        {
+            type = a.Key,
+            name = a.Name,
+            group = a.Group,
+            description = a.Description,
+        }));
     }
 
     private static AiProvider MapToEntity(AiProviderRequest request) => new()

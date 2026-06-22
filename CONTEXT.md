@@ -64,6 +64,39 @@ credits (income).
   consolidation — it removes all four duplicates by introducing a column EF
   can map.
 
+## Analysis Type (AI prompt catalog)
+
+A read-side catalog of financial-analysis types: each entry binds together
+a wire-format key (what the frontend sends), a user-facing label/group/
+description (what the dropdown renders), the prompt text (what the AI sees),
+and the temperature (creativity setting). Replaces the legacy
+`AnalysisTypePrompts` static class, which had two parallel switches over
+the same vocabulary plus a parallel `{ type, name, group, description }`
+array in `AIEndpoints`.
+
+- **Shape.** `AnalysisType(Key, Name, Group, Description, Prompt, Temperature)`.
+  Static `All` list (14 entries grouped by domain: Spending, Debt & Savings,
+  Planning, Behavior, Canadian-Specific); `Find(key)` lookup.
+- **Single source of truth.** The `/api/ai/analysis-types` endpoint
+  projects from `AnalysisType.All` directly (`type`, `name`, `group`,
+  `description` exposed; `Prompt` and `Temperature` are internal). The
+  `/api/ai/analyze` endpoint validates via `Find`. `AIService.GetAnalysisAsync`
+  resolves the prompt and temperature via `Find`. No parallel sources.
+- **Temperatures.** Three-tier convention: `0.3` for analyses requiring
+  precision (debt, forecasts, anomalies, income, seasonal), `0.5` for
+  balanced recommendations (budgets, savings, planning, tax), `0.7` for
+  creative exploratory insights (general spending, trends, behavioral,
+  subscriptions).
+- **Default behavior for unknown keys.** `Find` returns null;
+  `AIService.GetAnalysisAsync` treats null as empty prompt + 0.7
+  temperature, matching the pre-migration default-branch behavior of
+  `AnalysisTypePrompts.GetPrompt` / `GetTemperature`. The `/api/ai/analyze`
+  endpoint rejects unknown keys with 400 Bad Request (preserves today's
+  validation behavior).
+- **System prompt.** Kept as `private const` on `AIService`. Extracting to
+  a resource is a separate candidate; the const keeps it co-located with
+  the only consumer.
+
 ## Bank Import Adapter
 
 A read-side abstraction over per-bank CSV formats. Each bank (Mint, RBC,
