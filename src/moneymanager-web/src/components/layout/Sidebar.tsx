@@ -12,6 +12,7 @@ import {
   PieChart,
   LineChart,
   Store,
+  Workflow,
   Landmark,
   Tags,
   BookOpen,
@@ -99,6 +100,7 @@ export function Sidebar() {
           <NavItem to="/charts/spending" icon={<PieChart size={16} />} label="By Category" onClick={closeMobile} />
           <NavItem to="/charts/trend" icon={<LineChart size={16} />} label="Spending Trend" onClick={closeMobile} />
           <NavItem to="/charts/merchants" icon={<Store size={16} />} label="Top Merchants" onClick={closeMobile} />
+          <NavItem to="/charts/cash-flow" icon={<Workflow size={16} />} label="Cash Flow" onClick={closeMobile} />
         </CollapsibleGroup>
 
         <NavItem to="/import" icon={<Upload size={18} />} label="Import" onClick={closeMobile} />

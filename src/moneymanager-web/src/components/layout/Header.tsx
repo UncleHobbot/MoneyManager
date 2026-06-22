@@ -10,6 +10,7 @@ const routeTitles: Record<string, string> = {
   '/charts/spending': 'Spending by Category',
   '/charts/trend': 'Spending Trend',
   '/charts/merchants': 'Top Merchants',
+  '/charts/cash-flow': 'Cash Flow',
   '/ai': 'AI Analysis',
   '/settings': 'Settings',
   '/settings/accounts': 'Accounts',

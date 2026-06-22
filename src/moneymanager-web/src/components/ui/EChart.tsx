@@ -14,6 +14,8 @@ export interface EChartClickParams {
   dataIndex: number
   seriesName?: string
   data?: unknown
+  /** For composite charts (e.g. sankey): which element was clicked. */
+  dataType?: 'node' | 'edge' | string
 }
 
 interface EChartProps {

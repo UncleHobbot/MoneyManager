@@ -14,6 +14,7 @@ import CumulativeSpendingPage from '@/pages/CumulativeSpendingPage'
 import SpendingByCategoryPage from '@/pages/SpendingByCategoryPage'
 import SpendingTrendPage from '@/pages/SpendingTrendPage'
 import TopMerchantsPage from '@/pages/TopMerchantsPage'
+import CashFlowPage from '@/pages/CashFlowPage'
 import DashboardPage from '@/pages/DashboardPage'
 import TransactionsPage from '@/pages/TransactionsPage'
 import AIAnalysisPage from '@/pages/AIAnalysisPage'
@@ -42,6 +43,7 @@ function App() {
               <Route path="/charts/spending" element={<SpendingByCategoryPage />} />
               <Route path="/charts/trend" element={<SpendingTrendPage />} />
               <Route path="/charts/merchants" element={<TopMerchantsPage />} />
+              <Route path="/charts/cash-flow" element={<CashFlowPage />} />
               <Route path="/ai" element={<AIAnalysisPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/accounts" element={<AccountsPage />} />

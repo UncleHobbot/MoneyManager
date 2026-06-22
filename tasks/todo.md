@@ -80,8 +80,13 @@ against the API's own `balance` field. Pre-existing in the ApexCharts version.
   list is a superset of the bar (documented CONTEXT behavior — merchant drill is
   fuzzy, unlike the exact category-subtree drill). Verified: endpoint data correct,
   page mounts clean, search drill filters.
-- [ ] **Cash-flow Sankey** — ECharts sankey; income→hub→expenses+Savings; deficit
-  node; drill per node/edge. → verify: inflow == outflow (hub balances).
+- [x] **Cash-flow Sankey** — ECharts sankey; income→"Total Income" hub→expenses
+  (top-8 + "Other") + "Savings"; deficit shown as a source node feeding the hub;
+  node drill (category subtree / uncategorized). Backend `GET /api/charts/cash-flow`
+  (+1 test asserting the hub balances). Verified in browser (deficit case renders
+  correctly, no Savings node).
+
+**Phase 1 complete** (trend, top merchants, cash-flow). Backend 210 tests, web 88 tests green.
 
 ## Phase 2 — Forward bet: Budget
 
