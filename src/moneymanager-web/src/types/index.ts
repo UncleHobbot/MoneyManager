@@ -107,6 +107,12 @@ export interface SpendingTrendChart {
   series: SpendingTrendSeries[]
 }
 
+export interface MerchantSpend {
+  name: string
+  amount: number
+  count: number
+}
+
 export interface ImportResult {
   importedCount: number
   skippedCount: number

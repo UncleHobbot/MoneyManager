@@ -73,8 +73,13 @@ against the API's own `balance` field. Pre-existing in the ApexCharts version.
   (`/transactions?from&to&categoryId`). Backend `GET /api/charts/spending-trend`
   (+2 tests); sidebar + header nav. (Screenshot pending — preview window was
   collapsed during the run; page mounts clean, no console errors.)
-- [ ] **Top Merchants** — group by `Description`; horizontal bars; click bar →
-  `/transactions?search=<Description>`. → verify: sums match transaction list.
+- [x] **Top Merchants** — group by `Description` (top 15); horizontal bars; click bar
+  → `/transactions?search=<Description>`. Backend `GET /api/charts/top-merchants`
+  (+2 tests); added `Description` to `ReportingRow` (CONTEXT updated). Note: the bar
+  groups by exact `Description`; the drill uses `search` (LIKE %…%), so the drilled
+  list is a superset of the bar (documented CONTEXT behavior — merchant drill is
+  fuzzy, unlike the exact category-subtree drill). Verified: endpoint data correct,
+  page mounts clean, search drill filters.
 - [ ] **Cash-flow Sankey** — ECharts sankey; income→hub→expenses+Savings; deficit
   node; drill per node/edge. → verify: inflow == outflow (hub balances).
 

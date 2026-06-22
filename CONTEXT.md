@@ -164,9 +164,10 @@ Produced by `TransactionQueryService.GetReportingRowsAsync`. Carries the
 per-row facts that chart and stats methods need without re-spelling the sign
 convention, the parent-rollup rule, or the "Income"/"Transfer" name matches.
 
-- **Shape.** `ReportingRow(Date, SignedAmount, EffectiveCategory?, IsIncome, IsTransfer)`.
+- **Shape.** `ReportingRow(Date, SignedAmount, EffectiveCategory?, IsIncome, IsTransfer, Description)`.
   `EffectiveCategory` is `Category?.Parent ?? Category` (rolled up); `null`
-  when the transaction has no category.
+  when the transaction has no category. `Description` is the transaction's
+  display label, used as the merchant grouping key — see "Merchant / Payee".
 - **Flags are valid regardless of EffectiveCategory.** A row with
   `EffectiveCategory: null` still has `IsIncome == false` and
   `IsTransfer == false` — callers that need a category for grouping should

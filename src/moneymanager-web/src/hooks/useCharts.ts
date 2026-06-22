@@ -5,6 +5,7 @@ import type {
   CategoryChart,
   ChartPeriod,
   CumulativeSpendingChart,
+  MerchantSpend,
   SpendingTrendChart,
 } from '@/types'
 
@@ -28,6 +29,14 @@ export function useSpendingTrend(period: string) {
     queryKey: ['charts', 'spending-trend', period],
     queryFn: () =>
       api.get('/charts/spending-trend', { params: { period } }).then(r => r.data),
+  })
+}
+
+export function useTopMerchants(period: string, limit = 15) {
+  return useQuery<MerchantSpend[]>({
+    queryKey: ['charts', 'top-merchants', period, limit],
+    queryFn: () =>
+      api.get('/charts/top-merchants', { params: { period, limit } }).then(r => r.data),
   })
 }
 

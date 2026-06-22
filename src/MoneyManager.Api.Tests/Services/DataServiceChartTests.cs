@@ -131,6 +131,36 @@ public class DataServiceChartTests : IDisposable
         result.Series.Should().OnlyContain(s => s.Data.Length == result.Months.Count);
     }
 
+    // ----------------------------------------------------------------
+    // ChartTopMerchantsAsync (spend grouped by Description)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartTopMerchants_RanksExpenseMerchants_IncludingUncategorized()
+    {
+        var result = await _svc.DataService.ChartTopMerchantsAsync("a");
+
+        // Expense merchants ordered by spend; income (Salary) and the hidden-account
+        // transfer are excluded; uncategorized spend (Netflix) still counts.
+        result.Select(m => m.Name).Should().Equal("Loblaws Groceries", "Netflix", "Restaurant");
+
+        var loblaws = result.First();
+        loblaws.Amount.Should().Be(85.50m);
+        loblaws.Count.Should().Be(1);
+
+        result.Should().NotContain(m => m.Name == "Salary Deposit");
+        result.Should().NotContain(m => m.Name == "Internal Transfer");
+    }
+
+    [Fact]
+    public async Task ChartTopMerchants_RespectsLimit()
+    {
+        var result = await _svc.DataService.ChartTopMerchantsAsync("a", limit: 2);
+
+        result.Should().HaveCount(2);
+        result.Select(m => m.Name).Should().Equal("Loblaws Groceries", "Netflix");
+    }
+
     [Fact]
     public async Task ChartNetIncome_IncludesUncategorizedTransactions()
     {

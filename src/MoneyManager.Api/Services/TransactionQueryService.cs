@@ -97,7 +97,8 @@ public class TransactionQueryService
                         ? null
                         : new ReportingCategory(effective.Id, effective.Name, effective.Icon),
                     IsIncome: effective?.Name == "Income",
-                    IsTransfer: effective?.Name == "Transfer");
+                    IsTransfer: effective?.Name == "Transfer",
+                    Description: t.Description);
             })
             .ToList();
     }

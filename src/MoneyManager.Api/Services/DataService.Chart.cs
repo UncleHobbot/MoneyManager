@@ -137,6 +137,29 @@ public partial class DataService
     }
 
     /// <summary>
+    /// Returns the top spending merchants over a period, grouped by transaction
+    /// <c>Description</c> (the Rules-normalized merchant label — see CONTEXT.md
+    /// "Merchant / Payee"). Expenses only (income and transfers excluded);
+    /// uncategorized spend still counts. Reuses <see cref="ReportingRow"/>.
+    /// </summary>
+    public async Task<List<MerchantSpend>> ChartTopMerchantsAsync(string chartPeriod, int limit = 15)
+    {
+        var (startDate, endDate) = (ChartPeriod.Find(chartPeriod) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
+
+        var rows = await queryService.GetReportingRowsAsync(
+            new TransactionFilters(StartDate: startDate, EndDate: endDate));
+
+        return rows
+            .Where(r => !r.IsIncome && !r.IsTransfer)
+            .GroupBy(r => r.Description)
+            .Select(g => new MerchantSpend(g.Key, g.Sum(r => -r.SignedAmount), g.Count()))
+            .Where(m => m.Amount > 0) // drop net-credit merchants (e.g. pure refunds)
+            .OrderByDescending(m => m.Amount)
+            .Take(limit)
+            .ToList();
+    }
+
+    /// <summary>
     /// Calculates cumulative spending by day of month for the current month and previous month.
     /// </summary>
     /// <returns>
