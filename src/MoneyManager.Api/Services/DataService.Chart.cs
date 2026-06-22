@@ -63,6 +63,80 @@ public partial class DataService
     }
 
     /// <summary>
+    /// Builds the monthly spending-by-category trend for a period: the top 7 parent
+    /// categories by total spend plus an "Other" bucket, one value per month.
+    /// Expenses only; transfers excluded. Reuses <see cref="ReportingRow"/> (the
+    /// listability invariant, parent rollup, and sign convention) — see CONTEXT.md.
+    /// </summary>
+    public async Task<SpendingTrendChart> ChartSpendingTrendAsync(string chartPeriod)
+    {
+        const int TopCategoryCount = 7;
+
+        var (startDate, endDate) = (ChartPeriod.Find(chartPeriod) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
+
+        var rows = await queryService.GetReportingRowsAsync(
+            new TransactionFilters(StartDate: startDate, EndDate: endDate));
+
+        // Expenses only: drop income, transfers, and uncategorized rows.
+        var expenseRows = rows
+            .Where(r => !r.IsIncome && !r.IsTransfer && r.EffectiveCategory is not null)
+            .ToList();
+
+        if (expenseRows.Count == 0)
+            return new SpendingTrendChart([], []);
+
+        // Month buckets span [firstMonth, endDate). For unbounded periods ("a",
+        // StartDate == MinValue) anchor on the earliest expense month so we don't
+        // generate thousands of empty buckets.
+        var earliestMonth = expenseRows.Min(r => r.Date).StartOfMonth();
+        var firstMonth = startDate.StartOfMonth() > earliestMonth ? startDate.StartOfMonth() : earliestMonth;
+
+        var months = new List<SpendingTrendMonth>();
+        var monthIndex = new Dictionary<DateTime, int>();
+        for (var cursor = firstMonth; cursor < endDate; cursor = cursor.AddMonths(1))
+        {
+            monthIndex[cursor] = months.Count;
+            months.Add(new SpendingTrendMonth(cursor.ToString("MMM yy"), cursor, cursor.AddMonths(1)));
+        }
+
+        // Accumulate spend per category per month. Spend is the magnitude (-SignedAmount).
+        var agg = new Dictionary<int, (string Name, string? Icon, decimal[] PerMonth, decimal Total)>();
+        foreach (var row in expenseRows)
+        {
+            if (!monthIndex.TryGetValue(row.Date.StartOfMonth(), out var mi))
+                continue;
+
+            var cat = row.EffectiveCategory!;
+            if (!agg.TryGetValue(cat.Id, out var entry))
+                entry = (cat.Name, cat.Icon, new decimal[months.Count], 0m);
+
+            var spend = -row.SignedAmount;
+            entry.PerMonth[mi] += spend;
+            entry.Total += spend;
+            agg[cat.Id] = entry;
+        }
+
+        var ranked = agg.OrderByDescending(kv => kv.Value.Total).ToList();
+
+        var series = ranked
+            .Take(TopCategoryCount)
+            .Select(kv => new SpendingTrendSeries(kv.Key, kv.Value.Name, kv.Value.Icon, kv.Value.PerMonth))
+            .ToList();
+
+        var rest = ranked.Skip(TopCategoryCount).ToList();
+        if (rest.Count > 0)
+        {
+            var otherPerMonth = new decimal[months.Count];
+            foreach (var kv in rest)
+                for (var i = 0; i < months.Count; i++)
+                    otherPerMonth[i] += kv.Value.PerMonth[i];
+            series.Add(new SpendingTrendSeries(null, "Other", null, otherPerMonth));
+        }
+
+        return new SpendingTrendChart(months, series);
+    }
+
+    /// <summary>
     /// Calculates cumulative spending by day of month for the current month and previous month.
     /// </summary>
     /// <returns>

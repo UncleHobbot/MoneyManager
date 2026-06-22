@@ -20,6 +20,7 @@ public static class ChartEndpoints
         group.MapGet("/net-income", GetNetIncome);
         group.MapGet("/cumulative-spending", GetCumulativeSpending);
         group.MapGet("/spending-by-category", GetSpendingByCategory);
+        group.MapGet("/spending-trend", GetSpendingTrend);
         group.MapGet("/month/{month}", GetMonthTransactions);
         group.MapGet("/periods", GetPeriods);
     }
@@ -33,6 +34,12 @@ public static class ChartEndpoints
     internal static async Task<IResult> GetCumulativeSpending(DataService dataService)
     {
         var result = await dataService.ChartCumulativeSpendingAsync();
+        return TypedResults.Ok(result);
+    }
+
+    internal static async Task<IResult> GetSpendingTrend(string period, DataService dataService)
+    {
+        var result = await dataService.ChartSpendingTrendAsync(period ?? "12");
         return TypedResults.Ok(result);
     }
 

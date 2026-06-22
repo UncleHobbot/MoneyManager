@@ -87,6 +87,50 @@ public class DataServiceChartTests : IDisposable
         feb.Expenses.Should().Be(-29.49m, "Restaurant (Food top-level) must appear after bug fix");
     }
 
+    // ----------------------------------------------------------------
+    // ChartSpendingTrendAsync (monthly spending by parent category)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartSpendingTrend_RollsUpSubcategoriesAndExcludesNonExpenses()
+    {
+        int foodId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+            foodId = ctx.Categories.First(c => c.Name == "Food").Id;
+
+        var result = await _svc.DataService.ChartSpendingTrendAsync("a");
+
+        // Only Food has expenses: Groceries rolls up to Food, Netflix is
+        // uncategorized (null category), Salary is income, and the transfer is on a
+        // hidden account. One series, no "Other" bucket.
+        result.Series.Should().ContainSingle();
+        var food = result.Series.Single();
+        food.Name.Should().Be("Food");
+        food.CategoryId.Should().Be(foodId);
+
+        var monthLabels = result.Months.Select(m => m.Label).ToList();
+        var jan = monthLabels.IndexOf("Jan 25");
+        var feb = monthLabels.IndexOf("Feb 25");
+        jan.Should().BeGreaterThanOrEqualTo(0);
+        feb.Should().BeGreaterThanOrEqualTo(0);
+
+        food.Data[jan].Should().Be(85.50m); // Loblaws (Groceries -> Food)
+        food.Data[feb].Should().Be(12.50m); // Restaurant (Food)
+        food.Data.Sum().Should().Be(98.00m);
+
+        result.Series.Should().NotContain(s =>
+            s.Name == "Income" || s.Name == "Transfer" || s.Name == "Uncategorized" || s.Name == "Other");
+    }
+
+    [Fact]
+    public async Task ChartSpendingTrend_AlignsSeriesDataWithMonths()
+    {
+        var result = await _svc.DataService.ChartSpendingTrendAsync("a");
+
+        result.Months.Should().NotBeEmpty();
+        result.Series.Should().OnlyContain(s => s.Data.Length == result.Months.Count);
+    }
+
     [Fact]
     public async Task ChartNetIncome_IncludesUncategorizedTransactions()
     {
