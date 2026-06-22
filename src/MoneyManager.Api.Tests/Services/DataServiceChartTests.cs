@@ -161,6 +161,37 @@ public class DataServiceChartTests : IDisposable
         result.Select(m => m.Name).Should().Equal("Loblaws Groceries", "Netflix");
     }
 
+    // ----------------------------------------------------------------
+    // ChartCashFlowAsync (income -> hub -> expenses + savings)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartCashFlow_BuildsBalancedSankey_WithSavings()
+    {
+        const string hub = "Total Income";
+        var result = await _svc.DataService.ChartCashFlowAsync("a");
+
+        decimal Link(string source, string target) =>
+            result.Links.Single(l => l.Source == source && l.Target == target).Value;
+
+        // Income (3000) -> hub -> Food (98.00) + Uncategorized (16.99) + Savings (2885.01).
+        Link("Income", hub).Should().Be(3000m);
+        Link(hub, "Food").Should().Be(98.00m);
+        Link(hub, "Uncategorized").Should().Be(16.99m);
+        Link(hub, "Savings").Should().Be(2885.01m);
+
+        result.Nodes.Select(n => n.Name).Should().Contain(new[] { "Income", hub, "Food", "Uncategorized", "Savings" });
+        result.Nodes.Should().NotContain(n => n.Name == "Deficit");
+
+        // The hub balances: total inflow == total outflow.
+        var inflow = result.Links.Where(l => l.Target == hub).Sum(l => l.Value);
+        var outflow = result.Links.Where(l => l.Source == hub).Sum(l => l.Value);
+        inflow.Should().Be(outflow);
+
+        // The hidden-account transfer never appears.
+        result.Nodes.Should().NotContain(n => n.Name == "Transfer" || n.Name == "Internal Transfer");
+    }
+
     [Fact]
     public async Task ChartNetIncome_IncludesUncategorizedTransactions()
     {

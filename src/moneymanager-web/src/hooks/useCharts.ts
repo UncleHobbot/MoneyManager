@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
 import type {
   BalanceChart,
+  CashFlowChart,
   CategoryChart,
   ChartPeriod,
   CumulativeSpendingChart,
@@ -37,6 +38,14 @@ export function useTopMerchants(period: string, limit = 15) {
     queryKey: ['charts', 'top-merchants', period, limit],
     queryFn: () =>
       api.get('/charts/top-merchants', { params: { period, limit } }).then(r => r.data),
+  })
+}
+
+export function useCashFlow(period: string) {
+  return useQuery<CashFlowChart>({
+    queryKey: ['charts', 'cash-flow', period],
+    queryFn: () =>
+      api.get('/charts/cash-flow', { params: { period } }).then(r => r.data),
   })
 }
 

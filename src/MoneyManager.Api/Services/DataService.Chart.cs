@@ -160,6 +160,89 @@ public partial class DataService
     }
 
     /// <summary>
+    /// Builds the cash-flow Sankey for a period: income category nodes flow into a
+    /// single "Total Income" hub, which flows out to expense category nodes (top
+    /// <paramref name="topExpenses"/> + "Other") plus a "Savings" node. A surplus
+    /// produces the Savings flow; a deficit adds a "Deficit" source feeding the hub
+    /// so inflow and outflow balance. Reuses <see cref="ReportingRow"/>.
+    /// </summary>
+    public async Task<CashFlowChart> ChartCashFlowAsync(string chartPeriod, int topExpenses = 8)
+    {
+        const string Hub = "Total Income";
+
+        var (startDate, endDate) = (ChartPeriod.Find(chartPeriod) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
+        var rows = await queryService.GetReportingRowsAsync(
+            new TransactionFilters(StartDate: startDate, EndDate: endDate));
+
+        var nonTransfer = rows.Where(r => !r.IsTransfer).ToList();
+
+        // Income side: income rows grouped by (rolled-up) category.
+        var incomeGroups = nonTransfer
+            .Where(r => r.IsIncome && r.EffectiveCategory is not null)
+            .GroupBy(r => r.EffectiveCategory!)
+            .Select(g => (Id: (int?)g.Key.Id, g.Key.Name, Amount: g.Sum(r => r.SignedAmount)))
+            .Where(x => x.Amount > 0)
+            .ToList();
+
+        // Expense side: everything non-income. Null category groups as "Uncategorized".
+        var expenseGroups = nonTransfer
+            .Where(r => !r.IsIncome)
+            .GroupBy(r => r.EffectiveCategory)
+            .Select(g => (
+                Id: g.Key?.Id,
+                Name: g.Key?.Name ?? "Uncategorized",
+                Kind: g.Key is null ? "uncategorized" : "expense",
+                Amount: g.Sum(r => -r.SignedAmount)))
+            .Where(x => x.Amount > 0)
+            .OrderByDescending(x => x.Amount)
+            .ToList();
+
+        var totalIncome = incomeGroups.Sum(x => x.Amount);
+        var totalExpense = expenseGroups.Sum(x => x.Amount);
+
+        var nodes = new List<SankeyNode>();
+        var links = new List<SankeyLink>();
+
+        foreach (var inc in incomeGroups)
+        {
+            nodes.Add(new SankeyNode(inc.Name, inc.Id, "income"));
+            links.Add(new SankeyLink(inc.Name, Hub, inc.Amount));
+        }
+
+        nodes.Add(new SankeyNode(Hub, null, "hub"));
+
+        foreach (var ex in expenseGroups.Take(topExpenses))
+        {
+            nodes.Add(new SankeyNode(ex.Name, ex.Id, ex.Kind));
+            links.Add(new SankeyLink(Hub, ex.Name, ex.Amount));
+        }
+
+        var rest = expenseGroups.Skip(topExpenses).ToList();
+        if (rest.Count > 0)
+        {
+            nodes.Add(new SankeyNode("Other", null, "other"));
+            links.Add(new SankeyLink(Hub, "Other", rest.Sum(x => x.Amount)));
+        }
+
+        if (totalIncome >= totalExpense)
+        {
+            var surplus = totalIncome - totalExpense;
+            if (surplus > 0)
+            {
+                nodes.Add(new SankeyNode("Savings", null, "savings"));
+                links.Add(new SankeyLink(Hub, "Savings", surplus));
+            }
+        }
+        else
+        {
+            nodes.Add(new SankeyNode("Deficit", null, "deficit"));
+            links.Add(new SankeyLink("Deficit", Hub, totalExpense - totalIncome));
+        }
+
+        return new CashFlowChart(nodes, links);
+    }
+
+    /// <summary>
     /// Calculates cumulative spending by day of month for the current month and previous month.
     /// </summary>
     /// <returns>
