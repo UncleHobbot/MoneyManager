@@ -159,4 +159,161 @@ public class DataServiceChartTests : IDisposable
         // Treat this as a smoke test: method runs without error.
         result.Should().NotBeNull();
     }
+
+    // ----------------------------------------------------------------
+    // ChartCumulativeSpendingAsync
+    //
+    // Tests use DateTime.Today-relative dates because the method hard-codes
+    // "this month" and "last month" from today. Bug-fix regression guards
+    // mirror the ChartNetIncome tests: top-level categories and uncategorized
+    // transactions now reach the chart.
+    // ----------------------------------------------------------------
+
+    private async Task AddTransactionAsync(DateTime date, decimal amount, bool isDebit, string categoryName)
+    {
+        using var ctx = _svc.Factory.CreateDbContext();
+        var category = ctx.Categories.First(c => c.Name == categoryName);
+        var account = ctx.Accounts.First(a => a.Name == "RBC Chequing");
+        ctx.Transactions.Add(new Data.Transaction
+        {
+            Account = account,
+            Date = date,
+            Description = $"{categoryName} {date:yyyy-MM-dd}",
+            OriginalDescription = $"{categoryName}_{date:yyyyMMdd}",
+            Amount = amount,
+            IsDebit = isDebit,
+            Category = category,
+        });
+        await ctx.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task ChartCumulativeSpending_HasEntryForEveryDayOfLastMonth()
+    {
+        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+
+        var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+        var daysInLastMonth = DateTime.DaysInMonth(lastMonthStart.Year, lastMonthStart.Month);
+
+        result.Should().HaveCount(daysInLastMonth);
+        result.Select(d => d.DayNumber).Should().BeEquivalentTo(Enumerable.Range(1, daysInLastMonth));
+    }
+
+    [Fact]
+    public async Task ChartCumulativeSpending_LastMonthAccumulatesByDay()
+    {
+        // Add two expenses on day 5 and day 10 of last month.
+        var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 50m, true, "Food");
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 10), 30m, true, "Food");
+
+        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+
+        // Cumulative: day 5 onward includes 50; day 10 onward includes 80.
+        result.Single(d => d.DayNumber == 1).LastMonthExpenses.Should().Be(0m);
+        result.Single(d => d.DayNumber == 5).LastMonthExpenses.Should().Be(50m);
+        result.Single(d => d.DayNumber == 9).LastMonthExpenses.Should().Be(50m);
+        result.Single(d => d.DayNumber == 10).LastMonthExpenses.Should().Be(80m);
+        result.Last().LastMonthExpenses.Should().Be(80m);
+    }
+
+    [Fact]
+    public async Task ChartCumulativeSpending_ThisMonthAccumulatesByDay()
+    {
+        // Add two expenses on day 5 and day 15 of this month, before today.
+        var today = DateTime.Today;
+        var day5 = new DateTime(today.Year, today.Month, 5);
+        var day15 = new DateTime(today.Year, today.Month, 15);
+        if (day5 >= today || day15 >= today) return; // skip if today is too early in month
+
+        await AddTransactionAsync(day5, 40m, true, "Food");
+        await AddTransactionAsync(day15, 25m, true, "Food");
+
+        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+
+        result.Single(d => d.DayNumber == 5).ThisMonthExpenses.Should().Be(40m);
+        result.Single(d => d.DayNumber == 14).ThisMonthExpenses.Should().Be(40m);
+        result.Single(d => d.DayNumber == 15).ThisMonthExpenses.Should().Be(65m);
+        result.Single(d => d.DayNumber == today.Day).ThisMonthExpenses.Should().Be(65m);
+    }
+
+    [Fact]
+    public async Task ChartCumulativeSpending_ExcludesIncome()
+    {
+        // Add a Salary (Income) transaction in last month — must not contribute.
+        var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 5000m, false, "Income");
+
+        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+
+        result.Should().NotBeEmpty();
+        result.Should().OnlyContain(d => d.LastMonthExpenses == 0m);
+    }
+
+    [Fact]
+    public async Task ChartCumulativeSpending_ExcludesTransfers()
+    {
+        // Add a Transfer (debit) on day 5 of last month — must not contribute.
+        var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 300m, true, "Transfer");
+
+        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+
+        result.Should().NotBeEmpty();
+        result.Should().OnlyContain(d => d.LastMonthExpenses == 0m);
+    }
+
+    [Fact]
+    public async Task ChartCumulativeSpending_IncludesTopLevelAndUncategorized_AfterBugFix()
+    {
+        // Regression guard: pre-migration, ChartGetTransactionsAsync's NULL-comparison
+        // bug filtered out Food (top-level) and Uncategorized (top-level) transactions,
+        // and the Category != null filter excluded uncategorized-by-null rows.
+        // After migration, top-level categories and Category=null rows both reach the chart.
+        var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+
+        // Food is top-level in seed.
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 20m, true, "Food");
+
+        // Add an uncategorized transaction (Category = null).
+        using (var ctx = _svc.Factory.CreateDbContext())
+        {
+            var account = ctx.Accounts.First(a => a.Name == "RBC Chequing");
+            ctx.Transactions.Add(new Data.Transaction
+            {
+                Account = account,
+                Date = new DateTime(lastMonthStart.Year, lastMonthStart.Month, 6),
+                Description = "Mystery",
+                OriginalDescription = "MYSTERY",
+                Amount = 15m,
+                IsDebit = true,
+                Category = null,
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+
+        // Food (20) + Mystery (15) = 35 from day 6 onward.
+        result.Single(d => d.DayNumber == 5).LastMonthExpenses.Should().Be(20m);
+        result.Single(d => d.DayNumber == 6).LastMonthExpenses.Should().Be(35m);
+        result.Last().LastMonthExpenses.Should().Be(35m);
+    }
+
+    [Fact]
+    public async Task ChartCumulativeSpending_RefundsReduceExpenses()
+    {
+        // A credit "expense" (e.g. refund) should subtract from cumulative
+        // spending, matching the pre-migration convention where credits
+        // produced negative sums.
+        var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 50m, true, "Food");
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 10), 20m, false, "Food");
+
+        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+
+        // Day 5: +50; Day 10: +50 - 20 = +30.
+        result.Single(d => d.DayNumber == 5).LastMonthExpenses.Should().Be(50m);
+        result.Single(d => d.DayNumber == 10).LastMonthExpenses.Should().Be(30m);
+    }
 }

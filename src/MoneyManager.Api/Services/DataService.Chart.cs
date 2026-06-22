@@ -244,22 +244,22 @@ public partial class DataService
     /// </returns>
     /// <remarks>
     /// This method creates a day-by-day comparison of spending patterns between two months:
-    /// 
-    /// 1. Retrieves transactions from the first day of last month to today
-    /// 2. Filters out income transactions (only expenses are included)
-    /// 3. For each day (1-31):
-    ///    - Calculates cumulative expenses on that day last month
-    ///    - Calculates cumulative expenses on that day this month (if day has passed)
-    /// 
-    /// Cumulative calculation: Sum of all expenses from the first of the month up to and including that day.
-    /// 
-    /// Sign convention: Debit transactions are positive (money spent), credit transactions are negative (money back).
-    /// This differs from ChartNetIncomeAsync where expenses are shown as positive values for display.
-    /// 
-    /// Days beyond the actual month length will have NaN for that month's expenses.
-    /// Future days in the current month will have NaN for this month's expenses.
-    /// 
-    /// This is used to visualize spending velocity and identify whether the current month is ahead or behind the previous month's pace.
+    ///
+    /// 1. Retrieves <see cref="ReportingRow">reporting rows</see> from the first
+    ///    day of last month to today (today's transactions excluded by the
+    ///    exclusive end of the date window, matching pre-migration behavior).
+    /// 2. Filters to expenses only (<c>!IsIncome &amp;&amp; !IsTransfer</c>).
+    /// 3. For each day (1-31), sums <c>-SignedAmount</c> over rows whose date
+    ///    falls in [monthStart, dayBoundary). The negation flips the canonical
+    ///    "debits negative" convention to the "expenses positive" convention
+    ///    this chart has always used; see <c>CONTEXT.md</c> ("Signed amount").
+    ///
+    /// Days beyond the actual month length will have <c>null</c> for that month's
+    /// expenses. Future days in the current month will have <c>null</c> for this
+    /// month's expenses.
+    ///
+    /// This is used to visualize spending velocity and identify whether the
+    /// current month is ahead or behind the previous month's pace.
     /// </remarks>
     public async Task<List<CumulativeSpendingChart>> ChartCumulativeSpendingAsync()
     {
@@ -269,9 +269,12 @@ public partial class DataService
         var lastMonthStart = thisMonthStart.AddDays(-1);
         lastMonthStart = new DateTime(lastMonthStart.Year, lastMonthStart.Month, 1);
 
-        var catIncome = await GetCategoryByNameAsync("Income");
-        var trans = (await ChartGetTransactionsAsync(lastMonthStart, DateTime.Today))
-            .Where(x => (x.Category.Parent ?? x.Category).Id != catIncome.Id).ToList();
+        var filters = new TransactionFilters(StartDate: lastMonthStart, EndDate: DateTime.Today);
+        var rows = await queryService.GetReportingRowsAsync(filters);
+
+        var expenses = rows
+            .Where(r => !r.IsIncome && !r.IsTransfer)
+            .ToList();
 
         for (var day = 1; day <= 31; day++)
         {
@@ -280,7 +283,9 @@ public partial class DataService
             try
             {
                 var lastMonthDate = new DateTime(lastMonthStart.Year, lastMonthStart.Month, day).AddDays(1);
-                var lastMonth = trans.Where(x => x.Date >= lastMonthStart && x.Date < lastMonthDate).Sum(x => (x.IsDebit ? 1 : -1) * x.Amount);
+                var lastMonth = expenses
+                    .Where(x => x.Date >= lastMonthStart && x.Date < lastMonthDate)
+                    .Sum(x => -x.SignedAmount);
                 dayValue.LastMonthExpenses = lastMonth;
                 result.Add(dayValue);
             }
@@ -294,7 +299,9 @@ public partial class DataService
                 if (thisMonthDate <= DateTime.Today)
                 {
                     thisMonthDate = thisMonthDate.AddDays(1);
-                    var thisMonth = trans.Where(x => x.Date >= thisMonthStart && x.Date < thisMonthDate).Sum(x => (x.IsDebit ? 1 : -1) * x.Amount);
+                    var thisMonth = expenses
+                        .Where(x => x.Date >= thisMonthStart && x.Date < thisMonthDate)
+                        .Sum(x => -x.SignedAmount);
                     dayValue.ThisMonthExpenses = thisMonth;
                 }
             }
