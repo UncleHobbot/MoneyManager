@@ -64,6 +64,37 @@ credits (income).
   consolidation — it removes all four duplicates by introducing a column EF
   can map.
 
+## Bank Import Adapter
+
+A read-side abstraction over per-bank CSV formats. Each bank (Mint, RBC,
+CIBC) implements `IBankImporter` with two operations: `Validate(stream)`
+checks structure, `ReadRows(stream)` yields `NormalizedRow` values. The
+import pipeline (`TransactionService.ImportAsync`) consumes normalized
+rows and owns backup, account/category resolution, dedup, rule
+application, and persistence.
+
+- **Adapter properties.** Each `IBankImporter` declares: `BankType`
+  (wire-format identifier), `ApplyRules` (whether the pipeline applies
+  auto-categorization), `UseFuzzyDateMatch` (±5 day dedup window),
+  `HasHeaderRecord` (line-count adjustment).
+- **Adapter is pure.** Adapters do not touch the database, the cache, or
+  rule application. They read the stream and produce `NormalizedRow`
+  values; the pipeline does the rest.
+- **Pipeline is thread-safe.** Each `ImportAsync` call uses method-local
+  caches for accounts and categories. The legacy instance state
+  (`_accounts`, `_categories`) is deleted.
+- **Adding a new bank.** Add one class implementing `IBankImporter`.
+  Register its string code in `ImportEndpoints.ParseBankType` (and add a
+  detection heuristic to `DetectBankType` if it should be auto-detected).
+  The pipeline, helpers, and tests do not change.
+- **Endpoint responsibility.** `ImportEndpoints.Upload` owns HTTP receipt,
+  bank detection, and file archive (file-system side-effects). The
+  pipeline owns everything else, including backup. Pre-migration, the
+  endpoint also called backup - that double-backup bug is fixed.
+- **Archive filename format.** Changed from `{date} {enum}.csv`
+  (e.g. "2026-06-21 Mint_CSV.csv") to `{date} {bankType}.csv`
+  (e.g. "2026-06-21 Mint.csv"). Old archive files remain readable.
+
 ## ChartPeriod (vocabulary)
 
 The set of relative date windows accepted by chart, stats, and AI endpoints.

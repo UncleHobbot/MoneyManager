@@ -20,18 +20,13 @@ namespace MoneyManager.Api.Services;
 /// </list>
 ///
 /// Thread Safety: <see cref="ImportAsync(Stream, IBankImporter, bool)"/> is thread-safe -
-/// each call uses method-local caches. The legacy per-bank methods
-/// (<c>ImportMintCsvAsync</c>, <c>ImportRbcCsvAsync</c>, <c>ImportCibcCsvAsync</c>) are not
-/// thread-safe - they share instance state and must run sequentially. The legacy methods
-/// will be removed once the endpoint migrates to <see cref="ImportAsync(Stream, IBankImporter, bool)"/>.
+/// each call uses method-local caches for accounts and categories.
 /// </remarks>
 public partial class TransactionService(
     IDbContextFactory<DataContext> contextFactory,
     DataService dataService,
     DBService dbService)
 {
-    private Dictionary<string, Account> _accounts = [];
-    private Dictionary<string, Category> _categories = [];
 
     /// <summary>
     /// Imports transactions from a CSV stream using the supplied

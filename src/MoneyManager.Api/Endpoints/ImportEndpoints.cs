@@ -1,6 +1,6 @@
 using MoneyManager.Api.Model.Api;
-using MoneyManager.Api.Model.Import;
 using MoneyManager.Api.Services;
+using MoneyManager.Api.Services.Import;
 
 namespace MoneyManager.Api.Endpoints;
 
@@ -25,7 +25,6 @@ public static class ImportEndpoints
     internal static async Task<IResult> Upload(
         IFormFile file,
         TransactionService transactionService,
-        DBService dbService,
         IConfiguration configuration,
         string? bankType = null,
         bool createAccounts = true)
@@ -33,29 +32,22 @@ public static class ImportEndpoints
         if (file is null || file.Length == 0)
             return TypedResults.BadRequest("A non-empty CSV file is required.");
 
-        ImportTypeEnum? importType = ParseBankType(bankType);
-
-        if (importType is null)
+        // Resolve the bank importer either from an explicit query-string hint
+        // or by sniffing the file's first line. The pipeline (TransactionService.
+        // ImportAsync) owns backup; the endpoint owns only HTTP receipt, bank
+        // detection, and archive (file-system concerns).
+        IBankImporter? importer = ParseBankType(bankType);
+        if (importer is null)
         {
-            importType = await DetectBankTypeAsync(file);
-            if (importType is null)
+            importer = DetectBankType(file);
+            if (importer is null)
                 return TypedResults.BadRequest("Unable to determine the bank type. Please specify the bankType query parameter.");
         }
 
-        await dbService.BackupAsync();
-
-        ImportResult result;
         await using var stream = file.OpenReadStream();
+        var result = await transactionService.ImportAsync(stream, importer, createAccounts);
 
-        result = importType.Value switch
-        {
-            ImportTypeEnum.Mint_CSV => await transactionService.ImportMintCsvAsync(stream, createAccounts),
-            ImportTypeEnum.RBC_CSV => await transactionService.ImportRbcCsvAsync(stream, createAccounts),
-            ImportTypeEnum.CIBC_CSV => await transactionService.ImportCibcCsvAsync(stream, createAccounts),
-            _ => throw new InvalidOperationException($"Unsupported import type: {importType}")
-        };
-
-        await ArchiveCsvAsync(file, importType.Value, configuration);
+        await ArchiveCsvAsync(file, importer.BankType, configuration);
 
         return TypedResults.Ok(result);
     }
@@ -122,47 +114,66 @@ public static class ImportEndpoints
         return fullPath;
     }
 
-    private static ImportTypeEnum? ParseBankType(string? bankType)
+    /// <summary>
+    /// Maps a query-string <c>bankType</c> hint to an <see cref="IBankImporter"/>.
+    /// Accepts both the short form ("Mint", "RBC", "CIBC") and the legacy enum
+    /// form ("Mint_CSV", "RBC_CSV", "CIBC_CSV") for backward compatibility with
+    /// any client that sends the old form.
+    /// </summary>
+    private static IBankImporter? ParseBankType(string? bankType)
     {
         if (string.IsNullOrWhiteSpace(bankType))
             return null;
 
-        return Enum.TryParse<ImportTypeEnum>(bankType, ignoreCase: true, out var result)
-            ? result
-            : null;
+        return bankType.ToLowerInvariant() switch
+        {
+            "mint" or "mint_csv" => new MintImporter(),
+            "rbc" or "rbc_csv" => new RbcImporter(),
+            "cibc" or "cibc_csv" => new CibcImporter(),
+            _ => null,
+        };
     }
 
-    private static async Task<ImportTypeEnum?> DetectBankTypeAsync(IFormFile file)
+    /// <summary>
+    /// Sniffs the first line of the uploaded file to detect the bank format.
+    /// Mint files have "Original Description" + "Transaction Type" columns;
+    /// RBC files have "Account Type" + "CAD$"; CIBC files have no header row
+    /// (the line is purely numeric/data).
+    /// </summary>
+    private static IBankImporter? DetectBankType(IFormFile file)
     {
-        await using var stream = file.OpenReadStream();
+        using var stream = file.OpenReadStream();
         using var reader = new StreamReader(stream, leaveOpen: true);
-        var firstLine = await reader.ReadLineAsync();
+        var firstLine = reader.ReadLine();
 
         if (string.IsNullOrWhiteSpace(firstLine))
             return null;
 
         if (firstLine.Contains("Original Description", StringComparison.OrdinalIgnoreCase)
             && firstLine.Contains("Transaction Type", StringComparison.OrdinalIgnoreCase))
-            return ImportTypeEnum.Mint_CSV;
+            return new MintImporter();
 
         if (firstLine.Contains("Account Type", StringComparison.OrdinalIgnoreCase)
             && firstLine.Contains("CAD$", StringComparison.OrdinalIgnoreCase))
-            return ImportTypeEnum.RBC_CSV;
+            return new RbcImporter();
 
         var hasTextHeader = firstLine.Any(char.IsLetter);
         if (!hasTextHeader)
-            return ImportTypeEnum.CIBC_CSV;
+            return new CibcImporter();
 
         return null;
     }
 
-    private static async Task ArchiveCsvAsync(IFormFile file, ImportTypeEnum importType, IConfiguration configuration)
+    private static async Task ArchiveCsvAsync(IFormFile file, string bankType, IConfiguration configuration)
     {
         var archiveDir = GetArchivePath(configuration);
         Directory.CreateDirectory(archiveDir);
 
         var datePart = DateTime.Now.ToString("yyyy-MM-dd");
-        var archiveFileName = $"{datePart} {importType}.csv";
+        // Wire-format change: archive filenames now use the short BankType
+        // ("Mint.csv", "RBC.csv", "CIBC.csv") instead of the legacy enum form
+        // ("Mint_CSV.csv", ...). Old archive files remain readable.
+        var archiveFileName = $"{datePart} {bankType}.csv";
         var archivePath = Path.Combine(archiveDir, archiveFileName);
 
         await using var source = file.OpenReadStream();

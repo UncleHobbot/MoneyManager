@@ -4,10 +4,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Services;
+using MoneyManager.Api.Services.Import;
 using MoneyManager.Api.Tests.TestHelpers;
 
 namespace MoneyManager.Api.Tests.Services;
 
+/// <summary>
+/// Integration tests: real CSV file through the matching adapter through the
+/// real pipeline. Per-bank parsing is covered by <c>MintImporterTests</c>,
+/// <c>RbcImporterTests</c>, <c>CibcImporterTests</c>; pipeline mechanics by
+/// <c>TransactionServicePipelineTests</c> (with a fake adapter). These tests
+/// verify the wiring - that the right adapter feeds the right CSV into the
+/// pipeline and produces the expected database state.
+/// </summary>
 public class TransactionServiceImportTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
@@ -21,11 +30,9 @@ public class TransactionServiceImportTests : IDisposable
         _cache = new MemoryCache(new MemoryCacheOptions());
         _dataService = new DataService(_factory, _cache, new TransactionQueryService(_factory));
 
-        // Create a temp backup directory for DBService
         _backupDir = Path.Combine(Path.GetTempPath(), $"mm_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_backupDir);
 
-        // Seed a minimal account and category for import tests
         using var ctx = _factory.CreateDbContext();
         ctx.Accounts.Add(new Account { Name = "Chequing", ShownName = "Chequing", Type = 0, Number = "12345" });
         ctx.Categories.Add(new Category { Name = "Uncategorized", Icon = "Misc" });
@@ -49,15 +56,12 @@ public class TransactionServiceImportTests : IDisposable
         return new TransactionService(_factory, _dataService, dbService);
     }
 
-    private static Stream ToStream(string content)
-    {
-        return new MemoryStream(Encoding.UTF8.GetBytes(content));
-    }
+    private static Stream ToStream(string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 
     // --- Mint Import Tests ---
 
     [Fact]
-    public async Task ImportMintCsvAsync_ImportsValidRecords()
+    public async Task MintImport_ImportsValidRecords()
     {
         var csv = """
             Date,Description,Original Description,Amount,Transaction Type,Category,Account Name,Labels,Notes
@@ -66,14 +70,14 @@ public class TransactionServiceImportTests : IDisposable
             """;
 
         var service = CreateTransactionService();
-        var result = await service.ImportMintCsvAsync(ToStream(csv));
+        var result = await service.ImportAsync(ToStream(csv), new MintImporter());
 
         result.ImportedCount.Should().Be(2);
         result.BankType.Should().Be("Mint");
     }
 
     [Fact]
-    public async Task ImportMintCsvAsync_SkipsDuplicates()
+    public async Task MintImport_SkipsDuplicates()
     {
         var csv = """
             Date,Description,Original Description,Amount,Transaction Type,Category,Account Name,Labels,Notes
@@ -82,18 +86,15 @@ public class TransactionServiceImportTests : IDisposable
 
         var service = CreateTransactionService();
 
-        // Import once
-        await service.ImportMintCsvAsync(ToStream(csv));
-
-        // Import again — should be skipped
-        var result = await service.ImportMintCsvAsync(ToStream(csv));
+        await service.ImportAsync(ToStream(csv), new MintImporter());
+        var result = await service.ImportAsync(ToStream(csv), new MintImporter());
 
         result.ImportedCount.Should().Be(0);
         result.SkippedCount.Should().Be(1);
     }
 
     [Fact]
-    public async Task ImportMintCsvAsync_CreatesNewAccount()
+    public async Task MintImport_CreatesNewAccount()
     {
         var csv = """
             Date,Description,Original Description,Amount,Transaction Type,Category,Account Name,Labels,Notes
@@ -101,7 +102,7 @@ public class TransactionServiceImportTests : IDisposable
             """;
 
         var service = CreateTransactionService();
-        var result = await service.ImportMintCsvAsync(ToStream(csv), isCreateAccounts: true);
+        var result = await service.ImportAsync(ToStream(csv), new MintImporter(), isCreateAccounts: true);
 
         result.ImportedCount.Should().Be(1);
 
@@ -111,7 +112,7 @@ public class TransactionServiceImportTests : IDisposable
     }
 
     [Fact]
-    public async Task ImportMintCsvAsync_SkipsWhenAccountNotFoundAndCreateDisabled()
+    public async Task MintImport_SkipsWhenAccountNotFoundAndCreateDisabled()
     {
         var csv = """
             Date,Description,Original Description,Amount,Transaction Type,Category,Account Name,Labels,Notes
@@ -119,14 +120,14 @@ public class TransactionServiceImportTests : IDisposable
             """;
 
         var service = CreateTransactionService();
-        var result = await service.ImportMintCsvAsync(ToStream(csv), isCreateAccounts: false);
+        var result = await service.ImportAsync(ToStream(csv), new MintImporter(), isCreateAccounts: false);
 
         result.ImportedCount.Should().Be(0);
         result.SkippedCount.Should().Be(1);
     }
 
     [Fact]
-    public async Task ImportMintCsvAsync_SetsDebitFlag()
+    public async Task MintImport_SetsDebitFlag()
     {
         var csv = """
             Date,Description,Original Description,Amount,Transaction Type,Category,Account Name,Labels,Notes
@@ -135,7 +136,7 @@ public class TransactionServiceImportTests : IDisposable
             """;
 
         var service = CreateTransactionService();
-        await service.ImportMintCsvAsync(ToStream(csv));
+        await service.ImportAsync(ToStream(csv), new MintImporter());
 
         using var ctx = _factory.CreateDbContext();
         var debit = await ctx.Transactions.FirstAsync(t => t.OriginalDescription == "STARBUCKS");
@@ -148,7 +149,7 @@ public class TransactionServiceImportTests : IDisposable
     // --- RBC Import Tests ---
 
     [Fact]
-    public async Task ImportRbcCsvAsync_ImportsValidRecords()
+    public async Task RbcImport_ImportsValidRecords()
     {
         var csv = """
             Account Type,Account Number,Transaction Date,Cheque Number,Description 1,Description 2,CAD$,USD$
@@ -156,14 +157,14 @@ public class TransactionServiceImportTests : IDisposable
             """;
 
         var service = CreateTransactionService();
-        var result = await service.ImportRbcCsvAsync(ToStream(csv));
+        var result = await service.ImportAsync(ToStream(csv), new RbcImporter());
 
         result.ImportedCount.Should().Be(1);
         result.BankType.Should().Be("RBC");
     }
 
     [Fact]
-    public async Task ImportRbcCsvAsync_NegativeAmountIsDebit()
+    public async Task RbcImport_NegativeAmountIsDebit()
     {
         var csv = """
             Account Type,Account Number,Transaction Date,Cheque Number,Description 1,Description 2,CAD$,USD$
@@ -172,7 +173,7 @@ public class TransactionServiceImportTests : IDisposable
             """;
 
         var service = CreateTransactionService();
-        await service.ImportRbcCsvAsync(ToStream(csv));
+        await service.ImportAsync(ToStream(csv), new RbcImporter());
 
         using var ctx = _factory.CreateDbContext();
         var transactions = await ctx.Transactions.ToListAsync();
@@ -186,7 +187,7 @@ public class TransactionServiceImportTests : IDisposable
     }
 
     [Fact]
-    public async Task ImportRbcCsvAsync_ThrowsOnInvalidCsvStructure()
+    public async Task RbcImport_ThrowsOnInvalidCsvStructure()
     {
         var csv = """
             Bad,Header,Row
@@ -194,8 +195,9 @@ public class TransactionServiceImportTests : IDisposable
             """;
 
         var service = CreateTransactionService();
-        var act = () => service.ImportRbcCsvAsync(ToStream(csv));
+        var act = () => service.ImportAsync(ToStream(csv), new RbcImporter());
 
+        // The adapter throws during Validate; the pipeline propagates.
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*Missing column*");
     }
@@ -203,24 +205,24 @@ public class TransactionServiceImportTests : IDisposable
     // --- CIBC Import Tests ---
 
     [Fact]
-    public async Task ImportCibcCsvAsync_ImportsValidRecords()
+    public async Task CibcImport_ImportsValidRecords()
     {
         var csv = "1/25/2025,GROCERY STORE,30.00,,12345\n1/26/2025,SALARY,,2000.00,12345\n";
 
         var service = CreateTransactionService();
-        var result = await service.ImportCibcCsvAsync(ToStream(csv));
+        var result = await service.ImportAsync(ToStream(csv), new CibcImporter());
 
         result.ImportedCount.Should().Be(2);
         result.BankType.Should().Be("CIBC");
     }
 
     [Fact]
-    public async Task ImportCibcCsvAsync_DebitAndCreditLogic()
+    public async Task CibcImport_DebitAndCreditLogic()
     {
         var csv = "1/25/2025,PURCHASE,50.00,,12345\n1/26/2025,REFUND,,25.00,12345\n";
 
         var service = CreateTransactionService();
-        await service.ImportCibcCsvAsync(ToStream(csv));
+        await service.ImportAsync(ToStream(csv), new CibcImporter());
 
         using var ctx = _factory.CreateDbContext();
         var transactions = await ctx.Transactions.ToListAsync();
