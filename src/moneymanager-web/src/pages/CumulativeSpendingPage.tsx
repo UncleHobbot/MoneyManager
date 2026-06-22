@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useCumulativeSpending } from '@/hooks/useCharts'
+import { useBudgets } from '@/hooks/useBudgets'
 import { useTheme } from '@/components/layout/useTheme'
 import { Spinner, Card, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
@@ -8,14 +9,24 @@ import type { EChartsOption } from 'echarts'
 
 export default function CumulativeSpendingPage() {
   const { data, isLoading, error } = useCumulativeSpending()
+  const { data: budgets } = useBudgets()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
+
+  const totalBudget = useMemo(
+    () => (budgets ?? []).reduce((sum, b) => sum + b.amount, 0),
+    [budgets],
+  )
 
   const option = useMemo<EChartsOption>(() => {
     const points = (data ?? []).filter(
       (d) => Number.isFinite(d.lastMonthExpenses) || Number.isFinite(d.thisMonthExpenses),
     )
     const axis = chartAxis(isDark)
+
+    // Expected spend by day d if the whole monthly budget is spent evenly.
+    const now = new Date()
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
 
     return {
       grid: { left: 8, right: 16, top: 36, bottom: 36, containLabel: true },
@@ -70,9 +81,25 @@ export default function CumulativeSpendingPage() {
             Number.isFinite(d.thisMonthExpenses) ? d.thisMonthExpenses : null,
           ),
         },
+        // Budget pace: a straight ramp from 0 to the total monthly budget. Only
+        // shown when budgets are set. Above this line means spending faster than
+        // an even pace toward the budget.
+        ...(totalBudget > 0
+          ? [
+              {
+                name: 'Budget pace',
+                type: 'line' as const,
+                smooth: false,
+                showSymbol: false,
+                lineStyle: { width: 2, color: '#F59E0B', type: 'dashed' as const },
+                itemStyle: { color: '#F59E0B' },
+                data: points.map((d) => Math.round((totalBudget * d.dayNumber) / daysInMonth)),
+              },
+            ]
+          : []),
       ],
     }
-  }, [data, isDark])
+  }, [data, isDark, totalBudget])
 
   if (isLoading) {
     return (

@@ -98,7 +98,11 @@ against the API's own `balance` field. Pre-existing in the ApexCharts version.
 - [x] **Budget vs Actual** chart (this month) — grouped horizontal bars (Actual
   colored green/red by over/under, Budget gray), via `ChartBudgetVsActualAsync`
   reusing `ReportingRow` at the parent-rollup level.
-- [ ] Budget **pace** overlay on Cumulative Spending (expected-by-today vs actual).
+- [x] Budget **pace** overlay on Cumulative Spending — a dashed amber line ramping
+  from 0 to the total monthly budget (shown only when budgets exist). Verified in
+  browser.
+
+**Phase 2 complete** (Budget entity/CRUD, management UI, Budget vs Actual, pace overlay).
 
 ## Phase 3 — Existing-chart enhancements ("more informative") — PROPOSED, confirm
 
