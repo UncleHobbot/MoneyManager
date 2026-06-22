@@ -184,8 +184,8 @@ public static class DbContextHelper
             SeedTestData(ctx);
         }
 
-        var dataService = new DataService(factory, cache);
         var queryService = new TransactionQueryService(factory);
+        var dataService = new DataService(factory, cache, queryService);
         return new ServiceBundle(factory, dataService, queryService, cache);
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Helpers;
 using MoneyManager.Api.Model.Chart;
+using MoneyManager.Api.Model.Query;
 
 namespace MoneyManager.Api.Services;
 
@@ -193,39 +194,41 @@ public partial class DataService
     /// </returns>
     /// <remarks>
     /// This method:
-    /// 1. Retrieves transactions for the specified period
-    /// 2. Groups transactions by month (format: "MMM yy")
-    /// 3. Separates income (transactions in "Income" category tree) from expenses
-    /// 4. Calculates totals applying debit/credit sign correction
-    /// 
-    /// Income calculation: Sum of transactions where (Category or Parent) == "Income"
-    /// Expense calculation: Sum of all other transactions
-    /// 
-    /// Sign correction: For both income and expenses, multiplies by -1 if IsDebit is true.
-    /// This ensures positive values represent net flow:
-    /// - Positive income = money received
-    /// - Positive expenses = money spent
-    /// 
+    /// 1. Retrieves <see cref="ReportingRow">reporting rows</see> for the period
+    ///    (excludes hidden accounts via the listability invariant; category
+    ///    name-match for Income is precomputed as <see cref="ReportingRow.IsIncome"/>;
+    ///    sign convention is precomputed as <see cref="ReportingRow.SignedAmount"/>).
+    /// 2. Filters out transfers (<c>IsTransfer</c> flag) — chart convention.
+    /// 3. Groups the remaining rows by month (format: "MMM yy").
+    /// 4. Sums signed amounts into Income (<c>IsIncome</c>) and Expenses buckets.
+    ///
+    /// Income is positive (credits); Expenses is negative (debits) — both follow
+    /// the canonical <see cref="ReportingRow.SignedAmount"/> convention from
+    /// <c>CONTEXT.md</c> ("Signed amount").
+    ///
     /// The result is ordered chronologically by first date in each month.
     /// </remarks>
     public async Task<List<BalanceChart>> ChartNetIncomeAsync(string chartPeriod)
     {
         GetDates(chartPeriod, out var startDate, out var endDate);
 
-        var catIncome = await GetCategoryByNameAsync("Income");
-        var trans = await ChartGetTransactionsAsync(startDate, endDate);
+        var filters = new TransactionFilters(StartDate: startDate, EndDate: endDate);
+        var rows = await queryService.GetReportingRowsAsync(filters);
 
-        var result = trans
-            .GroupBy(x => x.Date.ToString("MMM yy"))
-            .Select(x => new BalanceChart
+        var result = rows
+            .Where(r => !r.IsTransfer)
+            .GroupBy(r => r.Date.ToString("MMM yy"))
+            .Select(g => new BalanceChart
             {
-                Month = x.Key,
-                FirstDate = x.Min(t => t.Date),
-                MonthLabel = x.Min(t => t.Date).ToString("MMMM yyyy"),
-                MonthKey = x.Min(t => t.Date).ToString("yyMM"),
-                Income = x.Where(t => t.Category != null && catIncome != null && (t.Category.Parent ?? t.Category).Id == catIncome.Id).Sum(t => (t.IsDebit ? -1 : 1) * t.Amount),
-                Expenses = x.Where(t => t.Category != null && catIncome != null && (t.Category.Parent ?? t.Category).Id != catIncome.Id).Sum(t => (t.IsDebit ? -1 : 1) * t.Amount)
-            }).OrderBy(x => x.FirstDate).ToList();
+                Month = g.Key,
+                FirstDate = g.Min(r => r.Date),
+                MonthLabel = g.Min(r => r.Date).ToString("MMMM yyyy"),
+                MonthKey = g.Min(r => r.Date).ToString("yyMM"),
+                Income = g.Where(r => r.IsIncome).Sum(r => r.SignedAmount),
+                Expenses = g.Where(r => !r.IsIncome).Sum(r => r.SignedAmount),
+            })
+            .OrderBy(x => x.FirstDate)
+            .ToList();
 
         return result;
     }

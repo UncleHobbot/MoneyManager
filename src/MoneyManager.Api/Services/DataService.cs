@@ -16,8 +16,13 @@ namespace MoneyManager.Api.Services;
 /// </list>
 /// Uses <see cref="IMemoryCache"/> for thread-safe account/category caching in the web environment.
 /// Uses <see cref="IDbContextFactory{TContext}"/> for creating per-operation database contexts.
+/// Chart methods depend on <see cref="TransactionQueryService"/> for the read-side
+/// <c>ReportingRow</c> projection; see ADR-0004 and CONTEXT.md ("Reporting Row").
 /// </remarks>
-public partial class DataService(IDbContextFactory<DataContext> contextFactory, IMemoryCache cache)
+public partial class DataService(
+    IDbContextFactory<DataContext> contextFactory,
+    IMemoryCache cache,
+    TransactionQueryService queryService)
 {
     private const string AccountsCacheKey = "accounts";
     private const string CategoriesCacheKey = "categories";

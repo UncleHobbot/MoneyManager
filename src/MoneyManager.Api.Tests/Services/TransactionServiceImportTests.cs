@@ -19,7 +19,7 @@ public class TransactionServiceImportTests : IDisposable
     {
         _factory = DbContextHelper.CreateFactory();
         _cache = new MemoryCache(new MemoryCacheOptions());
-        _dataService = new DataService(_factory, _cache);
+        _dataService = new DataService(_factory, _cache, new TransactionQueryService(_factory));
 
         // Create a temp backup directory for DBService
         _backupDir = Path.Combine(Path.GetTempPath(), $"mm_test_{Guid.NewGuid():N}");

@@ -79,3 +79,34 @@ The set of relative date windows accepted by chart and stats endpoints.
 - **Decoupling.** Read-side modules (e.g. `TransactionQueryService`) accept
   `StartDate` / `EndDate`, not period codes, so their adoption does not depend
   on Candidate 1 landing first.
+
+## Reporting Row
+
+A read-side projection of a listable transaction, optimized for aggregation.
+Produced by `TransactionQueryService.GetReportingRowsAsync`. Carries the
+per-row facts that chart and stats methods need without re-spelling the sign
+convention, the parent-rollup rule, or the "Income"/"Transfer" name matches.
+
+- **Shape.** `ReportingRow(Date, SignedAmount, EffectiveCategory?, IsIncome, IsTransfer)`.
+  `EffectiveCategory` is `Category?.Parent ?? Category` (rolled up); `null`
+  when the transaction has no category.
+- **Flags are valid regardless of EffectiveCategory.** A row with
+  `EffectiveCategory: null` still has `IsIncome == false` and
+  `IsTransfer == false` — callers that need a category for grouping should
+  filter, callers that only need Income/Expense totals can ignore the field.
+- **Canonical sign convention.** `SignedAmount` is positive for income
+  (credits), negative for expenses (debits). Same formula as `AmountExt`,
+  but carried on the row so consumers (chart methods) stop re-spelling
+  `IsDebit ? -Amount : Amount` inline. See "Signed amount" above.
+- **Source filter history.** Pre-migration, `ChartGetTransactionsAsync`
+  filtered chart input via `Category.Parent.Id != transfer.Id`, which
+  silently dropped every transaction whose category had no parent
+  (any top-level category — Income, Food, Uncategorized, ...). The
+  ReportingRow migration fixes this for `ChartNetIncomeAsync`; see ADR-0004.
+  Remaining chart methods (`ChartCumulativeSpendingAsync`,
+  `ChartGetTransactionsPAsync`, `GetMonthTransactions`) still route through
+  the buggy source filter and will be migrated in follow-up commits.
+- **Why it lives on `TransactionQueryService`.** Same listability invariant,
+  same `TransactionFilters` interface, same single-adapter strategy as
+  `GetPage`/`GetStats` (see ADR-0003). A separate "reporting service" was
+  considered and rejected during Candidate 3 grilling.
