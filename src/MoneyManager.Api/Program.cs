@@ -28,6 +28,7 @@ builder.Services.AddScoped<AiProviderService>();
 builder.Services.AddScoped<AIService>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<TransactionQueryService>();
+builder.Services.AddScoped<BudgetService>();
 builder.Services.AddSingleton<DBService>();
 builder.Services.AddSingleton<SettingsService>();
 
@@ -80,6 +81,15 @@ if (dbMatch.Success)
                 CreatedAt TEXT NOT NULL DEFAULT (datetime('now'))
             )
             """);
+
+        await ctx.Database.ExecuteSqlRawAsync("""
+            CREATE TABLE IF NOT EXISTS Budgets (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                CategoryId INTEGER NULL,
+                Amount TEXT NOT NULL,
+                CONSTRAINT FK_Budgets_Categories_CategoryId FOREIGN KEY (CategoryId) REFERENCES Categories (Id)
+            )
+            """);
     }
 }
 
@@ -116,6 +126,7 @@ app.MapChartEndpoints();
 app.MapImportEndpoints();
 app.MapSystemEndpoints();
 app.MapAIEndpoints();
+app.MapBudgetEndpoints();
 
 // SPA fallback — serve index.html for client-side routes, but never mask missing API routes.
 app.MapFallback(async context =>

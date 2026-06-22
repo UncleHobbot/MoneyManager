@@ -21,6 +21,7 @@ public static class ChartEndpoints
         group.MapGet("/spending-trend", GetSpendingTrend);
         group.MapGet("/top-merchants", GetTopMerchants);
         group.MapGet("/cash-flow", GetCashFlow);
+        group.MapGet("/budget-vs-actual", GetBudgetVsActual);
         group.MapGet("/periods", GetPeriods);
     }
 
@@ -51,6 +52,12 @@ public static class ChartEndpoints
     internal static async Task<IResult> GetCashFlow(string period, DataService dataService)
     {
         var result = await dataService.ChartCashFlowAsync(period ?? "12");
+        return TypedResults.Ok(result);
+    }
+
+    internal static async Task<IResult> GetBudgetVsActual(DataService dataService)
+    {
+        var result = await dataService.ChartBudgetVsActualAsync();
         return TypedResults.Ok(result);
     }
 

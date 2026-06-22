@@ -86,6 +86,11 @@ public class DataContext(DbContextOptions<DataContext> options) : DbContext(opti
     public DbSet<AiProvider> AiProviders { get; set; }
 
     /// <summary>
+    /// Gets or sets the DbSet for Budget entities (per-category monthly limits).
+    /// </summary>
+    public DbSet<Budget> Budgets { get; set; }
+
+    /// <summary>
     /// Configures the entity model relationships and properties.
     /// </summary>
     /// <param name="modelBuilder">The builder used to construct the entity model.</param>

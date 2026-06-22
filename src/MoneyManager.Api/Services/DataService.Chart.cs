@@ -243,6 +243,42 @@ public partial class DataService
     }
 
     /// <summary>
+    /// Compares each budgeted (parent) category's monthly limit to its actual spend
+    /// for the current calendar month. Actual is summed from <see cref="ReportingRow"/>
+    /// at the same parent-rollup level as the budget; categories without a budget are
+    /// absent. See CONTEXT.md ("Budget") / ADR-0007.
+    /// </summary>
+    public async Task<List<BudgetVsActual>> ChartBudgetVsActualAsync()
+    {
+        var ctx = await contextFactory.CreateDbContextAsync();
+        var budgets = await ctx.Budgets.Include(b => b.Category).ToListAsync();
+        if (budgets.Count == 0)
+            return [];
+
+        var now = DateTime.Today;
+        var start = new DateTime(now.Year, now.Month, 1);
+        var end = start.AddMonths(1);
+
+        var rows = await queryService.GetReportingRowsAsync(
+            new TransactionFilters(StartDate: start, EndDate: end));
+
+        var actualByCategory = rows
+            .Where(r => !r.IsIncome && !r.IsTransfer && r.EffectiveCategory is not null)
+            .GroupBy(r => r.EffectiveCategory!.Id)
+            .ToDictionary(g => g.Key, g => g.Sum(r => -r.SignedAmount));
+
+        return budgets
+            .Select(b => new BudgetVsActual(
+                b.Category.Id,
+                b.Category.Name,
+                b.Category.Icon,
+                b.Amount,
+                actualByCategory.GetValueOrDefault(b.Category.Id, 0m)))
+            .OrderByDescending(x => x.Actual)
+            .ToList();
+    }
+
+    /// <summary>
     /// Calculates cumulative spending by day of month for the current month and previous month.
     /// </summary>
     /// <returns>

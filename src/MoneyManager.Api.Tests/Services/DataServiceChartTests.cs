@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MoneyManager.Api.Data;
 using MoneyManager.Api.Model.Chart;
 using MoneyManager.Api.Tests.TestHelpers;
 
@@ -190,6 +191,47 @@ public class DataServiceChartTests : IDisposable
 
         // The hidden-account transfer never appears.
         result.Nodes.Should().NotContain(n => n.Name == "Transfer" || n.Name == "Internal Transfer");
+    }
+
+    // ----------------------------------------------------------------
+    // ChartBudgetVsActualAsync (current-month spend vs budget)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartBudgetVsActual_ComparesCurrentMonthSpendToBudget()
+    {
+        int foodId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+        {
+            var food = ctx.Categories.First(c => c.Name == "Food");
+            var account = ctx.Accounts.First(a => !a.IsHideFromGraph);
+            ctx.Budgets.Add(new Budget { Category = food, Amount = 600m });
+            // A current-month expense under Food (the seed's Food rows are in 2025).
+            ctx.Transactions.Add(new Transaction
+            {
+                Account = account,
+                Date = DateTime.Today,
+                Description = "Groceries today",
+                OriginalDescription = "GROCERIES TODAY",
+                Amount = 120m,
+                IsDebit = true,
+                Category = food,
+            });
+            ctx.SaveChanges();
+            foodId = food.Id;
+        }
+
+        var result = await _svc.DataService.ChartBudgetVsActualAsync();
+
+        var foodRow = result.Single(x => x.CategoryId == foodId);
+        foodRow.Budget.Should().Be(600m);
+        foodRow.Actual.Should().Be(120m); // only the current-month row counts
+    }
+
+    [Fact]
+    public async Task ChartBudgetVsActual_EmptyWhenNoBudgets()
+    {
+        (await _svc.DataService.ChartBudgetVsActualAsync()).Should().BeEmpty();
     }
 
     [Fact]
