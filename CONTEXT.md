@@ -190,3 +190,49 @@ convention, the parent-rollup rule, or the "Income"/"Transfer" name matches.
   Chart methods don't need it (Uncategorized transactions count as
   expenses by category). When `GetStatsAsync` or `ApplyAll` migrate to
   consume `ReportingRow`, the flag should be added — see Q3 grilling.
+
+## Merchant / Payee
+
+The counterparty of a transaction, as shown to the user. There is intentionally
+**no `Merchant` entity**: the merchant is the transaction's `Description` field,
+and merchant-name normalization is owned by **Rules**.
+
+- **Operational rule.** "Top merchants" and any merchant-level grouping group by
+  `Transaction.Description`, not `OriginalDescription`. `OriginalDescription` is
+  the raw bank string (e.g. `AMZN*1234`, `AMAZON.CA`) used for dedup and rule
+  matching; `Description` is the display label a Rule can rewrite via
+  `NewDescription` (e.g. `NETFLIX` → `Netflix Subscription`).
+- **Normalization owner.** A `Rule` (pattern → `NewDescription` + category) is the
+  canonical "merchant mapping". The Rules page is the merchant-management UI. The
+  quality of any merchant view scales with rule coverage; un-ruled rows surface as
+  their raw bank string, which is a deliberate nudge to add a rule.
+- **No parallel mechanism.** A separate `Merchant`/`Payee` entity was considered
+  and rejected — it would duplicate the "pattern → canonical name" idea Rules
+  already own. If merchant-level features later outgrow Rules (logos, per-merchant
+  limits), introduce the entity then and supersede this entry.
+- **Drill-down.** Clicking a merchant routes to the canonical Transactions surface
+  filtered by description search (`search=<Description>`), per ADR-0005.
+
+## Budget
+
+An opt-in, recurring **monthly spending limit attached to a top-level (parent)
+category**. The single forward-looking primitive in an otherwise retrospective
+chart suite (see ADR-0007).
+
+- **Shape (v1).** `Budget(Category, Amount)` — exactly one row per parent category,
+  interpreted as the same limit every month ("recurring"). Categories without a
+  `Budget` row have no limit and are simply absent from budget views.
+- **Operational rule.** Budget-vs-actual compares, for a given month, the
+  category's `Amount` against the summed expense `ReportingRow`s whose
+  `EffectiveCategory` is that parent category. Both sides use the parent-rollup
+  grouping, so "actual" matches every other chart.
+- **Level.** Parent categories only, to match the `EffectiveCategory` rollup.
+  Leaf-level budgets were considered and deferred (ADR-0007).
+- **Evolution (Y).** Per-month overrides / budget history are a documented future
+  extension: introduce effective-dated rows (`EffectiveFrom`) or an override table,
+  where "effective budget for month M" = the latest row with `EffectiveFrom <= M`.
+  v1's single recurring row is the special case of that model, so the change is
+  additive — do not design v1 in a way that blocks it.
+- **Unlocks.** A "Budget vs Actual" chart (per-category actual-vs-limit bars,
+  over/under coloured) and a budget **pace** overlay on the cumulative-spending
+  chart (expected-by-today vs actual).
