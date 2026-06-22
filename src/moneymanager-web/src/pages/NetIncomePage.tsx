@@ -8,6 +8,16 @@ import { CHART_COLORS, chartAxis } from '@/lib/chartTheme'
 import type { BalanceChart } from '@/types'
 import type { EChartsOption } from 'echarts'
 
+/** Build a Transactions drill-in URL for the calendar month of `firstDateISO`. */
+function monthTransactionsUrl(firstDateISO: string): string {
+  const d = new Date(firstDateISO)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const from = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  const to = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-01`
+  return `/transactions?from=${from}&to=${to}`
+}
+
 export default function NetIncomePage() {
   const [period, setPeriod] = useState('12')
   const navigate = useNavigate()
@@ -69,7 +79,7 @@ export default function NetIncomePage() {
   const onEvents = {
     click: (params: { dataIndex: number }) => {
       const item = data[params.dataIndex]
-      if (item) navigate(`/charts/month/${item.monthKey}`)
+      if (item) navigate(monthTransactionsUrl(item.firstDate))
     },
   }
 
@@ -114,7 +124,7 @@ export default function NetIncomePage() {
                   <tr
                     key={row.monthKey}
                     className="border-b border-gray-100 dark:border-gray-700/50 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
-                    onClick={() => navigate(`/charts/month/${row.monthKey}`)}
+                    onClick={() => navigate(monthTransactionsUrl(row.firstDate))}
                   >
                     <td className="py-2 text-gray-900 dark:text-gray-100">
                       {row.month}

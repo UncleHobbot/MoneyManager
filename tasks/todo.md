@@ -42,9 +42,8 @@ without inventing data we don't have.
   - [x] Spending-by-Category donuts (light-mode bug fixed; dropped ECharts built-in
     legend in favor of the existing custom legend list)
   - [x] 3 Dashboard minis
-  - [ ] Month-detail donuts (migrate or retire with the URL-filter task below)
-- [ ] Remove `apexcharts` / `react-apexcharts` once the last site (Month-detail) is
-  migrated/retired.
+  - [x] Month-detail donuts — page retired (replaced by Transactions date-range drill)
+- [x] Remove `apexcharts` / `react-apexcharts` (done; main bundle 827KB → 310KB).
 - [x] Fix the hard-coded `theme: 'dark'` light-mode bug (done as each donut/cumulative
   chart migrated; Net Income already theme-correct via `chartTheme`).
 
@@ -52,9 +51,13 @@ EChart wrapper notes: `animation: false` in `chartTheme` (snappy + keeps the can
 idle); `isDisposed()` guards on resize/setOption. Residual "[ECharts] instance has
 been disposed" warnings are a dev-only React StrictMode double-mount artifact — they
 do not occur in the production build.
-- [ ] Lift `TransactionsPage` filters into URL query params (deep-linkable);
-  retire `MonthDetailPage`; Net Income month click → `/transactions?...`. → verify:
-  pasting a filtered URL reproduces the view; back button works.
+- [x] Lift `TransactionsPage` filters into URL query params (deep-linkable);
+  retire `MonthDetailPage`; Net Income month click → `/transactions?from&to`;
+  Spending slice → `/transactions?categoryId` (subtree). Backend: category-subtree
+  filter + `from`/`to` on GetAll/GetStats. Verified in browser (chip, deep-link,
+  totals reconcile with slice).
+
+**Phase 0 complete.** Backend 205 tests, web 88 tests green.
 
 **Bug fixed in passing (Net Income migration):** the chart and breakdown table
 computed `net = income - expenses`, but `expenses` is a signed sum (debits

@@ -60,6 +60,25 @@ function numParam(value: string | null): number | undefined {
   return Number.isFinite(n) ? n : undefined
 }
 
+/** Parse a `yyyy-MM-dd` string as a local date (avoids the UTC shift of `new Date(str)`). */
+function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1)
+}
+
+/** Human-readable label for an explicit [from, to) date window (to is exclusive). */
+function formatDateRange(from?: string, to?: string): string {
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' }
+  const start = from ? parseLocalDate(from).toLocaleDateString('en-US', opts) : '…'
+  let end = '…'
+  if (to) {
+    const d = parseLocalDate(to)
+    d.setDate(d.getDate() - 1) // exclusive end -> inclusive for display
+    end = d.toLocaleDateString('en-US', opts)
+  }
+  return `${start} – ${end}`
+}
+
 /** A cell value that filters the grid when clicked. */
 function FilterCell({
   onClick,
@@ -128,6 +147,9 @@ export default function TransactionsPage() {
   const sortDir: SortDir = searchParams.get('sortDir') === 'asc' ? 'asc' : 'desc'
   const page = numParam(searchParams.get('page')) ?? 1
   const pageSize = numParam(searchParams.get('pageSize')) ?? 50
+  // Explicit date window from a chart drill-in (overrides `period` server-side).
+  const from = searchParams.get('from') ?? undefined
+  const to = searchParams.get('to') ?? undefined
 
   // The search box stays local for responsiveness; its debounced value drives the
   // query and is mirrored into the URL for shareability.
@@ -179,8 +201,10 @@ export default function TransactionsPage() {
       uncategorized,
       sortBy,
       sortDir,
+      from,
+      to,
     }),
-    [period, accountFilter, categoryFilter, search, uncategorized, sortBy, sortDir],
+    [period, accountFilter, categoryFilter, search, uncategorized, sortBy, sortDir, from, to],
   )
 
   const { data: periods } = useChartPeriods()
@@ -205,7 +229,12 @@ export default function TransactionsPage() {
     [updateParams],
   )
 
-  const handlePeriodChange = useCallback((v: string) => updateParams({ period: v }), [updateParams])
+  // Picking a period clears any drill-in date window so the two never conflict.
+  const handlePeriodChange = useCallback(
+    (v: string) => updateParams({ period: v, from: undefined, to: undefined }),
+    [updateParams],
+  )
+  const clearDateRange = useCallback(() => updateParams({ from: undefined, to: undefined }), [updateParams])
   const handleAccountChange = useCallback(
     (v: string) => updateParams({ accountId: v || undefined }),
     [updateParams],
@@ -522,6 +551,20 @@ export default function TransactionsPage() {
           />
           Uncategorized only
         </label>
+        {(from || to) && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+            {formatDateRange(from, to)}
+            <button
+              type="button"
+              onClick={clearDateRange}
+              title="Clear date range"
+              aria-label="Clear date range"
+              className="rounded-full p-0.5 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:bg-blue-800/60"
+            >
+              <X size={12} />
+            </button>
+          </span>
+        )}
         {isFetching && !isLoading && (
           <span className="inline-flex items-center gap-1.5 text-gray-400">
             <Spinner size="sm" /> Updating…

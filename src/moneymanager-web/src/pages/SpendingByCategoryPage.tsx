@@ -1,5 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSpendingByCategory, useChartPeriods } from '@/hooks/useCharts'
+import { useCategories } from '@/hooks/useCategories'
 import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, Card, CategoryIcon, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
@@ -10,13 +12,11 @@ import type { EChartsOption } from 'echarts'
 function DonutChart({
   title,
   data,
-  highlighted,
-  onSliceClick,
+  onDrill,
 }: {
   title: string
   data: CategoryChart[]
-  highlighted: number | null
-  onSliceClick: (index: number | null) => void
+  onDrill: (name: string) => void
 }) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -47,23 +47,17 @@ function DonutChart({
           data: data.map((d, i) => ({
             value: d.amount,
             name: d.name,
-            itemStyle: {
-              color: CHART_PALETTE[i % CHART_PALETTE.length],
-              opacity: highlighted == null || highlighted === i ? 1 : 0.35,
-            },
+            itemStyle: { color: CHART_PALETTE[i % CHART_PALETTE.length] },
           })),
         },
       ],
     }),
-    [data, total, highlighted, isDark],
+    [data, total, isDark],
   )
 
   const onEvents = useMemo(
-    () => ({
-      click: (params: { dataIndex: number }) =>
-        onSliceClick(params.dataIndex === highlighted ? null : params.dataIndex),
-    }),
-    [highlighted, onSliceClick],
+    () => ({ click: (params: { name: string }) => onDrill(params.name) }),
+    [onDrill],
   )
 
   return (
@@ -80,16 +74,12 @@ function DonutChart({
                   key={item.name}
                   role="button"
                   tabIndex={0}
-                  onClick={() => onSliceClick(i === highlighted ? null : i)}
+                  title={`View ${item.name} transactions`}
+                  onClick={() => onDrill(item.name)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ' ')
-                      onSliceClick(i === highlighted ? null : i)
+                    if (e.key === 'Enter' || e.key === ' ') onDrill(item.name)
                   }}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors ${
-                    highlighted === i
-                      ? 'bg-gray-100 dark:bg-gray-700'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                  }`}
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 >
                   <span
                     className="h-3 w-3 rounded-full shrink-0"
@@ -117,15 +107,29 @@ function DonutChart({
 
 export default function SpendingByCategoryPage() {
   const [period, setPeriod] = useState('12')
-  const [incomeHighlight, setIncomeHighlight] = useState<number | null>(null)
-  const [expenseHighlight, setExpenseHighlight] = useState<number | null>(null)
+  const navigate = useNavigate()
 
   const { data: periods, isLoading: periodsLoading } = useChartPeriods()
+  const { data: categories } = useCategories()
   const { data, isLoading, isError } = useSpendingByCategory(period)
 
   const periodOptions = useMemo(
     () => (periods ?? []).map(p => ({ label: p.label, value: p.code })),
     [periods],
+  )
+
+  // Drill a (parent-rolled-up) slice into the canonical Transactions surface,
+  // filtered to that category subtree for the same period (ADR-0005). Falls back
+  // to a description search if the name can't be resolved to a category id.
+  const drillToCategory = useCallback(
+    (name: string) => {
+      const cat = categories?.find(c => c.name === name)
+      const params = new URLSearchParams({ period })
+      if (cat) params.set('categoryId', String(cat.id))
+      else params.set('search', name)
+      navigate(`/transactions?${params.toString()}`)
+    },
+    [categories, period, navigate],
   )
 
   if (isLoading || periodsLoading) {
@@ -164,18 +168,8 @@ export default function SpendingByCategoryPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <DonutChart
-          title="Income by Category"
-          data={income}
-          highlighted={incomeHighlight}
-          onSliceClick={setIncomeHighlight}
-        />
-        <DonutChart
-          title="Expenses by Category"
-          data={expenses}
-          highlighted={expenseHighlight}
-          onSliceClick={setExpenseHighlight}
-        />
+        <DonutChart title="Income by Category" data={income} onDrill={drillToCategory} />
+        <DonutChart title="Expenses by Category" data={expenses} onDrill={drillToCategory} />
       </div>
     </div>
   )

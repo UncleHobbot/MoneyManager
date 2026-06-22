@@ -5,7 +5,6 @@ import type {
   CategoryChart,
   ChartPeriod,
   CumulativeSpendingChart,
-  TransactionDto,
 } from '@/types'
 
 export function useNetIncome(period: string) {
@@ -35,15 +34,6 @@ export function useSpendingByCategory(period: string) {
       api
         .get('/charts/spending-by-category', { params: { period } })
         .then(r => r.data),
-  })
-}
-
-export function useMonthDetail(month: string) {
-  return useQuery<TransactionDto[]>({
-    queryKey: ['charts', 'month-detail', month],
-    queryFn: () =>
-      api.get('/charts/month-detail', { params: { month } }).then(r => r.data),
-    enabled: !!month,
   })
 }
 
