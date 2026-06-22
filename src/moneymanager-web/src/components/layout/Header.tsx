@@ -11,6 +11,7 @@ const routeTitles: Record<string, string> = {
   '/charts/trend': 'Spending Trend',
   '/charts/merchants': 'Top Merchants',
   '/charts/cash-flow': 'Cash Flow',
+  '/budgets': 'Budgets',
   '/ai': 'AI Analysis',
   '/settings': 'Settings',
   '/settings/accounts': 'Accounts',

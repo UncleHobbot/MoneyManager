@@ -130,6 +130,22 @@ export interface CashFlowChart {
   links: SankeyLink[]
 }
 
+export interface BudgetDto {
+  id: number
+  categoryId: number
+  categoryName: string
+  icon: string | null
+  amount: number
+}
+
+export interface BudgetVsActual {
+  categoryId: number
+  name: string
+  icon: string | null
+  budget: number
+  actual: number
+}
+
 export interface ImportResult {
   importedCount: number
   skippedCount: number

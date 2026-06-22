@@ -13,6 +13,7 @@ import {
   LineChart,
   Store,
   Workflow,
+  Target,
   Landmark,
   Tags,
   BookOpen,
@@ -102,6 +103,8 @@ export function Sidebar() {
           <NavItem to="/charts/merchants" icon={<Store size={16} />} label="Top Merchants" onClick={closeMobile} />
           <NavItem to="/charts/cash-flow" icon={<Workflow size={16} />} label="Cash Flow" onClick={closeMobile} />
         </CollapsibleGroup>
+
+        <NavItem to="/budgets" icon={<Target size={18} />} label="Budgets" onClick={closeMobile} />
 
         <NavItem to="/import" icon={<Upload size={18} />} label="Import" onClick={closeMobile} />
         <NavItem to="/ai" icon={<Bot size={18} />} label="AI Analysis" onClick={closeMobile} />

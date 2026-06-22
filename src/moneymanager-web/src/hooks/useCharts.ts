@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
 import type {
   BalanceChart,
+  BudgetVsActual,
   CashFlowChart,
   CategoryChart,
   ChartPeriod,
@@ -46,6 +47,13 @@ export function useCashFlow(period: string) {
     queryKey: ['charts', 'cash-flow', period],
     queryFn: () =>
       api.get('/charts/cash-flow', { params: { period } }).then(r => r.data),
+  })
+}
+
+export function useBudgetVsActual() {
+  return useQuery<BudgetVsActual[]>({
+    queryKey: ['charts', 'budget-vs-actual'],
+    queryFn: () => api.get('/charts/budget-vs-actual').then(r => r.data),
   })
 }
 

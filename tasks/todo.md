@@ -90,10 +90,14 @@ against the API's own `balance` field. Pre-existing in the ApexCharts version.
 
 ## Phase 2 — Forward bet: Budget
 
-- [ ] `Budget` entity + `DbSet<Budget>` + endpoints (CRUD). → verify: xUnit handler tests.
-- [ ] Budget management UI (opt-in per parent category).
-- [ ] **Budget vs Actual** chart (actual-vs-limit bars, over/under colour) for the
-  current month, via `ReportingRow`. → verify: actual matches other charts.
+- [x] `Budget` entity + `DbSet<Budget>` + `BudgetService` + `/api/budgets` (GET/PUT/
+  DELETE). Program.cs creates the table for existing dev DBs. (216 backend tests.)
+- [x] Budget management UI — `/budgets` page: per top-level category, set/clear an
+  opt-in monthly amount (Income/Transfer/Uncategorized excluded). Verified in browser
+  (set → persists + chart updates + Clear button; clear → removed).
+- [x] **Budget vs Actual** chart (this month) — grouped horizontal bars (Actual
+  colored green/red by over/under, Budget gray), via `ChartBudgetVsActualAsync`
+  reusing `ReportingRow` at the parent-rollup level.
 - [ ] Budget **pace** overlay on Cumulative Spending (expected-by-today vs actual).
 
 ## Phase 3 — Existing-chart enhancements ("more informative") — PROPOSED, confirm
