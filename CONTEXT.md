@@ -102,11 +102,14 @@ convention, the parent-rollup rule, or the "Income"/"Transfer" name matches.
   filtered chart input via `Category.Parent.Id != transfer.Id`, which
   silently dropped every transaction whose category had no parent
   (any top-level category — Income, Food, Uncategorized, ...). The
-  ReportingRow migration fixes this for `ChartNetIncomeAsync`; see ADR-0004.
-  Remaining chart methods (`ChartCumulativeSpendingAsync`,
-  `ChartGetTransactionsPAsync`, `GetMonthTransactions`) still route through
-  the buggy source filter and will be migrated in follow-up commits.
+  ReportingRow migration fixes this for all chart consumers; see ADR-0004.
+  `ChartGetTransactionsAsync` and its overloads have been deleted; all
+  chart and stats methods now route through `GetReportingRowsAsync`.
 - **Why it lives on `TransactionQueryService`.** Same listability invariant,
   same `TransactionFilters` interface, same single-adapter strategy as
   `GetPage`/`GetStats` (see ADR-0003). A separate "reporting service" was
   considered and rejected during Candidate 3 grilling.
+- **Known debt.** `IsUncategorized` flag is not yet on `ReportingRow`.
+  Chart methods don't need it (Uncategorized transactions count as
+  expenses by category). When `GetStatsAsync` or `ApplyAll` migrate to
+  consume `ReportingRow`, the flag should be added — see Q3 grilling.

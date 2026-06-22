@@ -12,60 +12,6 @@ namespace MoneyManager.Api.Services;
 public partial class DataService
 {
     /// <summary>
-    /// Retrieves transactions within the specified date range for chart purposes, excluding transfers and hidden accounts.
-    /// </summary>
-    /// <param name="startDate">The start date of the period to retrieve transactions from (inclusive).</param>
-    /// <param name="endDate">The end date of the period to retrieve transactions from (exclusive).</param>
-    /// <returns>
-    /// A list of Transaction objects that fall within the specified date range, excluding transfers and accounts marked as hidden from graphs.
-    /// </returns>
-    /// <remarks>
-    /// This method filters out:
-    /// - Transactions belonging to the "Transfer" category (either directly or as a subcategory)
-    /// - Transactions from accounts where IsHideFromGraph is true
-    /// - Transactions without a category assignment
-    /// 
-    /// The method eagerly loads Account, Category, and Parent Category relationships for efficient access.
-    /// This is used by all chart data aggregation methods to ensure consistent filtering.
-    /// </remarks>
-    public async Task<List<Transaction>> ChartGetTransactionsAsync(DateTime startDate, DateTime endDate)
-    {
-        var ctx = await contextFactory.CreateDbContextAsync();
-        var categoryTransfer = await ctx.Categories.FirstOrDefaultAsync(x => x.Name == "Transfer");
-
-        var trans = await ctx.Transactions
-            .Where(x => x.Date >= startDate && x.Date < endDate)
-            .Where(x => x.Category != null && categoryTransfer != null && x.Category.Id != categoryTransfer.Id && x.Category.Parent.Id != categoryTransfer.Id)
-            .Where(x => !x.Account.IsHideFromGraph)
-            .Include(x => x.Account).Include(x => x.Category).Include(x => x.Category.Parent)
-            .ToListAsync();
-        return trans;
-    }
-
-    /// <summary>
-    /// Retrieves transactions for a specific month (format: yyMM) for chart purposes.
-    /// </summary>
-    /// <param name="month">The month in "yyMM" format (e.g., "2501" for January 2025).</param>
-    /// <returns>
-    /// A list of Transaction objects for the specified month, excluding transfers and hidden accounts.
-    /// </returns>
-    /// <remarks>
-    /// This is a convenience method that converts the month string to date boundaries and calls ChartGetTransactionsAsync(DateTime, DateTime).
-    /// 
-    /// The method parses the month string and calculates:
-    /// - Start date: First day of the specified month at midnight
-    /// - End date: First day of the next month (exclusive boundary)
-    /// </remarks>
-    /// <exception cref="FormatException">Thrown when month string is not in valid "yyMM" format.</exception>
-    public async Task<List<Transaction>> ChartGetTransactionsAsync(string month)
-    {
-        var startDate = DateTime.ParseExact(month, "yyMM", Thread.CurrentThread.CurrentCulture);
-        var endDate = startDate.AddMonths(1).StartOfMonth();
-
-        return await ChartGetTransactionsAsync(startDate, endDate);
-    }
-
-    /// <summary>
     /// Converts a chart period code to corresponding start and end dates.
     /// </summary>
     /// <param name="chartPeriod">The period code (e.g., "12", "y1", "m1", "w", "a").</param>
@@ -160,26 +106,6 @@ public partial class DataService
                 startDate = DateTime.MinValue;
                 break;
         }
-    }
-
-    /// <summary>
-    /// Retrieves transactions for a specified chart period using period code.
-    /// </summary>
-    /// <param name="chartPeriod">The period code (e.g., "12", "y1", "m1", "w", "a").</param>
-    /// <returns>
-    /// A list of Transaction objects for the specified period, excluding transfers and hidden accounts.
-    /// </returns>
-    /// <remarks>
-    /// This is a convenience method that:
-    /// 1. Converts the period code to start/end dates using GetDates
-    /// 2. Retrieves transactions for that date range using ChartGetTransactionsAsync
-    /// 
-    /// Commonly used to fetch transaction data for chart components without manually calculating dates.
-    /// </remarks>
-    public async Task<List<Transaction>> ChartGetTransactionsPAsync(string chartPeriod)
-    {
-        GetDates(chartPeriod, out var startDate, out var endDate);
-        return await ChartGetTransactionsAsync(startDate, endDate);
     }
 
     /// <summary>
