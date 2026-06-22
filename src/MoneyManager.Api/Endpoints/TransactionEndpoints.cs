@@ -38,9 +38,11 @@ public static class TransactionEndpoints
         string sortBy = "date",
         string sortDir = "desc",
         int page = 1,
-        int pageSize = 50)
+        int pageSize = 50,
+        DateTime? from = null,
+        DateTime? to = null)
     {
-        var (startDate, endDate) = (ChartPeriod.Find(period) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
+        var (startDate, endDate) = ResolveDateRange(period, from, to);
 
         var filters = new TransactionFilters(
             StartDate: startDate,
@@ -165,9 +167,11 @@ public static class TransactionEndpoints
         int? accountId = null,
         int? categoryId = null,
         string? search = null,
-        bool uncategorized = false)
+        bool uncategorized = false,
+        DateTime? from = null,
+        DateTime? to = null)
     {
-        var (startDate, endDate) = (ChartPeriod.Find(period) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
+        var (startDate, endDate) = ResolveDateRange(period, from, to);
 
         var filters = new TransactionFilters(
             StartDate: startDate,
@@ -185,5 +189,17 @@ public static class TransactionEndpoints
     {
         var csv = await dataService.AIGetTransactionsCSVAsync(period);
         return TypedResults.Text(csv, "text/csv");
+    }
+
+    /// <summary>
+    /// Resolves the listing window. An explicit <paramref name="from"/> /
+    /// <paramref name="to"/> overrides the <paramref name="period"/>-derived range
+    /// (used by chart drill-downs into a specific month); otherwise the
+    /// <see cref="ChartPeriod"/> code applies.
+    /// </summary>
+    private static (DateTime Start, DateTime End) ResolveDateRange(string period, DateTime? from, DateTime? to)
+    {
+        var (periodStart, periodEnd) = (ChartPeriod.Find(period) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
+        return (from ?? periodStart, to ?? periodEnd);
     }
 }

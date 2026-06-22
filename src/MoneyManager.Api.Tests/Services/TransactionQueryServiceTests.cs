@@ -96,8 +96,27 @@ public class TransactionQueryServiceTests : IDisposable
 
         var page = await _svc.QueryService.GetPageAsync(filters, new TransactionSort(), new Paging(1, 50));
 
-        page.Items.Should().ContainSingle(t => t.Description == "Restaurant");
-        page.Items.Should().NotContain(t => t.Description == "Loblaws Groceries"); // Groceries is child of Food, not Food itself
+        // Subtree semantics: filtering by the Food parent includes Food itself and
+        // its children (Groceries), so a chart drill reconciles with the rolled-up
+        // slice total. See ADR-0005.
+        page.Items.Should().Contain(t => t.Description == "Restaurant"); // Food itself
+        page.Items.Should().Contain(t => t.Description == "Loblaws Groceries"); // Groceries is a child of Food
+    }
+
+    [Fact]
+    public async Task GetPage_FiltersByCategory_LeafReturnsOnlyItsOwn()
+    {
+        int groceriesId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+            groceriesId = ctx.Categories.First(c => c.Name == "Groceries").Id;
+
+        var filters = FiltersForAllSeed() with { CategoryId = groceriesId };
+
+        var page = await _svc.QueryService.GetPageAsync(filters, new TransactionSort(), new Paging(1, 50));
+
+        // A leaf category has no children, so the subtree is just itself.
+        page.Items.Should().Contain(t => t.Description == "Loblaws Groceries");
+        page.Items.Should().NotContain(t => t.Description == "Restaurant");
     }
 
     [Fact]
