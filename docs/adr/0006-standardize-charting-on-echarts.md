@@ -11,8 +11,15 @@ heatmap and a category-hierarchy (sunburst) view. We decided whether to keep
 ApexCharts and bolt on a second library for the gaps, or standardize on a single
 engine that covers everything.
 
-We chose to **standardize on Apache ECharts** (`echarts` + `echarts-for-react`)
-as the single charting engine and migrate the existing ApexCharts charts to it.
+We chose to **standardize on Apache ECharts** (`echarts` core + a thin in-repo
+React wrapper) as the single charting engine and migrate the existing ApexCharts
+charts to it.
+
+> Implementation note: `echarts-for-react` was the obvious wrapper, but its
+> `/lib/core` entry ships CommonJS and fails under Vite's ESM dev server
+> (`ReferenceError: exports is not defined`). We render through a ~40-line in-repo
+> `EChart` wrapper over `echarts/core` instead — fewer deps, no CJS interop, and it
+> keeps the modular-import control this ADR calls for.
 
 ## Considered options
 
@@ -40,7 +47,8 @@ as the single charting engine and migrate the existing ApexCharts charts to it.
 ## Consequences
 
 - `apexcharts` / `react-apexcharts` are removed once migration completes; `echarts`
-  + `echarts-for-react` are added. Imports are modular to control bundle size.
+  is added and rendered via the in-repo `EChart` wrapper (no `echarts-for-react`).
+  Imports are modular to control bundle size.
 - The `chartTheme(isDark)` helper and `<ChartCard>` shell (decided separately)
   **target the ECharts option schema**, not `ApexOptions`. That earlier decision is
   retargeted, not reversed: one styling source of truth, now echarts-shaped.

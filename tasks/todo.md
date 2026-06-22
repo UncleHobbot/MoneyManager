@@ -30,17 +30,30 @@ without inventing data we don't have.
 
 ## Phase 0 — Foundations (prerequisites)
 
-- [ ] Add `echarts` + `echarts-for-react` (modular imports); plan removal of
-  `apexcharts`/`react-apexcharts`. → verify: bundle size acceptable.
-- [ ] Build `chartTheme(isDark)` factory + shared palette module + `<ChartCard>`
-  (card + empty + loading). → verify: light & dark both correct.
-- [ ] Migrate the 6 existing ApexCharts sites to ECharts (Net Income, Cumulative,
-  Spending-by-Category donuts, 3 Dashboard minis, Month-detail donuts). → verify:
-  visual parity in light+dark; `npm test` green.
-- [ ] Fix the hard-coded `theme: 'dark'` light-mode bug as part of migration.
+- [x] Add `echarts` (modular imports) via in-repo `EChart` wrapper over
+  `echarts/core` — `echarts-for-react` rejected (CommonJS, breaks Vite ESM). See
+  ADR-0006 note.
+- [x] Build `chartTheme(isDark)` factory + shared palette (`CHART_PALETTE`,
+  `CHART_COLORS`, `chartAxis`) + `<ChartCard>` (card + empty + loading). Unit-tested
+  (`chartTheme.test.ts`). Verified light & dark in browser.
+- [ ] Migrate the 6 existing ApexCharts sites to ECharts:
+  - [x] Net Income (also fixed a latent net-income sign bug — see below)
+  - [ ] Cumulative Spending (still hard-codes `theme: 'dark'`)
+  - [ ] Spending-by-Category donuts (still hard-codes `theme: 'dark'`)
+  - [ ] 3 Dashboard minis
+  - [ ] Month-detail donuts
+- [ ] Remove `apexcharts` / `react-apexcharts` once the last site is migrated.
+- [ ] Fix the hard-coded `theme: 'dark'` light-mode bug as each donut/cumulative
+  chart migrates (Net Income already theme-correct via `chartTheme`).
 - [ ] Lift `TransactionsPage` filters into URL query params (deep-linkable);
   retire `MonthDetailPage`; Net Income month click → `/transactions?...`. → verify:
   pasting a filtered URL reproduces the view; back button works.
+
+**Bug fixed in passing (Net Income migration):** the chart and breakdown table
+computed `net = income - expenses`, but `expenses` is a signed sum (debits
+negative), so net was double-negated and rendered far above income (e.g. +$13,582
+for a month that was actually -$1,688). Corrected to `income + expenses`; verified
+against the API's own `balance` field. Pre-existing in the ApexCharts version.
 
 ## Phase 1 — New retrospective charts (ECharts)
 

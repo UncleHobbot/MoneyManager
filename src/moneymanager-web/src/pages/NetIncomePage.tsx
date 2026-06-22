@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Chart from 'react-apexcharts'
 import { useNetIncome, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
-import { Select, Spinner, Card } from '@/components/ui'
+import { Select, Spinner, Card, ChartCard, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { CHART_COLORS, chartAxis } from '@/lib/chartTheme'
 import type { BalanceChart } from '@/types'
-import type { ApexOptions } from 'apexcharts'
+import type { EChartsOption } from 'echarts'
 
 export default function NetIncomePage() {
   const [period, setPeriod] = useState('12')
@@ -29,60 +29,49 @@ export default function NetIncomePage() {
 
   const months = data.map(d => d.month)
   const incomeValues = data.map(d => d.income)
+  // Expenses arrive as a signed sum (debits negative), so the expense bars plot
+  // downward and net is income + expenses. (Pre-migration code used
+  // income - expenses, which double-negated and showed net far above income.)
   const expenseValues = data.map(d => d.expenses)
-  const netValues = data.map(d => d.income - d.expenses)
+  const netValues = data.map(d => d.income + d.expenses)
 
-  const options: ApexOptions = {
-    chart: {
-      type: 'bar',
-      background: 'transparent',
-      toolbar: { show: false },
-      events: {
-        dataPointSelection: (_e, _chart, config) => {
-          const idx = config?.dataPointIndex as number
-          const item = data[idx]
-          if (item) navigate(`/charts/month/${item.monthKey}`)
-        },
-      },
-    },
-    theme: { mode: isDark ? 'dark' : 'light' },
-    plotOptions: {
-      bar: { columnWidth: '60%' },
-    },
-    stroke: {
-      width: [0, 0, 3],
-    },
-    colors: ['#22c55e', '#ef4444', '#3b82f6'],
-    xaxis: {
-      categories: months,
-      labels: {
-        style: { colors: isDark ? '#d1d5db' : '#374151' },
-      },
-    },
-    yaxis: {
-      labels: {
-        formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
-        style: { colors: isDark ? '#d1d5db' : '#374151' },
-      },
-    },
+  const axis = chartAxis(isDark)
+
+  const option: EChartsOption = {
+    grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
+    legend: { top: 0 },
     tooltip: {
-      theme: isDark ? 'dark' : 'light',
-      y: { formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }) },
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      valueFormatter: (val) => formatCAD(Number(val), { fractionDigits: 0 }),
     },
-    legend: {
-      labels: { colors: isDark ? '#d1d5db' : '#374151' },
+    xAxis: {
+      type: 'category',
+      data: months,
+      axisLabel: { color: axis.label },
+      axisLine: { lineStyle: { color: axis.line } },
     },
-    dataLabels: { enabled: false },
-    grid: {
-      borderColor: isDark ? '#374151' : '#e5e7eb',
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: axis.label,
+        formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
+      },
+      splitLine: { lineStyle: { color: axis.split } },
     },
+    series: [
+      { name: 'Income', type: 'bar', data: incomeValues, itemStyle: { color: CHART_COLORS.income } },
+      { name: 'Expenses', type: 'bar', data: expenseValues, itemStyle: { color: CHART_COLORS.expense } },
+      { name: 'Net Income', type: 'line', data: netValues, lineStyle: { width: 3, color: CHART_COLORS.net }, itemStyle: { color: CHART_COLORS.net } },
+    ],
   }
 
-  const series = [
-    { name: 'Income', type: 'bar' as const, data: incomeValues },
-    { name: 'Expenses', type: 'bar' as const, data: expenseValues },
-    { name: 'Net Income', type: 'line' as const, data: netValues },
-  ]
+  const onEvents = {
+    click: (params: { dataIndex: number }) => {
+      const item = data[params.dataIndex]
+      if (item) navigate(`/charts/month/${item.monthKey}`)
+    },
+  }
 
   const periodOptions = (periods ?? []).map(p => ({
     label: p.label,
@@ -103,14 +92,9 @@ export default function NetIncomePage() {
         />
       </div>
 
-      <Card>
-        <Chart
-          options={options}
-          series={series}
-          type="line"
-          height={400}
-        />
-      </Card>
+      <ChartCard isEmpty={data.length === 0} height={400}>
+        <EChart option={option} height={400} onEvents={onEvents} />
+      </ChartCard>
 
       <Card title="Monthly Breakdown">
         <div className="overflow-x-auto">
@@ -125,7 +109,7 @@ export default function NetIncomePage() {
             </thead>
             <tbody>
               {data.map(row => {
-                const net = row.income - row.expenses
+                const net = row.income + row.expenses
                 return (
                   <tr
                     key={row.monthKey}
