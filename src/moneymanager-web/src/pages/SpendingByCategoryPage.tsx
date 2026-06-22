@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import Chart from 'react-apexcharts'
 import { useSpendingByCategory, useChartPeriods } from '@/hooks/useCharts'
 import { Select, Spinner, Card, CategoryIcon } from '@/components/ui'
+import { formatCAD } from '@/lib/format'
 import type { CategoryChart } from '@/types'
 import type { ApexOptions } from 'apexcharts'
 
@@ -11,15 +12,6 @@ const PALETTE = [
   '#06B6D4', '#D946EF', '#F43F5E', '#22D3EE', '#A3E635',
   '#FB923C', '#818CF8', '#2DD4BF', '#FBBF24', '#C084FC',
 ]
-
-function formatAmount(value: number): string {
-  return value.toLocaleString('en-CA', {
-    style: 'currency',
-    currency: 'CAD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })
-}
 
 function DonutChart({
   title,
@@ -66,7 +58,7 @@ function DonutChart({
               total: {
                 show: true,
                 label: 'Total',
-                formatter: () => formatAmount(total),
+                formatter: () => formatCAD(total, { fractionDigits: 0 }),
               },
             },
           },
@@ -74,7 +66,7 @@ function DonutChart({
       },
       tooltip: {
         y: {
-          formatter: (val: number) => formatAmount(val),
+          formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
         },
       },
       states: {
@@ -125,7 +117,7 @@ function DonutChart({
                     {item.name}
                   </span>
                   <span className="font-medium tabular-nums text-gray-900 dark:text-gray-100">
-                    {formatAmount(item.amount)}
+                    {formatCAD(item.amount, { fractionDigits: 0 })}
                   </span>
                   <span className="w-14 text-right text-gray-500 dark:text-gray-400 tabular-nums">
                     {item.percentage.toFixed(1)}%

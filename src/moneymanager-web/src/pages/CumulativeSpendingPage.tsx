@@ -1,5 +1,6 @@
 import { useCumulativeSpending } from '@/hooks/useCharts'
 import { Spinner, Card } from '@/components/ui'
+import { formatCAD } from '@/lib/format'
 import Chart from 'react-apexcharts'
 import type { ApexOptions } from 'apexcharts'
 
@@ -63,12 +64,12 @@ export default function CumulativeSpendingPage() {
       title: { text: 'Cumulative $ Spent', style: { color: '#9CA3AF' } },
       labels: {
         style: { colors: '#9CA3AF' },
-        formatter: (val: number) => `$${val.toLocaleString()}`,
+        formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
       },
     },
     tooltip: {
       theme: 'dark',
-      y: { formatter: (val: number) => `$${val.toLocaleString()}` },
+      y: { formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }) },
     },
     grid: { borderColor: '#374151' },
     legend: { labels: { colors: '#D1D5DB' } },

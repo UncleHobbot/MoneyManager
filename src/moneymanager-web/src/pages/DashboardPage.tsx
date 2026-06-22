@@ -6,8 +6,9 @@ import { useInfiniteTransactions, useUpdateTransaction } from '@/hooks/useTransa
 import { useNetIncome, useCumulativeSpending, useSpendingByCategory } from '@/hooks/useCharts'
 import { useCategories } from '@/hooks/useCategories'
 import { useCreateBackup } from '@/hooks/useSystem'
-import { Card, Spinner, Button, Badge, CategoryIcon } from '@/components/ui'
+import { Card, Spinner, Button, Badge, CategoryIcon, Money } from '@/components/ui'
 import { EditTransactionDialog } from '@/components/EditTransactionDialog'
+import { formatCAD } from '@/lib/format'
 import type { TransactionDto } from '@/types'
 import {
   Upload,
@@ -22,10 +23,6 @@ import {
 } from 'lucide-react'
 
 const DASHBOARD_LIST_PAGE_SIZE = 50
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(value)
-}
 
 function formatDate(dateStr: string, includeYear = false): string {
   return new Date(dateStr).toLocaleDateString('en-CA', {
@@ -94,13 +91,9 @@ function TransactionRow({
           </span>
           <div className="flex shrink-0 items-start gap-2">
             <span
-              className={`text-sm font-medium ${
-                transaction.amountExt >= 0
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}
+              className="text-sm font-medium shrink-0"
             >
-              {formatCurrency(transaction.amountExt)}
+              <Money amount={transaction.amountExt} signed color />
             </span>
             {action}
           </div>
@@ -262,7 +255,7 @@ function UncategorizedCard() {
                         size="sm"
                         icon={<Pencil size={14} />}
                         className="px-2"
-                        aria-label={`Edit ${t.description}, ${formatDate(t.date, true)}, ${formatCurrency(t.amountExt)}`}
+                        aria-label={`Edit ${t.description}, ${formatDate(t.date, true)}, ${formatCAD(t.amountExt)}`}
                         onClick={() => openEdit(t)}
                       >
                         Edit
@@ -292,7 +285,6 @@ function UncategorizedCard() {
             isSaving={updateTx.isPending}
             errorMessage={editError}
             formatDate={(value) => formatDate(value, true)}
-            formatAmount={formatCurrency}
             onDescriptionChange={setEditDesc}
             onCategoryChange={setEditCatId}
             onClose={closeEdit}
@@ -364,7 +356,7 @@ function CumulativeSpendingCard() {
     colors: ['#3b82f6', '#f97316'],
     tooltip: {
       theme: 'dark',
-      y: { formatter: (v: number) => formatCurrency(v) },
+      y: { formatter: (v: number) => formatCAD(v) },
     },
     xaxis: { labels: { show: false } },
     yaxis: { labels: { show: false } },
@@ -402,7 +394,7 @@ function NetIncomeCard() {
     colors: ['#22c55e', '#ef4444'],
     tooltip: {
       theme: 'dark',
-      y: { formatter: (v: number) => formatCurrency(v) },
+      y: { formatter: (v: number) => formatCAD(v) },
     },
     xaxis: { labels: { show: false } },
     yaxis: { labels: { show: false } },
@@ -440,7 +432,7 @@ function SpendingByCategoryCard() {
     dataLabels: { enabled: false },
     tooltip: {
       theme: 'dark',
-      y: { formatter: (v: number) => formatCurrency(v) },
+      y: { formatter: (v: number) => formatCAD(v) },
     },
     plotOptions: {
       pie: { donut: { size: '65%' } },

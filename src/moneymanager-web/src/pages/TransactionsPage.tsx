@@ -34,24 +34,15 @@ import {
   Card,
   Spinner,
   CategoryIcon,
+  Money,
 } from '@/components/ui'
 import { EditTransactionDialog } from '@/components/EditTransactionDialog'
 import { AddTransactionDialog } from '@/components/AddTransactionDialog'
+import { formatCAD } from '@/lib/format'
 import type { Column } from '@/components/ui'
 import type { CreateTransactionRequest, TransactionDto } from '@/types'
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency: 'CAD',
-  }).format(Math.abs(value))
-}
-
-function formatSignedAmount(value: number): string {
-  return `${value < 0 ? '-' : ''}${formatCurrency(value)}`
-}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', {
@@ -349,10 +340,7 @@ export default function TransactionsPage() {
         sortable: true,
         className: 'whitespace-nowrap text-right w-28',
         render: (row) => (
-          <span className={row.isDebit ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}>
-            {row.isDebit ? '-' : '+'}
-            {formatCurrency(row.amount)}
-          </span>
+          <Money amount={row.amountExt} signed color />
         ),
       },
       {
@@ -584,15 +572,15 @@ export default function TransactionsPage() {
           <div className="flex flex-wrap items-center gap-6 text-sm">
             <span className="inline-flex items-center gap-1.5 text-green-600 dark:text-green-400">
               <TrendingUp size={16} />
-              Income: {formatCurrency(stats.income)}
+              Income: {formatCAD(stats.income)}
             </span>
             <span className="inline-flex items-center gap-1.5 text-red-600 dark:text-red-400">
               <TrendingDown size={16} />
-              Expenses: {formatCurrency(stats.expenses)}
+              Expenses: {formatCAD(stats.expenses)}
             </span>
             <span className="inline-flex items-center gap-1.5 text-gray-900 dark:text-gray-100 font-medium">
               <DollarSign size={16} />
-              Net: {formatCurrency(stats.net)}
+              Net: {formatCAD(stats.net)}
             </span>
             <span className="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
               <Hash size={16} />
@@ -612,7 +600,6 @@ export default function TransactionsPage() {
         isSaving={updateTx.isPending}
         errorMessage={editError}
         formatDate={formatDate}
-        formatAmount={formatSignedAmount}
         onDescriptionChange={setEditDesc}
         onCategoryChange={setEditCatId}
         onClose={closeEdit}

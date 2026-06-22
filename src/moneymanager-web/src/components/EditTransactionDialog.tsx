@@ -1,6 +1,7 @@
 import { useMemo, useState, type FC } from 'react'
 import { useApplyRuleToTransaction, usePossibleRules, useUpdateRule } from '@/hooks/useRules'
 import { Button, Dialog, DialogFooter, Input, Select, Spinner, CategoryIcon } from '@/components/ui'
+import { formatCAD } from '@/lib/format'
 import type { Category, Rule, TransactionDto } from '@/types'
 
 const RULE_COMPARE_OPTIONS = [
@@ -19,7 +20,6 @@ interface EditTransactionDialogProps {
   isSaving: boolean
   errorMessage?: string | null
   formatDate: (value: string) => string
-  formatAmount: (value: number) => string
   onDescriptionChange: (value: string) => void
   onCategoryChange: (value?: number) => void
   onClose: () => void
@@ -49,7 +49,6 @@ function EditTransactionDialogContent({
   isSaving,
   errorMessage,
   formatDate,
-  formatAmount,
   onDescriptionChange,
   onCategoryChange,
   onClose,
@@ -143,7 +142,7 @@ function EditTransactionDialogContent({
       <div className="grid gap-4 sm:grid-cols-3">
         <Input id="edit-transaction-date" label="Date" value={formatDate(transaction.date)} readOnly />
         <Input id="edit-transaction-account" label="Account" value={transaction.account.shownName} readOnly />
-        <Input id="edit-transaction-amount" label="Amount" value={formatAmount(transaction.amountExt)} readOnly />
+        <Input id="edit-transaction-amount" label="Amount" value={formatCAD(transaction.amountExt, { signed: true })} readOnly />
       </div>
       <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
         Date, account and amount come from the imported bank record and can&apos;t be edited.

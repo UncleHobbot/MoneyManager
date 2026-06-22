@@ -4,17 +4,9 @@ import Chart from 'react-apexcharts'
 import { useNetIncome, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, Card } from '@/components/ui'
+import { formatCAD } from '@/lib/format'
 import type { BalanceChart } from '@/types'
 import type { ApexOptions } from 'apexcharts'
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-CA', {
-    style: 'currency',
-    currency: 'CAD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value)
-}
 
 export default function NetIncomePage() {
   const [period, setPeriod] = useState('12')
@@ -69,13 +61,13 @@ export default function NetIncomePage() {
     },
     yaxis: {
       labels: {
-        formatter: (val: number) => formatCurrency(val),
+        formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
         style: { colors: isDark ? '#d1d5db' : '#374151' },
       },
     },
     tooltip: {
       theme: isDark ? 'dark' : 'light',
-      y: { formatter: (val: number) => formatCurrency(val) },
+      y: { formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }) },
     },
     legend: {
       labels: { colors: isDark ? '#d1d5db' : '#374151' },
@@ -144,10 +136,10 @@ export default function NetIncomePage() {
                       {row.month}
                     </td>
                     <td className="py-2 text-right text-green-600 dark:text-green-400">
-                      {formatCurrency(row.income)}
+                      {formatCAD(row.income, { fractionDigits: 0 })}
                     </td>
                     <td className="py-2 text-right text-red-600 dark:text-red-400">
-                      {formatCurrency(row.expenses)}
+                      {formatCAD(row.expenses, { fractionDigits: 0 })}
                     </td>
                     <td
                       className={`py-2 text-right font-medium ${
@@ -156,7 +148,7 @@ export default function NetIncomePage() {
                           : 'text-red-600 dark:text-red-400'
                       }`}
                     >
-                      {formatCurrency(net)}
+                      {formatCAD(net, { fractionDigits: 0 })}
                     </td>
                   </tr>
                 )

@@ -2,8 +2,9 @@ import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import Chart from 'react-apexcharts'
 import { useMonthDetail } from '@/hooks/useCharts'
-import { Spinner, Card, DataTable, CategoryIcon } from '@/components/ui'
+import { Spinner, Card, DataTable, CategoryIcon, Money } from '@/components/ui'
 import type { Column } from '@/components/ui'
+import { formatCAD } from '@/lib/format'
 import type { TransactionDto } from '@/types'
 
 /** Parse "yyMM" → formatted month string like "January 2025". */
@@ -59,10 +60,7 @@ const columns: Column<TransactionDto>[] = [
     sortable: true,
     className: 'text-right',
     render: (row) => (
-      <span className={row.amountExt >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-        {row.amountExt >= 0 ? '+' : ''}
-        {row.amountExt.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })}
-      </span>
+      <Money amount={row.amountExt} signed color />
     ),
   },
   {
@@ -95,7 +93,7 @@ function DonutChart({ title, groups }: { title: string; groups: CategoryGroup[] 
     tooltip: {
       y: {
         formatter: (val: number) =>
-          val.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' }),
+          formatCAD(val),
       },
     },
     plotOptions: {
@@ -108,7 +106,7 @@ function DonutChart({ title, groups }: { title: string; groups: CategoryGroup[] 
               label: 'Total',
               formatter: (w) => {
                 const sum = (w.globals.seriesTotals as number[]).reduce((a, b) => a + b, 0)
-                return sum.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })
+                return formatCAD(sum)
               },
             },
           },
@@ -164,7 +162,7 @@ export default function MonthDetailPage() {
     )
   }
 
-  const fmt = (v: number) => v.toLocaleString('en-CA', { style: 'currency', currency: 'CAD' })
+  const fmt = (v: number) => formatCAD(v)
 
   return (
     <div className="space-y-6 p-6">

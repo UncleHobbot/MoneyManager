@@ -88,7 +88,6 @@ describe('EditTransactionDialog', () => {
         ]}
         isSaving={false}
         formatDate={() => 'Mar 15, 2026'}
-        formatAmount={() => '-$45.67'}
         onDescriptionChange={onDescriptionChange}
         onCategoryChange={onCategoryChange}
         onClose={onClose}
@@ -182,7 +181,6 @@ describe('EditTransactionDialog', () => {
         ]}
         isSaving={false}
         formatDate={() => 'Mar 15, 2026'}
-        formatAmount={() => '-$45.67'}
         onDescriptionChange={vi.fn()}
         onCategoryChange={vi.fn()}
         onClose={onClose}
@@ -265,7 +263,6 @@ describe('EditTransactionDialog', () => {
         ]}
         isSaving={false}
         formatDate={() => 'Mar 15, 2026'}
-        formatAmount={() => '-$45.67'}
         onDescriptionChange={onDescriptionChange}
         onCategoryChange={onCategoryChange}
         onClose={onClose}
@@ -323,7 +320,6 @@ describe('EditTransactionDialog', () => {
         categories={[transaction.category!]}
         isSaving={false}
         formatDate={() => 'Mar 15, 2026'}
-        formatAmount={() => '-$45.67'}
         onDescriptionChange={vi.fn()}
         onCategoryChange={vi.fn()}
         onClose={vi.fn()}
@@ -377,7 +373,6 @@ describe('EditTransactionDialog', () => {
         ]}
         isSaving={false}
         formatDate={() => 'Mar 15, 2026'}
-        formatAmount={() => '-$45.67'}
         onDescriptionChange={vi.fn()}
         onCategoryChange={vi.fn()}
         onClose={vi.fn()}
