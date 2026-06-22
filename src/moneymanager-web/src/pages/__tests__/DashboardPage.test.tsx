@@ -7,7 +7,7 @@ import { useInfiniteTransactions, useUpdateTransaction } from '@/hooks/useTransa
 import { useApplyRuleToTransaction, usePossibleRules, useUpdateRule } from '@/hooks/useRules'
 import type { Account, Category, Transaction, TransactionDto } from '@/types'
 
-vi.mock('react-apexcharts', () => ({ default: () => null }))
+vi.mock('@/components/ui/EChart', () => ({ EChart: () => null }))
 vi.mock('@/hooks/useCategories', () => ({ useCategories: vi.fn() }))
 vi.mock('@/hooks/useTransactions', () => ({
   useInfiniteTransactions: vi.fn(),

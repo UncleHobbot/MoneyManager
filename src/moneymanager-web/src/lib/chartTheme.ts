@@ -41,6 +41,9 @@ export function chartTheme(isDark: boolean): EChartsOption {
   return {
     color: [...CHART_PALETTE],
     backgroundColor: 'transparent',
+    // Skip intro/transition animation: snappier for a finance dashboard and keeps
+    // the canvas idle (continuous animation blocks screenshots / wastes paint).
+    animation: false,
     textStyle: { color: text },
     tooltip: {
       backgroundColor: isDark ? '#1F2937' : '#FFFFFF',

@@ -1,17 +1,11 @@
 import { useState, useMemo } from 'react'
-import Chart from 'react-apexcharts'
 import { useSpendingByCategory, useChartPeriods } from '@/hooks/useCharts'
-import { Select, Spinner, Card, CategoryIcon } from '@/components/ui'
+import { useTheme } from '@/components/layout/useTheme'
+import { Select, Spinner, Card, CategoryIcon, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { CHART_PALETTE } from '@/lib/chartTheme'
 import type { CategoryChart } from '@/types'
-import type { ApexOptions } from 'apexcharts'
-
-const PALETTE = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-  '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#84CC16',
-  '#06B6D4', '#D946EF', '#F43F5E', '#22D3EE', '#A3E635',
-  '#FB923C', '#818CF8', '#2DD4BF', '#FBBF24', '#C084FC',
-]
+import type { EChartsOption } from 'echarts'
 
 function DonutChart({
   title,
@@ -24,57 +18,52 @@ function DonutChart({
   highlighted: number | null
   onSliceClick: (index: number | null) => void
 }) {
-  const labels = data.map(d => d.name)
-  const series = data.map(d => d.amount)
-  const total = series.reduce((a, b) => a + b, 0)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const total = data.reduce((a, d) => a + d.amount, 0)
 
-  const options = useMemo<ApexOptions>(
+  const option = useMemo<EChartsOption>(
     () => ({
-      chart: {
-        type: 'donut' as const,
-        background: 'transparent',
-        events: {
-          dataPointSelection: (
-            _e: unknown,
-            _chart: unknown,
-            config?: Record<string, unknown>,
-          ) => {
-            const idx = config?.dataPointIndex as number | undefined
-            if (idx != null) onSliceClick(idx === highlighted ? null : idx)
-          },
-        },
-      },
-      labels,
-      colors: PALETTE.slice(0, data.length),
-      theme: { mode: 'dark' as const },
-      legend: { show: false },
-      dataLabels: { enabled: false },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '60%',
-            labels: {
-              show: true,
-              total: {
-                show: true,
-                label: 'Total',
-                formatter: () => formatCAD(total, { fractionDigits: 0 }),
-              },
-            },
-          },
-        },
-      },
       tooltip: {
-        y: {
-          formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
+        trigger: 'item',
+        valueFormatter: (val) => formatCAD(Number(val), { fractionDigits: 0 }),
+      },
+      title: {
+        text: formatCAD(total, { fractionDigits: 0 }),
+        subtext: 'Total',
+        left: 'center',
+        top: 'center',
+        textStyle: { color: isDark ? '#F3F4F6' : '#111827', fontSize: 18 },
+        subtextStyle: { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: 12 },
+      },
+      series: [
+        {
+          type: 'pie',
+          radius: ['62%', '90%'],
+          center: ['50%', '50%'],
+          avoidLabelOverlap: false,
+          label: { show: false },
+          labelLine: { show: false },
+          data: data.map((d, i) => ({
+            value: d.amount,
+            name: d.name,
+            itemStyle: {
+              color: CHART_PALETTE[i % CHART_PALETTE.length],
+              opacity: highlighted == null || highlighted === i ? 1 : 0.35,
+            },
+          })),
         },
-      },
-      states: {
-        active: { filter: { type: 'darken', value: 0.6 } },
-      },
-      stroke: { show: false },
+      ],
     }),
-    [data, labels, total, highlighted, onSliceClick],
+    [data, total, highlighted, isDark],
+  )
+
+  const onEvents = useMemo(
+    () => ({
+      click: (params: { dataIndex: number }) =>
+        onSliceClick(params.dataIndex === highlighted ? null : params.dataIndex),
+    }),
+    [highlighted, onSliceClick],
   )
 
   return (
@@ -84,13 +73,7 @@ function DonutChart({
           <p className="py-12 text-sm text-gray-400">No data for this period</p>
         ) : (
           <>
-            <Chart
-              options={options}
-              series={series}
-              type="donut"
-              width="100%"
-              height={320}
-            />
+            <EChart option={option} height={320} onEvents={onEvents} className="w-full" />
             <ul className="mt-4 w-full space-y-1.5 max-h-64 overflow-y-auto">
               {data.map((item, i) => (
                 <li
@@ -110,7 +93,7 @@ function DonutChart({
                 >
                   <span
                     className="h-3 w-3 rounded-full shrink-0"
-                    style={{ backgroundColor: PALETTE[i % PALETTE.length] }}
+                    style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
                   />
                   <CategoryIcon icon={item.icon ?? undefined} size={16} className="shrink-0 text-gray-500 dark:text-gray-400" />
                   <span className="flex-1 truncate text-gray-900 dark:text-gray-100">

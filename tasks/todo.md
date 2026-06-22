@@ -38,13 +38,20 @@ without inventing data we don't have.
   (`chartTheme.test.ts`). Verified light & dark in browser.
 - [ ] Migrate the 6 existing ApexCharts sites to ECharts:
   - [x] Net Income (also fixed a latent net-income sign bug — see below)
-  - [ ] Cumulative Spending (still hard-codes `theme: 'dark'`)
-  - [ ] Spending-by-Category donuts (still hard-codes `theme: 'dark'`)
-  - [ ] 3 Dashboard minis
-  - [ ] Month-detail donuts
-- [ ] Remove `apexcharts` / `react-apexcharts` once the last site is migrated.
-- [ ] Fix the hard-coded `theme: 'dark'` light-mode bug as each donut/cumulative
-  chart migrates (Net Income already theme-correct via `chartTheme`).
+  - [x] Cumulative Spending (light-mode bug fixed)
+  - [x] Spending-by-Category donuts (light-mode bug fixed; dropped ECharts built-in
+    legend in favor of the existing custom legend list)
+  - [x] 3 Dashboard minis
+  - [ ] Month-detail donuts (migrate or retire with the URL-filter task below)
+- [ ] Remove `apexcharts` / `react-apexcharts` once the last site (Month-detail) is
+  migrated/retired.
+- [x] Fix the hard-coded `theme: 'dark'` light-mode bug (done as each donut/cumulative
+  chart migrated; Net Income already theme-correct via `chartTheme`).
+
+EChart wrapper notes: `animation: false` in `chartTheme` (snappy + keeps the canvas
+idle); `isDisposed()` guards on resize/setOption. Residual "[ECharts] instance has
+been disposed" warnings are a dev-only React StrictMode double-mount artifact — they
+do not occur in the production build.
 - [ ] Lift `TransactionsPage` filters into URL query params (deep-linkable);
   retire `MonthDetailPage`; Net Income month click → `/transactions?...`. → verify:
   pasting a filtered URL reproduces the view; back button works.
