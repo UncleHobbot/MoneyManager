@@ -89,6 +89,24 @@ export interface CategoryChart {
   percentage: number
 }
 
+export interface SpendingTrendMonth {
+  label: string
+  from: string
+  to: string
+}
+
+export interface SpendingTrendSeries {
+  categoryId: number | null
+  name: string
+  icon: string | null
+  data: number[]
+}
+
+export interface SpendingTrendChart {
+  months: SpendingTrendMonth[]
+  series: SpendingTrendSeries[]
+}
+
 export interface ImportResult {
   importedCount: number
   skippedCount: number

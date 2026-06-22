@@ -12,6 +12,7 @@ import SettingsPage from '@/pages/SettingsPage'
 import NetIncomePage from '@/pages/NetIncomePage'
 import CumulativeSpendingPage from '@/pages/CumulativeSpendingPage'
 import SpendingByCategoryPage from '@/pages/SpendingByCategoryPage'
+import SpendingTrendPage from '@/pages/SpendingTrendPage'
 import DashboardPage from '@/pages/DashboardPage'
 import TransactionsPage from '@/pages/TransactionsPage'
 import AIAnalysisPage from '@/pages/AIAnalysisPage'
@@ -38,6 +39,7 @@ function App() {
               <Route path="/charts/income" element={<NetIncomePage />} />
               <Route path="/charts/cumulative" element={<CumulativeSpendingPage />} />
               <Route path="/charts/spending" element={<SpendingByCategoryPage />} />
+              <Route path="/charts/trend" element={<SpendingTrendPage />} />
               <Route path="/ai" element={<AIAnalysisPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/accounts" element={<AccountsPage />} />

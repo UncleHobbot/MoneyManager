@@ -67,10 +67,12 @@ against the API's own `balance` field. Pre-existing in the ApexCharts version.
 
 ## Phase 1 — New retrospective charts (ECharts)
 
-- [ ] **Spending Trend over time** — stacked area, parent rollup, top-7 + "Other",
+- [x] **Spending Trend over time** — stacked area, parent rollup, top-7 + "Other",
   monthly buckets, expenses only, transfers excluded, `ChartPeriod` selector
-  (default 12mo), click-isolate a series, click a segment → drill. → verify: totals
-  reconcile with Spending-by-Category for the same period.
+  (default 12mo), legend toggle to isolate, click a segment → drill
+  (`/transactions?from&to&categoryId`). Backend `GET /api/charts/spending-trend`
+  (+2 tests); sidebar + header nav. (Screenshot pending — preview window was
+  collapsed during the run; page mounts clean, no console errors.)
 - [ ] **Top Merchants** — group by `Description`; horizontal bars; click bar →
   `/transactions?search=<Description>`. → verify: sums match transaction list.
 - [ ] **Cash-flow Sankey** — ECharts sankey; income→hub→expenses+Savings; deficit

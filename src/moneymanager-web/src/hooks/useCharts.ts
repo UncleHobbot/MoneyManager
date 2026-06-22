@@ -5,6 +5,7 @@ import type {
   CategoryChart,
   ChartPeriod,
   CumulativeSpendingChart,
+  SpendingTrendChart,
 } from '@/types'
 
 export function useNetIncome(period: string) {
@@ -19,6 +20,14 @@ export function useCumulativeSpending() {
   return useQuery<CumulativeSpendingChart[]>({
     queryKey: ['charts', 'cumulative-spending'],
     queryFn: () => api.get('/charts/cumulative-spending').then(r => r.data),
+  })
+}
+
+export function useSpendingTrend(period: string) {
+  return useQuery<SpendingTrendChart>({
+    queryKey: ['charts', 'spending-trend', period],
+    queryFn: () =>
+      api.get('/charts/spending-trend', { params: { period } }).then(r => r.data),
   })
 }
 

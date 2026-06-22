@@ -8,6 +8,7 @@ const routeTitles: Record<string, string> = {
   '/charts/income': 'Net Income',
   '/charts/cumulative': 'Cumulative Spending',
   '/charts/spending': 'Spending by Category',
+  '/charts/trend': 'Spending Trend',
   '/ai': 'AI Analysis',
   '/settings': 'Settings',
   '/settings/accounts': 'Accounts',
