@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, type ReactNode } from 'react'
+import { useState, useMemo, useCallback, useEffect, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
@@ -50,6 +51,13 @@ function formatDate(iso: string): string {
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+/** Parse a numeric query param, returning undefined when absent or invalid. */
+function numParam(value: string | null): number | undefined {
+  if (!value) return undefined
+  const n = Number(value)
+  return Number.isFinite(n) ? n : undefined
 }
 
 /** A cell value that filters the grid when clicked. */
@@ -106,15 +114,26 @@ function ClearableHeader({
 }
 
 export default function TransactionsPage() {
-  const [period, setPeriod] = useState('12')
-  const [accountFilter, setAccountFilter] = useState<number | undefined>()
-  const [categoryFilter, setCategoryFilter] = useState<number | undefined>()
-  const [searchInput, setSearchInput] = useState('')
-  const [uncategorized, setUncategorized] = useState(false)
-  const [sortBy, setSortBy] = useState('date')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(50)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Filter / sort / paging state lives in the URL so any view is deep-linkable
+  // and the back button works (ADR-0005). Charts drill in by linking to this page
+  // with these same query params.
+  const period = searchParams.get('period') ?? '12'
+  const accountFilter = numParam(searchParams.get('accountId'))
+  const categoryFilter = numParam(searchParams.get('categoryId'))
+  const urlSearch = searchParams.get('search') ?? ''
+  const uncategorized = searchParams.get('uncategorized') === '1'
+  const sortBy = searchParams.get('sortBy') ?? 'date'
+  const sortDir: SortDir = searchParams.get('sortDir') === 'asc' ? 'asc' : 'desc'
+  const page = numParam(searchParams.get('page')) ?? 1
+  const pageSize = numParam(searchParams.get('pageSize')) ?? 50
+
+  // The search box stays local for responsiveness; its debounced value drives the
+  // query and is mirrored into the URL for shareability.
+  const [searchInput, setSearchInput] = useState(urlSearch)
+  const search = useDebouncedValue(searchInput.trim(), 300)
+
   const [editRow, setEditRow] = useState<TransactionDto | null>(null)
   const [editDesc, setEditDesc] = useState('')
   const [editCatId, setEditCatId] = useState<number | undefined>()
@@ -122,7 +141,34 @@ export default function TransactionsPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
 
-  const search = useDebouncedValue(searchInput.trim(), 300)
+  // Merge updates into the URL query string. Empty/undefined/false values drop the
+  // key. Any change that narrows or reorders results returns to the first page
+  // (unless keepPage is set, e.g. the pager itself).
+  const updateParams = useCallback(
+    (
+      updates: Record<string, string | number | boolean | undefined>,
+      opts?: { keepPage?: boolean },
+    ) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          for (const [key, value] of Object.entries(updates)) {
+            if (value === undefined || value === '' || value === false) next.delete(key)
+            else next.set(key, value === true ? '1' : String(value))
+          }
+          if (!opts?.keepPage) next.delete('page')
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  // Mirror the debounced search box into the URL (without flooding history).
+  useEffect(() => {
+    if (search !== urlSearch) updateParams({ search: search || undefined })
+  }, [search, urlSearch, updateParams])
 
   const filters: TransactionFilters = useMemo(
     () => ({
@@ -154,78 +200,62 @@ export default function TransactionsPage() {
     searchInput.trim() !== '' ||
     uncategorized
 
-  // Any change that narrows or reorders results returns to the first page.
-  const handlePeriodChange = useCallback((v: string) => {
-    setPeriod(v)
-    setPage(1)
-  }, [])
-  const handleAccountChange = useCallback((v: string) => {
-    setAccountFilter(v ? Number(v) : undefined)
-    setPage(1)
-  }, [])
-  const handleCategoryChange = useCallback((v: string) => {
-    setCategoryFilter(v ? Number(v) : undefined)
-    setPage(1)
-  }, [])
-  const handleSearchChange = useCallback((v: string) => {
-    setSearchInput(v)
-    setPage(1)
-  }, [])
-  const handleUncategorizedChange = useCallback((checked: boolean) => {
-    setUncategorized(checked)
-    setPage(1)
-  }, [])
-  const handlePageSizeChange = useCallback((v: string) => {
-    setPageSize(Number(v))
-    setPage(1)
-  }, [])
+  const goToPage = useCallback(
+    (p: number) => updateParams({ page: p > 1 ? p : undefined }, { keepPage: true }),
+    [updateParams],
+  )
+
+  const handlePeriodChange = useCallback((v: string) => updateParams({ period: v }), [updateParams])
+  const handleAccountChange = useCallback(
+    (v: string) => updateParams({ accountId: v || undefined }),
+    [updateParams],
+  )
+  const handleCategoryChange = useCallback(
+    (v: string) => updateParams({ categoryId: v || undefined }),
+    [updateParams],
+  )
+  const handleSearchChange = useCallback((v: string) => setSearchInput(v), [])
+  const handleUncategorizedChange = useCallback(
+    (checked: boolean) => updateParams({ uncategorized: checked, categoryId: undefined }),
+    [updateParams],
+  )
+  const handlePageSizeChange = useCallback(
+    (v: string) => updateParams({ pageSize: v }),
+    [updateParams],
+  )
 
   const clearFilters = useCallback(() => {
-    setAccountFilter(undefined)
-    setCategoryFilter(undefined)
     setSearchInput('')
-    setUncategorized(false)
-    setPage(1)
-  }, [])
+    updateParams({
+      accountId: undefined,
+      categoryId: undefined,
+      search: undefined,
+      uncategorized: undefined,
+    })
+  }, [updateParams])
 
-  const handleSortChange = useCallback((key: string, dir: SortDir) => {
-    setSortBy(key)
-    setSortDir(dir)
-    setPage(1)
-  }, [])
+  const handleSortChange = useCallback(
+    (key: string, dir: SortDir) => updateParams({ sortBy: key, sortDir: dir }),
+    [updateParams],
+  )
 
   // Click-a-cell-to-filter handlers (kept in sync with the top filter bar).
-  const filterByAccount = useCallback((id: number) => {
-    setAccountFilter(id)
-    setPage(1)
-  }, [])
-  const clearAccountFilter = useCallback(() => {
-    setAccountFilter(undefined)
-    setPage(1)
-  }, [])
-  const filterByCategory = useCallback((id: number) => {
-    setCategoryFilter(id)
-    setUncategorized(false)
-    setPage(1)
-  }, [])
-  const filterUncategorized = useCallback(() => {
-    setUncategorized(true)
-    setCategoryFilter(undefined)
-    setPage(1)
-  }, [])
-  const clearCategoryFilter = useCallback(() => {
-    setCategoryFilter(undefined)
-    setUncategorized(false)
-    setPage(1)
-  }, [])
-  const filterByDescription = useCallback((text: string) => {
-    setSearchInput(text)
-    setPage(1)
-  }, [])
-  const clearSearchFilter = useCallback(() => {
-    setSearchInput('')
-    setPage(1)
-  }, [])
+  const filterByAccount = useCallback((id: number) => updateParams({ accountId: id }), [updateParams])
+  const clearAccountFilter = useCallback(() => updateParams({ accountId: undefined }), [updateParams])
+  const filterByCategory = useCallback(
+    (id: number) => updateParams({ categoryId: id, uncategorized: undefined }),
+    [updateParams],
+  )
+  const filterUncategorized = useCallback(
+    () => updateParams({ uncategorized: true, categoryId: undefined }),
+    [updateParams],
+  )
+  const clearCategoryFilter = useCallback(
+    () => updateParams({ categoryId: undefined, uncategorized: undefined }),
+    [updateParams],
+  )
+  const filterByDescription = useCallback((text: string) => setSearchInput(text), [])
+  const clearSearchFilter = useCallback(() => setSearchInput(''), [])
 
   const openEdit = useCallback((row: TransactionDto) => {
     setEditRow(row)
@@ -544,7 +574,7 @@ export default function TransactionsPage() {
             variant="ghost"
             size="sm"
             disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
+            onClick={() => goToPage(page - 1)}
             icon={<ChevronLeft size={16} />}
           >
             Prev
@@ -556,7 +586,7 @@ export default function TransactionsPage() {
             variant="ghost"
             size="sm"
             disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => goToPage(page + 1)}
             icon={<ChevronRight size={16} />}
           >
             Next
