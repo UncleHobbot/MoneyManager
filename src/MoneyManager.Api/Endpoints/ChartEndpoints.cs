@@ -10,23 +10,6 @@ namespace MoneyManager.Api.Endpoints;
 /// </summary>
 public static class ChartEndpoints
 {
-    private static readonly object[] Periods =
-    [
-        new { Code = "12", Label = "Last 12 Months" },
-        new { Code = "y1", Label = "This Year" },
-        new { Code = "y2", Label = "Last Year" },
-        new { Code = "y3", Label = "2 Years Ago" },
-        new { Code = "y12", Label = "Last + This Year" },
-        new { Code = "m1", Label = "This Month" },
-        new { Code = "m2", Label = "Last Month" },
-        new { Code = "m1+2", Label = "Last 2 Months" },
-        new { Code = "m1+3", Label = "Last 3 Months" },
-        new { Code = "w", Label = "Last 7 Days" },
-        new { Code = "w2", Label = "Last 14 Days" },
-        new { Code = "w3", Label = "Last 31 Days" },
-        new { Code = "a", Label = "All Time" }
-    ];
-
     /// <summary>
     /// Maps all chart-related endpoints under <c>/api/charts</c>.
     /// </summary>
@@ -55,10 +38,9 @@ public static class ChartEndpoints
 
     internal static async Task<IResult> GetSpendingByCategory(
         string period,
-        DataService dataService,
         TransactionQueryService queryService)
     {
-        dataService.GetDates(period ?? "12", out var startDate, out var endDate);
+        var (startDate, endDate) = (ChartPeriod.Find(period ?? "12") ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
         var filters = new TransactionFilters(StartDate: startDate, EndDate: endDate);
         var rows = await queryService.GetReportingRowsAsync(filters);
 
@@ -143,6 +125,9 @@ public static class ChartEndpoints
 
     internal static IResult GetPeriods()
     {
-        return TypedResults.Ok(Periods);
+        // Single source of truth: ChartPeriod.All. The endpoint projects
+        // away the GetDateRange function (not serializable, not relevant
+        // to clients) and returns only { Code, Label }.
+        return TypedResults.Ok(ChartPeriod.All.Select(p => new { p.Code, p.Label }));
     }
 }

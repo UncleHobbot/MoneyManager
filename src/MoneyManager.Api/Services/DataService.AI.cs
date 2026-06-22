@@ -3,6 +3,7 @@ using CsvHelper;
 using Microsoft.EntityFrameworkCore;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Model.AI;
+using MoneyManager.Api.Model.Query;
 
 namespace MoneyManager.Api.Services;
 
@@ -28,7 +29,7 @@ public partial class DataService
     /// </remarks>
     public async Task<List<TransactionAI>> AIGetTransactionsAsync(string period)
     {
-        GetDates(period, out var dateStart, out var dateEnd);
+        var (dateStart, dateEnd) = (ChartPeriod.Find(period) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
         return await AIGetTransactionsAsync(dateStart, dateEnd);
     }
 
@@ -102,7 +103,7 @@ public partial class DataService
     /// </remarks>
     public async Task<string> AIGetTransactionsCSVAsync(string period)
     {
-        GetDates(period, out var dateStart, out var dateEnd);
+        var (dateStart, dateEnd) = (ChartPeriod.Find(period) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
         return await AIGetTransactionsCSVAsync(dateStart, dateEnd);
     }
 

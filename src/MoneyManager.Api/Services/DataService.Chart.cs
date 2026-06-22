@@ -12,103 +12,6 @@ namespace MoneyManager.Api.Services;
 public partial class DataService
 {
     /// <summary>
-    /// Converts a chart period code to corresponding start and end dates.
-    /// </summary>
-    /// <param name="chartPeriod">The period code (e.g., "12", "y1", "m1", "w", "a").</param>
-    /// <param name="startDate">Output parameter for the calculated start date.</param>
-    /// <param name="endDate">Output parameter for the calculated end date.</param>
-    /// <remarks>
-    /// Supported period codes:
-    /// 
-    /// **Year-based periods:**
-    /// - "12" - Last 12 months from today
-    /// - "y1" - Current year (January 1 to now)
-    /// - "y2" - Last year (full previous calendar year)
-    /// - "y3" - Two years ago (full calendar year)
-    /// - "y12" - Last year + current year (from Jan 1 of last year to now)
-    /// 
-    /// **Month-based periods:**
-    /// - "m1" - Current month (first day to now)
-    /// - "m2" - Last month (full previous month)
-    /// - "m1+2" - Current + last 2 months (last 3 months)
-    /// - "m1+3" - Current + last 3 months (last 4 months)
-    /// 
-    /// **Week-based periods:**
-    /// - "w" or "w1" - Last 7 days
-    /// - "w2" - Last 14 days
-    /// - "w3" - Last 31 days
-    /// 
-    /// **Other periods:**
-    /// - "a" - All data (from DateTime.MinValue)
-    /// 
-    /// If the period code is not recognized, defaults to current year to next month start.
-    /// </remarks>
-    public void GetDates(string chartPeriod, out DateTime startDate, out DateTime endDate)
-    {
-        startDate = new DateTime(DateTime.Today.Year, 1, 1);
-        endDate = DateTime.Today.AddMonths(1).StartOfMonth();
-
-        switch (chartPeriod)
-        {
-            // last 12 months
-            case "12":
-                startDate = DateTime.Today.AddMonths(-12).StartOfMonth();
-                break;
-            // this year
-            case "y1":
-                startDate = new DateTime(DateTime.Today.Year, 1, 1);
-                break;
-            // last year
-            case "y2":
-                startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
-                endDate = new DateTime(DateTime.Today.Year, 1, 1);
-                break;
-            // 2 years ago
-            case "y3":
-                startDate = new DateTime(DateTime.Today.Year - 2, 1, 1);
-                endDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
-                break;
-            // last + this year
-            case "y12":
-                startDate = new DateTime(DateTime.Today.Year - 1, 1, 1);
-                break;
-            // This month
-            case "m1":
-                startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                break;
-            // Last month
-            case "m2":
-                startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
-                endDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-                break;
-            // This +last months
-            case "m1+2":
-                startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
-                break;
-            // This + 2 last months
-            case "m1+3":
-                startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-2);
-                break;
-            // Last 7 days
-            case "w" or "w1":
-                startDate = DateTime.Today.AddDays(-7);
-                break;
-            // Last 14 days
-            case "w2":
-                startDate = DateTime.Today.AddDays(-14);
-                break;
-            // Last 31 days
-            case "w3":
-                startDate = DateTime.Today.AddDays(-31);
-                break;
-            // All
-            case "a":
-                startDate = DateTime.MinValue;
-                break;
-        }
-    }
-
-    /// <summary>
     /// Aggregates transaction data by month to calculate net income (income vs expenses).
     /// </summary>
     /// <param name="chartPeriod">The period code (e.g., "12", "y1", "m1", "w", "a").</param>
@@ -136,7 +39,7 @@ public partial class DataService
     /// </remarks>
     public async Task<List<BalanceChart>> ChartNetIncomeAsync(string chartPeriod)
     {
-        GetDates(chartPeriod, out var startDate, out var endDate);
+        var (startDate, endDate) = (ChartPeriod.Find(chartPeriod) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
 
         var filters = new TransactionFilters(StartDate: startDate, EndDate: endDate);
         var rows = await queryService.GetReportingRowsAsync(filters);

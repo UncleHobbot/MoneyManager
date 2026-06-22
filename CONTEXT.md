@@ -66,19 +66,32 @@ credits (income).
 
 ## ChartPeriod (vocabulary)
 
-The set of relative date windows accepted by chart and stats endpoints.
+The set of relative date windows accepted by chart, stats, and AI endpoints.
+Implemented as a value object (`Model/Query/ChartPeriod.cs`) that owns the
+period vocabulary and the per-period date math; the legacy 60-line switch in
+`DataService.GetDates` is deleted.
 
-- **Codes.** `m1` (month), `y1` (year), `12` (last 12 months), `w`/`w1`/`w2`/`w3`
-  (weeks), `a` (all), plus multi-month variants (`m1+2`, `m1+3`) and year
-  variants (`y2`, `y3`, `y12`).
-- **Known debt.** The codes are encoded as bare strings in four places:
-  `DataService.GetDates` switch, `ChartEndpoints` period list, AI partial, and
-  five frontend pages. Candidate 1 (ChartPeriod value object) is the planned
-  consolidation. Until then, treat the codes as opaque strings validated only
-  by `GetDates`'s default branch.
-- **Decoupling.** Read-side modules (e.g. `TransactionQueryService`) accept
-  `StartDate` / `EndDate`, not period codes, so their adoption does not depend
-  on Candidate 1 landing first.
+- **Shape.** `ChartPeriod(Code, Label, Func<DateTime, (DateTime Start, DateTime End)> GetDateRange)`.
+  Static `All` list (14 periods); `Find(code)` lookup; `Default` fallback
+  for unknown codes (equivalent to "y1" / "This Year", preserves the
+  pre-migration silent-fallback behavior).
+- **Single source of truth.** The `/api/charts/periods` endpoint enumerates
+  `ChartPeriod.All` directly. Endpoints (`GetAll`, `GetStats`,
+  `GetSpendingByCategory`) and services (`ChartNetIncomeAsync`,
+  `AIGetTransactionsAsync`, `AIGetTransactionsCSVAsync`) all resolve codes
+  through `ChartPeriod.Find(code) ?? ChartPeriod.Default`.
+- **Codes.** `12` (last 12 months), `y1`/`y2`/`y3`/`y12` (year variants),
+  `m1`/`m2`/`m1+2`/`m1+3` (month variants), `w`/`w1`/`w2`/`w3` (week
+  variants, `w1` is alias for `w`), `a` (all time).
+- **Decoupling.** Read-side modules (`TransactionQueryService`,
+  `ReportingRow`) accept `StartDate`/`EndDate`, not period codes. The
+  translation happens at the endpoint/service boundary via `ChartPeriod`.
+- **Known debt.** `ChartPeriod.Default` silently maps unknown codes to
+  `y1` to preserve pre-migration behavior. Tightening to throw requires
+  auditing frontend usage and is a separate candidate.
+- **Frontend not touched.** This candidate is backend-only. Frontend
+  pages still send bare string codes; TS codegen for a narrow union type
+  is a separate candidate.
 
 ## Reporting Row
 

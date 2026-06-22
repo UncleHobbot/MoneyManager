@@ -29,7 +29,6 @@ public static class TransactionEndpoints
     }
 
     internal static async Task<IResult> GetAll(
-        DataService dataService,
         TransactionQueryService queryService,
         string period = "12",
         int? accountId = null,
@@ -41,7 +40,7 @@ public static class TransactionEndpoints
         int page = 1,
         int pageSize = 50)
     {
-        dataService.GetDates(period, out var startDate, out var endDate);
+        var (startDate, endDate) = (ChartPeriod.Find(period) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
 
         var filters = new TransactionFilters(
             StartDate: startDate,
@@ -161,7 +160,6 @@ public static class TransactionEndpoints
     }
 
     internal static async Task<IResult> GetStats(
-        DataService dataService,
         TransactionQueryService queryService,
         string period = "12",
         int? accountId = null,
@@ -169,7 +167,7 @@ public static class TransactionEndpoints
         string? search = null,
         bool uncategorized = false)
     {
-        dataService.GetDates(period, out var startDate, out var endDate);
+        var (startDate, endDate) = (ChartPeriod.Find(period) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
 
         var filters = new TransactionFilters(
             StartDate: startDate,

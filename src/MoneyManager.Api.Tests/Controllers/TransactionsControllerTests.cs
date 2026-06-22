@@ -24,7 +24,7 @@ public class TransactionEndpointsTests : IDisposable
     [Fact]
     public async Task GetAll_ReturnsOkWithPaginatedResult()
     {
-        var result = await TransactionEndpoints.GetAll(_svc.DataService, _svc.QueryService, period: "a", page: 1, pageSize: 50);
+        var result = await TransactionEndpoints.GetAll(_svc.QueryService, period: "a", page: 1, pageSize: 50);
 
         result.Should().BeAssignableTo<IResult>();
     }
@@ -32,7 +32,7 @@ public class TransactionEndpointsTests : IDisposable
     [Fact]
     public async Task GetAll_RespectsPageSize()
     {
-        var result = await TransactionEndpoints.GetAll(_svc.DataService, _svc.QueryService, period: "a", page: 1, pageSize: 2);
+        var result = await TransactionEndpoints.GetAll(_svc.QueryService, period: "a", page: 1, pageSize: 2);
 
         // The result wraps an anonymous type; verify it's Ok
         result.Should().BeAssignableTo<IResult>();
@@ -42,7 +42,7 @@ public class TransactionEndpointsTests : IDisposable
     [Fact]
     public async Task GetAll_FiltersBySearch()
     {
-        var result = await TransactionEndpoints.GetAll(_svc.DataService, _svc.QueryService, period: "a", search: "Loblaws");
+        var result = await TransactionEndpoints.GetAll(_svc.QueryService, period: "a", search: "Loblaws");
 
         var items = GetItems(result);
         items.Should().NotBeEmpty();
@@ -54,7 +54,7 @@ public class TransactionEndpointsTests : IDisposable
     [Fact]
     public async Task GetAll_FiltersUncategorized()
     {
-        var result = await TransactionEndpoints.GetAll(_svc.DataService, _svc.QueryService, period: "a", uncategorized: true);
+        var result = await TransactionEndpoints.GetAll(_svc.QueryService, period: "a", uncategorized: true);
 
         var items = GetItems(result);
         items.Should().OnlyContain(t =>
@@ -64,7 +64,7 @@ public class TransactionEndpointsTests : IDisposable
     [Fact]
     public async Task GetAll_SortsByAmountAscending()
     {
-        var result = await TransactionEndpoints.GetAll(_svc.DataService, _svc.QueryService, period: "a", sortBy: "amount", sortDir: "asc");
+        var result = await TransactionEndpoints.GetAll(_svc.QueryService, period: "a", sortBy: "amount", sortDir: "asc");
 
         var items = GetItems(result);
         var signed = items.Select(t => t.AmountExt).ToList();
@@ -74,7 +74,7 @@ public class TransactionEndpointsTests : IDisposable
     [Fact]
     public async Task GetStats_RespectsSearchFilter()
     {
-        var result = await TransactionEndpoints.GetStats(_svc.DataService, _svc.QueryService, period: "a", search: "Loblaws");
+        var result = await TransactionEndpoints.GetStats(_svc.QueryService, period: "a", search: "Loblaws");
 
         var ok = result.Should().BeOfType<Ok<TransactionStats>>().Subject;
         ok.Value!.Count.Should().BeGreaterThan(0);
