@@ -64,6 +64,45 @@ public class TransactionQueryService
     }
 
     /// <summary>
+    /// Returns reporting projections of all transactions matching
+    /// <paramref name="filters"/>. Each row carries the signed amount,
+    /// the rolled-up effective category, and pre-computed
+    /// <see cref="ReportingRow.IsIncome"/> / <see cref="ReportingRow.IsTransfer"/>
+    /// flags so consumers can aggregate without re-spelling the sign
+    /// convention or category-name matches.
+    /// </summary>
+    /// <remarks>
+    /// Transactions with no category produce rows with
+    /// <c>EffectiveCategory: null</c> and both flags <c>false</c>. Consumers
+    /// that need a category for grouping should filter; consumers that only
+    /// need Income/Expense totals can ignore the field.
+    /// </remarks>
+    public async Task<IReadOnlyList<ReportingRow>> GetReportingRowsAsync(
+        TransactionFilters filters,
+        CancellationToken cancellationToken = default)
+    {
+        await using var ctx = await _contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var transactions = await ApplyFilters(ListableTransactions(ctx), filters)
+            .ToListAsync(cancellationToken);
+
+        return transactions
+            .Select(t =>
+            {
+                var effective = t.Category?.Parent ?? t.Category;
+                return new ReportingRow(
+                    Date: t.Date,
+                    SignedAmount: t.AmountExt,
+                    EffectiveCategory: effective is null
+                        ? null
+                        : new ReportingCategory(effective.Id, effective.Name, effective.Icon),
+                    IsIncome: effective?.Name == "Income",
+                    IsTransfer: effective?.Name == "Transfer");
+            })
+            .ToList();
+    }
+
+    /// <summary>
     /// Base query for listable transactions: eager-loads the navigations the
     /// DTO needs and enforces the listability invariant. AsNoTracking because
     /// the module is read-only — entities never escape this service.

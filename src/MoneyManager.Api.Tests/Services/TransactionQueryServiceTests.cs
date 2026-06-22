@@ -275,4 +275,133 @@ public class TransactionQueryServiceTests : IDisposable
         stats.Expenses.Should().Be(0m);
         stats.Count.Should().Be(1);
     }
+
+    // ----------------------------------------------------------------
+    // GetReportingRows
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task GetReportingRows_ReturnsAllListableTransactions()
+    {
+        var rows = await _svc.QueryService.GetReportingRowsAsync(FiltersForAllSeed());
+
+        rows.Should().HaveCount(4);
+        rows.Select(r => r.Date).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetReportingRows_ExcludesHiddenAccounts()
+    {
+        var rows = await _svc.QueryService.GetReportingRowsAsync(FiltersForAllSeed());
+
+        // Internal Transfer is on the hidden "Transfer Account" and must be excluded
+        // by the listability invariant, even though its category is Transfer.
+        rows.Should().NotContain(r => r.IsTransfer && r.SignedAmount == -500m);
+        rows.Should().HaveCount(4);
+    }
+
+    [Fact]
+    public async Task GetReportingRows_SignedAmount_PositiveForCredits_NegativeForDebits()
+    {
+        var rows = await _svc.QueryService.GetReportingRowsAsync(FiltersForAllSeed());
+
+        var salary = rows.Single(r => r.Date == new DateTime(2025, 1, 20));
+        salary.SignedAmount.Should().Be(3000m);    // credit (income direction)
+
+        var loblaws = rows.Single(r => r.Date == new DateTime(2025, 1, 15));
+        loblaws.SignedAmount.Should().Be(-85.50m); // debit (expense direction)
+    }
+
+    [Fact]
+    public async Task GetReportingRows_EffectiveCategory_RollsUpToParent()
+    {
+        var rows = await _svc.QueryService.GetReportingRowsAsync(FiltersForAllSeed());
+
+        // Loblaws is categorized as "Groceries" (child of "Food").
+        // EffectiveCategory should be the parent "Food", not "Groceries".
+        var loblaws = rows.Single(r => r.Date == new DateTime(2025, 1, 15));
+        loblaws.EffectiveCategory.Should().NotBeNull();
+        loblaws.EffectiveCategory!.Name.Should().Be("Food");
+    }
+
+    [Fact]
+    public async Task GetReportingRows_EffectiveCategory_IsSelf_WhenNoParent()
+    {
+        var rows = await _svc.QueryService.GetReportingRowsAsync(FiltersForAllSeed());
+
+        // Salary is categorized as top-level "Income" (no parent).
+        // EffectiveCategory should be "Income" itself.
+        var salary = rows.Single(r => r.Date == new DateTime(2025, 1, 20));
+        salary.EffectiveCategory.Should().NotBeNull();
+        salary.EffectiveCategory!.Name.Should().Be("Income");
+    }
+
+    [Fact]
+    public async Task GetReportingRows_EffectiveCategory_IsNull_WhenTransactionHasNoCategory()
+    {
+        var rows = await _svc.QueryService.GetReportingRowsAsync(FiltersForAllSeed());
+
+        // Netflix has Category = null. EffectiveCategory should be null,
+        // and both flags should be false (no category to check against).
+        var netflix = rows.Single(r => r.Date == new DateTime(2025, 2, 1));
+        netflix.EffectiveCategory.Should().BeNull();
+        netflix.IsIncome.Should().BeFalse();
+        netflix.IsTransfer.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetReportingRows_IsIncome_TrueForIncomeCategory()
+    {
+        var rows = await _svc.QueryService.GetReportingRowsAsync(FiltersForAllSeed());
+
+        var salary = rows.Single(r => r.Date == new DateTime(2025, 1, 20));
+        salary.IsIncome.Should().BeTrue();
+
+        // All other listable rows should have IsIncome == false
+        rows.Where(r => r.Date != new DateTime(2025, 1, 20))
+            .Should().OnlyContain(r => !r.IsIncome);
+    }
+
+    [Fact]
+    public async Task GetReportingRows_IsTransfer_TrueForTransferCategory_OnVisibleAccount()
+    {
+        // Seed's only Transfer-categorized transaction is on a hidden account
+        // (excluded by listability). Add a Transfer row on a visible account
+        // so we can exercise the IsTransfer flag.
+        using (var ctx = _svc.Factory.CreateDbContext())
+        {
+            var transfer = ctx.Categories.First(c => c.Name == "Transfer");
+            var chequing = ctx.Accounts.First(a => a.Name == "RBC Chequing");
+            ctx.Transactions.Add(new Transaction
+            {
+                Account = chequing,
+                Date = new DateTime(2025, 3, 1),
+                Description = "Visa Payment",
+                OriginalDescription = "VISA PAYMENT",
+                Amount = 200m,
+                IsDebit = true,
+                Category = transfer,
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        var rows = await _svc.QueryService.GetReportingRowsAsync(FiltersForAllSeed());
+
+        var visaPayment = rows.Single(r => r.Date == new DateTime(2025, 3, 1));
+        visaPayment.IsTransfer.Should().BeTrue();
+        visaPayment.IsIncome.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetReportingRows_RespectsDateFilter()
+    {
+        var filters = new TransactionFilters(
+            StartDate: new DateTime(2025, 2, 1),
+            EndDate: new DateTime(2025, 3, 1));
+
+        var rows = await _svc.QueryService.GetReportingRowsAsync(filters);
+
+        rows.Should().HaveCount(2);
+        rows.Should().OnlyContain(r => r.Date >= new DateTime(2025, 2, 1) && r.Date < new DateTime(2025, 3, 1));
+    }
 }
