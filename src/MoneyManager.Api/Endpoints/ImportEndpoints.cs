@@ -137,10 +137,12 @@ public static class ImportEndpoints
     /// <summary>
     /// Sniffs the first line of the uploaded file to detect the bank format.
     /// Mint files have "Original Description" + "Transaction Type" columns;
-    /// RBC files have "Account Type" + "CAD$"; CIBC files have no header row
-    /// (the line is purely numeric/data).
+    /// RBC files have "Account Type" + "CAD$"; CIBC files have no header row,
+    /// so any non-Mint/non-RBC file falls through to <see cref="CibcImporter"/>.
+    /// <see cref="CibcImporter.Validate"/> rejects genuinely non-CIBC files
+    /// with a clear "expected structure" error.
     /// </summary>
-    private static IBankImporter? DetectBankType(IFormFile file)
+    internal static IBankImporter? DetectBankType(IFormFile file)
     {
         using var stream = file.OpenReadStream();
         using var reader = new StreamReader(stream, leaveOpen: true);
@@ -157,11 +159,7 @@ public static class ImportEndpoints
             && firstLine.Contains("CAD$", StringComparison.OrdinalIgnoreCase))
             return new RbcImporter();
 
-        var hasTextHeader = firstLine.Any(char.IsLetter);
-        if (!hasTextHeader)
-            return new CibcImporter();
-
-        return null;
+        return new CibcImporter();
     }
 
     private static async Task ArchiveCsvAsync(IFormFile file, string bankType, IConfiguration configuration)
