@@ -9,6 +9,14 @@ import { CHART_PALETTE } from '@/lib/chartTheme'
 import type { CategoryChart } from '@/types'
 import type { EChartsOption } from 'echarts'
 
+/** Compact change-vs-previous-period label for a category. */
+function deltaLabel(amount: number, previous: number): string {
+  if (previous <= 0) return amount > 0 ? 'new' : ''
+  const pct = Math.round(((amount - previous) / previous) * 100)
+  if (pct === 0) return '0%'
+  return `${pct > 0 ? '▲' : '▼'}${Math.abs(pct)}%`
+}
+
 function DonutChart({
   title,
   data,
@@ -92,8 +100,14 @@ function DonutChart({
                   <span className="font-medium tabular-nums text-gray-900 dark:text-gray-100">
                     {formatCAD(item.amount, { fractionDigits: 0 })}
                   </span>
-                  <span className="w-14 text-right text-gray-500 dark:text-gray-400 tabular-nums">
-                    {item.percentage.toFixed(1)}%
+                  <span
+                    className="w-14 text-right text-xs text-gray-400 tabular-nums"
+                    title={`Previous period: ${formatCAD(item.previousAmount, { fractionDigits: 0 })}`}
+                  >
+                    {deltaLabel(item.amount, item.previousAmount)}
+                  </span>
+                  <span className="w-12 text-right text-gray-500 dark:text-gray-400 tabular-nums">
+                    {item.percentage.toFixed(0)}%
                   </span>
                 </li>
               ))}

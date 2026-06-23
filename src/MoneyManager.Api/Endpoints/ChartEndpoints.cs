@@ -66,17 +66,30 @@ public static class ChartEndpoints
         TransactionQueryService queryService)
     {
         var (startDate, endDate) = (ChartPeriod.Find(period ?? "12") ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
-        var filters = new TransactionFilters(StartDate: startDate, EndDate: endDate);
-        var rows = await queryService.GetReportingRowsAsync(filters);
 
-        // Filter to rows with an EffectiveCategory (drops uncategorized, which
-        // the pre-migration source filter also dropped) and exclude transfers.
-        // Group by EffectiveCategory; each group is one rolled-up category.
+        // The immediately-preceding window of the same length, for a per-category
+        // delta. Skipped for unbounded "a" (StartDate == MinValue), where there is
+        // no earlier window to compare against.
+        var hasPrevious = startDate > DateTime.MinValue.AddYears(1);
+        var prevStart = hasPrevious ? startDate - (endDate - startDate) : startDate;
+
+        var rows = await queryService.GetReportingRowsAsync(
+            new TransactionFilters(StartDate: prevStart, EndDate: endDate));
+
+        // Previous-window spend per category id (absolute).
+        var previousByCategory = rows
+            .Where(r => r.Date < startDate && !r.IsTransfer && r.EffectiveCategory != null)
+            .GroupBy(r => r.EffectiveCategory!.Id)
+            .ToDictionary(g => g.Key, g => Math.Abs(g.Sum(r => r.SignedAmount)));
+
+        // Current-window groups (one per rolled-up category), excluding transfers
+        // and uncategorized.
         var grouped = rows
-            .Where(r => !r.IsTransfer && r.EffectiveCategory != null)
+            .Where(r => r.Date >= startDate && !r.IsTransfer && r.EffectiveCategory != null)
             .GroupBy(r => r.EffectiveCategory!)
             .Select(g => new
             {
+                Id = g.Key.Id,
                 Name = g.Key.Name,
                 Icon = g.Key.Icon,
                 RawSignedAmount = g.Sum(r => r.SignedAmount),
@@ -95,6 +108,7 @@ public static class ChartEndpoints
             x.Name,
             x.Icon,
             Amount = Math.Abs(x.RawSignedAmount),
+            PreviousAmount = previousByCategory.GetValueOrDefault(x.Id, 0m),
             Percentage = totalIncome > 0 ? Math.Round((double)(Math.Abs(x.RawSignedAmount) / totalIncome * 100), 2) : 0
         }).OrderByDescending(x => x.Amount).ToList();
 
@@ -103,6 +117,7 @@ public static class ChartEndpoints
             x.Name,
             x.Icon,
             Amount = Math.Abs(x.RawSignedAmount),
+            PreviousAmount = previousByCategory.GetValueOrDefault(x.Id, 0m),
             Percentage = totalExpenses > 0 ? Math.Round((double)(Math.Abs(x.RawSignedAmount) / totalExpenses * 100), 2) : 0
         }).OrderByDescending(x => x.Amount).ToList();
 

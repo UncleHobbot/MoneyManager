@@ -44,6 +44,11 @@ export default function NetIncomePage() {
   // income - expenses, which double-negated and showed net far above income.)
   const expenseValues = data.map(d => d.expenses)
   const netValues = data.map(d => d.income + d.expenses)
+  // Trailing 3-month average of net, to read the trend through monthly noise.
+  const rollingNet = netValues.map((_, i) => {
+    const window = netValues.slice(Math.max(0, i - 2), i + 1)
+    return Math.round(window.reduce((a, b) => a + b, 0) / window.length)
+  })
 
   const axis = chartAxis(isDark)
 
@@ -73,6 +78,7 @@ export default function NetIncomePage() {
       { name: 'Income', type: 'bar', data: incomeValues, itemStyle: { color: CHART_COLORS.income } },
       { name: 'Expenses', type: 'bar', data: expenseValues, itemStyle: { color: CHART_COLORS.expense } },
       { name: 'Net Income', type: 'line', data: netValues, lineStyle: { width: 3, color: CHART_COLORS.net }, itemStyle: { color: CHART_COLORS.net } },
+      { name: 'Net (3-mo avg)', type: 'line', data: rollingNet, symbol: 'none', smooth: true, lineStyle: { width: 2, color: '#F59E0B', type: 'dashed' }, itemStyle: { color: '#F59E0B' } },
     ],
   }
 
@@ -115,11 +121,13 @@ export default function NetIncomePage() {
                 <th className="pb-2 font-medium text-right">Income</th>
                 <th className="pb-2 font-medium text-right">Expenses</th>
                 <th className="pb-2 font-medium text-right">Net</th>
+                <th className="pb-2 font-medium text-right">Savings rate</th>
               </tr>
             </thead>
             <tbody>
               {data.map(row => {
                 const net = row.income + row.expenses
+                const savingsRate = row.income > 0 ? Math.round((net / row.income) * 100) : null
                 return (
                   <tr
                     key={row.monthKey}
@@ -143,6 +151,17 @@ export default function NetIncomePage() {
                       }`}
                     >
                       {formatCAD(net, { fractionDigits: 0 })}
+                    </td>
+                    <td
+                      className={`py-2 text-right tabular-nums ${
+                        savingsRate == null
+                          ? 'text-gray-400'
+                          : savingsRate >= 0
+                            ? 'text-gray-700 dark:text-gray-300'
+                            : 'text-red-600 dark:text-red-400'
+                      }`}
+                    >
+                      {savingsRate == null ? '—' : `${savingsRate}%`}
                     </td>
                   </tr>
                 )

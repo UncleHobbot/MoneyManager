@@ -104,11 +104,20 @@ against the API's own `balance` field. Pre-existing in the ApexCharts version.
 
 **Phase 2 complete** (Budget entity/CRUD, management UI, Budget vs Actual, pace overlay).
 
-## Phase 3 — Existing-chart enhancements ("more informative") — PROPOSED, confirm
+## Phase 3 — Existing-chart enhancements ("more informative")
 
-- [ ] Net Income: savings-rate % + rolling-average line; period-over-period.
-- [ ] Spending-by-Category: per-category Δ vs previous period; drill on slice.
-- [ ] Cumulative: generalize beyond this-vs-last-month; add budget pace line (needs Phase 2).
+- [x] Net Income: trailing 3-month average line + a Savings-rate column in the
+  breakdown table. (Frontend-only.) Verified in browser.
+- [x] Spending-by-Category: per-category Δ vs the previous equal-length window
+  (`▲/▼ %` in the legend); drill on slice already shipped in Phase 0. Backend adds
+  `previousAmount` to `/api/charts/spending-by-category`. Verified in browser.
+- [x] Cumulative: budget pace line shipped in Phase 2.
+- [~] Cumulative "generalize beyond this-vs-last-month" — **trimmed** (needs a
+  backend rework of the cumulative endpoint to take a period; deferred as a separate
+  candidate. The pace line already added the main value here.)
+
+**Phase 3 complete** (Net Income trend/savings-rate, category period-over-period delta).
+Backend 216 tests, web 88 tests green.
 
 ## Notes / housekeeping spotted (out of scope, not yet decided)
 

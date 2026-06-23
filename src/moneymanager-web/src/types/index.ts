@@ -87,6 +87,8 @@ export interface CategoryChart {
   icon: string | null
   amount: number
   percentage: number
+  /** Spend in the immediately-preceding window of the same length (0 if none). */
+  previousAmount: number
 }
 
 export interface SpendingTrendMonth {
