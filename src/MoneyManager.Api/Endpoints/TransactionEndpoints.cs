@@ -200,6 +200,9 @@ public static class TransactionEndpoints
     private static (DateTime Start, DateTime End) ResolveDateRange(string period, DateTime? from, DateTime? to)
     {
         var (periodStart, periodEnd) = (ChartPeriod.Find(period) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
-        return (from ?? periodStart, to ?? periodEnd);
+        var start = from ?? periodStart;
+        var end = to ?? periodEnd;
+        // Tolerate an inverted explicit window rather than silently returning nothing.
+        return start <= end ? (start, end) : (end, start);
     }
 }

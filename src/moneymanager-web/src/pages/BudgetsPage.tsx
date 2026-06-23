@@ -155,7 +155,9 @@ export default function BudgetsPage() {
         <div className="divide-y divide-gray-100 dark:divide-gray-700">
           {topLevel.map(c => (
             <BudgetRow
-              key={c.id}
+              // Include the amount so the row remounts (re-seeding its input) after
+              // a save/clear, instead of keeping the previously typed value.
+              key={`${c.id}:${budgetByCategory.get(c.id)?.amount ?? 'none'}`}
               category={c}
               budget={budgetByCategory.get(c.id)}
               onSave={handleSave}

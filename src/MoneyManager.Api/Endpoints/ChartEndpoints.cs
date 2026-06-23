@@ -70,8 +70,19 @@ public static class ChartEndpoints
         // The immediately-preceding window of the same length, for a per-category
         // delta. Skipped for unbounded "a" (StartDate == MinValue), where there is
         // no earlier window to compare against.
+        // Align the previous window to the same calendar span. For month-aligned
+        // periods (this/last month, last 12 months, year variants) step back by
+        // whole months so "previous" is the prior calendar period, not a day-count
+        // window that straddles month boundaries. Day-based periods (weeks) fall
+        // back to an equal-length window. Skipped for unbounded "a" (MinValue).
         var hasPrevious = startDate > DateTime.MinValue.AddYears(1);
-        var prevStart = hasPrevious ? startDate - (endDate - startDate) : startDate;
+        DateTime prevStart;
+        if (!hasPrevious)
+            prevStart = startDate;
+        else if (startDate.Day == 1 && endDate.Day == 1)
+            prevStart = startDate.AddMonths(-((endDate.Year - startDate.Year) * 12 + (endDate.Month - startDate.Month)));
+        else
+            prevStart = startDate - (endDate - startDate);
 
         var rows = await queryService.GetReportingRowsAsync(
             new TransactionFilters(StartDate: prevStart, EndDate: endDate));

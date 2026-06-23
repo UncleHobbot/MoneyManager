@@ -21,14 +21,16 @@ public static class BudgetEndpoints
     internal static async Task<IResult> GetBudgets(BudgetService budgetService)
         => TypedResults.Ok(await budgetService.GetBudgetsAsync());
 
-    internal static async Task<IResult> SetBudget(BudgetRequest request, BudgetService budgetService)
+    internal static async Task<IResult> SetBudget(BudgetRequest? request, BudgetService budgetService)
     {
+        if (request is null)
+            return TypedResults.BadRequest("A request body is required.");
         if (request.Amount <= 0)
             return TypedResults.BadRequest("Amount must be greater than zero.");
 
         var dto = await budgetService.SetBudgetAsync(request.CategoryId, request.Amount);
         return dto is null
-            ? TypedResults.NotFound("Category not found.")
+            ? TypedResults.BadRequest("Category not found, or is not a top-level category.")
             : TypedResults.Ok(dto);
     }
 

@@ -85,7 +85,7 @@ if (dbMatch.Success)
         await ctx.Database.ExecuteSqlRawAsync("""
             CREATE TABLE IF NOT EXISTS Budgets (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                CategoryId INTEGER NULL,
+                CategoryId INTEGER NOT NULL,
                 Amount TEXT NOT NULL,
                 CONSTRAINT FK_Budgets_Categories_CategoryId FOREIGN KEY (CategoryId) REFERENCES Categories (Id)
             )

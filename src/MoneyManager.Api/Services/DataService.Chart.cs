@@ -203,25 +203,42 @@ public partial class DataService
         var nodes = new List<SankeyNode>();
         var links = new List<SankeyLink>();
 
-        foreach (var inc in incomeGroups)
+        // Sankey links reference nodes by name, so names must be unique. A user
+        // category sharing a synthetic name ("Other"/"Savings"/"Deficit"/the hub)
+        // would otherwise collide; suffix duplicates to keep them distinct.
+        var usedNames = new HashSet<string>();
+        string Uniq(string name)
         {
-            nodes.Add(new SankeyNode(inc.Name, inc.Id, "income"));
-            links.Add(new SankeyLink(inc.Name, Hub, inc.Amount));
+            var candidate = name;
+            while (!usedNames.Add(candidate))
+                candidate += " ";
+            return candidate;
         }
 
-        nodes.Add(new SankeyNode(Hub, null, "hub"));
+        var hubName = Uniq(Hub);
+
+        foreach (var inc in incomeGroups)
+        {
+            var name = Uniq(inc.Name);
+            nodes.Add(new SankeyNode(name, inc.Id, "income"));
+            links.Add(new SankeyLink(name, hubName, inc.Amount));
+        }
+
+        nodes.Add(new SankeyNode(hubName, null, "hub"));
 
         foreach (var ex in expenseGroups.Take(topExpenses))
         {
-            nodes.Add(new SankeyNode(ex.Name, ex.Id, ex.Kind));
-            links.Add(new SankeyLink(Hub, ex.Name, ex.Amount));
+            var name = Uniq(ex.Name);
+            nodes.Add(new SankeyNode(name, ex.Id, ex.Kind));
+            links.Add(new SankeyLink(hubName, name, ex.Amount));
         }
 
         var rest = expenseGroups.Skip(topExpenses).ToList();
         if (rest.Count > 0)
         {
-            nodes.Add(new SankeyNode("Other", null, "other"));
-            links.Add(new SankeyLink(Hub, "Other", rest.Sum(x => x.Amount)));
+            var name = Uniq("Other");
+            nodes.Add(new SankeyNode(name, null, "other"));
+            links.Add(new SankeyLink(hubName, name, rest.Sum(x => x.Amount)));
         }
 
         if (totalIncome >= totalExpense)
@@ -229,14 +246,16 @@ public partial class DataService
             var surplus = totalIncome - totalExpense;
             if (surplus > 0)
             {
-                nodes.Add(new SankeyNode("Savings", null, "savings"));
-                links.Add(new SankeyLink(Hub, "Savings", surplus));
+                var name = Uniq("Savings");
+                nodes.Add(new SankeyNode(name, null, "savings"));
+                links.Add(new SankeyLink(hubName, name, surplus));
             }
         }
         else
         {
-            nodes.Add(new SankeyNode("Deficit", null, "deficit"));
-            links.Add(new SankeyLink("Deficit", Hub, totalExpense - totalIncome));
+            var name = Uniq("Deficit");
+            nodes.Add(new SankeyNode(name, null, "deficit"));
+            links.Add(new SankeyLink(name, hubName, totalExpense - totalIncome));
         }
 
         return new CashFlowChart(nodes, links);
@@ -250,7 +269,7 @@ public partial class DataService
     /// </summary>
     public async Task<List<BudgetVsActual>> ChartBudgetVsActualAsync()
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         var budgets = await ctx.Budgets.Include(b => b.Category).ToListAsync();
         if (budgets.Count == 0)
             return [];

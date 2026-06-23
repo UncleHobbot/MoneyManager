@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, type ReactNode } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   ChevronLeft,
@@ -152,9 +152,12 @@ export default function TransactionsPage() {
   const to = searchParams.get('to') ?? undefined
 
   // The search box stays local for responsiveness; its debounced value drives the
-  // query and is mirrored into the URL for shareability.
+  // query and is mirrored into the URL for shareability. `externalUrlChange` marks
+  // a URL change that came from outside the box (back/forward, a chart drill-in) so
+  // the box re-syncs and the mirror doesn't echo it back (which would fight Back).
   const [searchInput, setSearchInput] = useState(urlSearch)
   const search = useDebouncedValue(searchInput.trim(), 300)
+  const externalUrlChange = useRef(false)
 
   const [editRow, setEditRow] = useState<TransactionDto | null>(null)
   const [editDesc, setEditDesc] = useState('')
@@ -187,8 +190,21 @@ export default function TransactionsPage() {
     [setSearchParams],
   )
 
-  // Mirror the debounced search box into the URL (without flooding history).
+  // Re-sync the box when the URL search changes from outside (back/forward, drill-in).
+  // Syncing an external source (the browser URL) into local state is a valid effect.
   useEffect(() => {
+    externalUrlChange.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSearchInput((cur) => (cur.trim() === urlSearch ? cur : urlSearch))
+  }, [urlSearch])
+
+  // Mirror the debounced box into the URL — but skip the echo from an external sync,
+  // so pressing Back doesn't immediately re-push the previous search.
+  useEffect(() => {
+    if (externalUrlChange.current) {
+      externalUrlChange.current = false
+      return
+    }
     if (search !== urlSearch) updateParams({ search: search || undefined })
   }, [search, urlSearch, updateParams])
 
@@ -228,6 +244,11 @@ export default function TransactionsPage() {
     (p: number) => updateParams({ page: p > 1 ? p : undefined }, { keepPage: true }),
     [updateParams],
   )
+
+  // Correct an out-of-range page from a stale deep link once the total is known.
+  useEffect(() => {
+    if (txPage && page > totalPages) goToPage(totalPages)
+  }, [txPage, page, totalPages, goToPage])
 
   // Picking a period clears any drill-in date window so the two never conflict.
   const handlePeriodChange = useCallback(

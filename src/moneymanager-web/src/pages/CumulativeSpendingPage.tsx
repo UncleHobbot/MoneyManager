@@ -93,7 +93,11 @@ export default function CumulativeSpendingPage() {
                 showSymbol: false,
                 lineStyle: { width: 2, color: '#F59E0B', type: 'dashed' as const },
                 itemStyle: { color: '#F59E0B' },
-                data: points.map((d) => Math.round((totalBudget * d.dayNumber) / daysInMonth)),
+                // Cap at the total: the line is flat once the month is fully spent,
+                // so days beyond the current month's length don't overshoot.
+                data: points.map((d) =>
+                  Math.round(Math.min(totalBudget, (totalBudget * d.dayNumber) / daysInMonth)),
+                ),
               },
             ]
           : []),
