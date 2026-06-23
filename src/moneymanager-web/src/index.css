@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+/* Drive `dark:` variants from a `.dark` class on <html> (toggled by ThemeProvider)
+   instead of the default `prefers-color-scheme` media query, so the in-app theme
+   toggle actually switches the page chrome. */
+@custom-variant dark (&:where(.dark, .dark *));

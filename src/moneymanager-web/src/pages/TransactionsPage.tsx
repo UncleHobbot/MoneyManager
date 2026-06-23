@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, type ReactNode } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
@@ -50,6 +51,32 @@ function formatDate(iso: string): string {
     day: 'numeric',
     year: 'numeric',
   })
+}
+
+/** Parse a numeric query param, returning undefined when absent or invalid. */
+function numParam(value: string | null): number | undefined {
+  if (!value) return undefined
+  const n = Number(value)
+  return Number.isFinite(n) ? n : undefined
+}
+
+/** Parse a `yyyy-MM-dd` string as a local date (avoids the UTC shift of `new Date(str)`). */
+function parseLocalDate(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number)
+  return new Date(y, (m ?? 1) - 1, d ?? 1)
+}
+
+/** Human-readable label for an explicit [from, to) date window (to is exclusive). */
+function formatDateRange(from?: string, to?: string): string {
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' }
+  const start = from ? parseLocalDate(from).toLocaleDateString('en-US', opts) : '…'
+  let end = '…'
+  if (to) {
+    const d = parseLocalDate(to)
+    d.setDate(d.getDate() - 1) // exclusive end -> inclusive for display
+    end = d.toLocaleDateString('en-US', opts)
+  }
+  return `${start} – ${end}`
 }
 
 /** A cell value that filters the grid when clicked. */
@@ -106,15 +133,32 @@ function ClearableHeader({
 }
 
 export default function TransactionsPage() {
-  const [period, setPeriod] = useState('12')
-  const [accountFilter, setAccountFilter] = useState<number | undefined>()
-  const [categoryFilter, setCategoryFilter] = useState<number | undefined>()
-  const [searchInput, setSearchInput] = useState('')
-  const [uncategorized, setUncategorized] = useState(false)
-  const [sortBy, setSortBy] = useState('date')
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(50)
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Filter / sort / paging state lives in the URL so any view is deep-linkable
+  // and the back button works (ADR-0005). Charts drill in by linking to this page
+  // with these same query params.
+  const period = searchParams.get('period') ?? '12'
+  const accountFilter = numParam(searchParams.get('accountId'))
+  const categoryFilter = numParam(searchParams.get('categoryId'))
+  const urlSearch = searchParams.get('search') ?? ''
+  const uncategorized = searchParams.get('uncategorized') === '1'
+  const sortBy = searchParams.get('sortBy') ?? 'date'
+  const sortDir: SortDir = searchParams.get('sortDir') === 'asc' ? 'asc' : 'desc'
+  const page = numParam(searchParams.get('page')) ?? 1
+  const pageSize = numParam(searchParams.get('pageSize')) ?? 50
+  // Explicit date window from a chart drill-in (overrides `period` server-side).
+  const from = searchParams.get('from') ?? undefined
+  const to = searchParams.get('to') ?? undefined
+
+  // The search box stays local for responsiveness; its debounced value drives the
+  // query and is mirrored into the URL for shareability. `externalUrlChange` marks
+  // a URL change that came from outside the box (back/forward, a chart drill-in) so
+  // the box re-syncs and the mirror doesn't echo it back (which would fight Back).
+  const [searchInput, setSearchInput] = useState(urlSearch)
+  const search = useDebouncedValue(searchInput.trim(), 300)
+  const externalUrlChange = useRef(false)
+
   const [editRow, setEditRow] = useState<TransactionDto | null>(null)
   const [editDesc, setEditDesc] = useState('')
   const [editCatId, setEditCatId] = useState<number | undefined>()
@@ -122,7 +166,47 @@ export default function TransactionsPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
 
-  const search = useDebouncedValue(searchInput.trim(), 300)
+  // Merge updates into the URL query string. Empty/undefined/false values drop the
+  // key. Any change that narrows or reorders results returns to the first page
+  // (unless keepPage is set, e.g. the pager itself).
+  const updateParams = useCallback(
+    (
+      updates: Record<string, string | number | boolean | undefined>,
+      opts?: { keepPage?: boolean },
+    ) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          for (const [key, value] of Object.entries(updates)) {
+            if (value === undefined || value === '' || value === false) next.delete(key)
+            else next.set(key, value === true ? '1' : String(value))
+          }
+          if (!opts?.keepPage) next.delete('page')
+          return next
+        },
+        { replace: true },
+      )
+    },
+    [setSearchParams],
+  )
+
+  // Re-sync the box when the URL search changes from outside (back/forward, drill-in).
+  // Syncing an external source (the browser URL) into local state is a valid effect.
+  useEffect(() => {
+    externalUrlChange.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSearchInput((cur) => (cur.trim() === urlSearch ? cur : urlSearch))
+  }, [urlSearch])
+
+  // Mirror the debounced box into the URL — but skip the echo from an external sync,
+  // so pressing Back doesn't immediately re-push the previous search.
+  useEffect(() => {
+    if (externalUrlChange.current) {
+      externalUrlChange.current = false
+      return
+    }
+    if (search !== urlSearch) updateParams({ search: search || undefined })
+  }, [search, urlSearch, updateParams])
 
   const filters: TransactionFilters = useMemo(
     () => ({
@@ -133,8 +217,10 @@ export default function TransactionsPage() {
       uncategorized,
       sortBy,
       sortDir,
+      from,
+      to,
     }),
-    [period, accountFilter, categoryFilter, search, uncategorized, sortBy, sortDir],
+    [period, accountFilter, categoryFilter, search, uncategorized, sortBy, sortDir, from, to],
   )
 
   const { data: periods } = useChartPeriods()
@@ -154,78 +240,72 @@ export default function TransactionsPage() {
     searchInput.trim() !== '' ||
     uncategorized
 
-  // Any change that narrows or reorders results returns to the first page.
-  const handlePeriodChange = useCallback((v: string) => {
-    setPeriod(v)
-    setPage(1)
-  }, [])
-  const handleAccountChange = useCallback((v: string) => {
-    setAccountFilter(v ? Number(v) : undefined)
-    setPage(1)
-  }, [])
-  const handleCategoryChange = useCallback((v: string) => {
-    setCategoryFilter(v ? Number(v) : undefined)
-    setPage(1)
-  }, [])
-  const handleSearchChange = useCallback((v: string) => {
-    setSearchInput(v)
-    setPage(1)
-  }, [])
-  const handleUncategorizedChange = useCallback((checked: boolean) => {
-    setUncategorized(checked)
-    setPage(1)
-  }, [])
-  const handlePageSizeChange = useCallback((v: string) => {
-    setPageSize(Number(v))
-    setPage(1)
-  }, [])
+  const goToPage = useCallback(
+    (p: number) => updateParams({ page: p > 1 ? p : undefined }, { keepPage: true }),
+    [updateParams],
+  )
+
+  // Correct an out-of-range page from a stale deep link once the total is known.
+  useEffect(() => {
+    if (txPage && page > totalPages) goToPage(totalPages)
+  }, [txPage, page, totalPages, goToPage])
+
+  // Picking a period clears any drill-in date window so the two never conflict.
+  const handlePeriodChange = useCallback(
+    (v: string) => updateParams({ period: v, from: undefined, to: undefined }),
+    [updateParams],
+  )
+  const clearDateRange = useCallback(() => updateParams({ from: undefined, to: undefined }), [updateParams])
+  const handleAccountChange = useCallback(
+    (v: string) => updateParams({ accountId: v || undefined }),
+    [updateParams],
+  )
+  const handleCategoryChange = useCallback(
+    (v: string) => updateParams({ categoryId: v || undefined }),
+    [updateParams],
+  )
+  const handleSearchChange = useCallback((v: string) => setSearchInput(v), [])
+  const handleUncategorizedChange = useCallback(
+    (checked: boolean) => updateParams({ uncategorized: checked, categoryId: undefined }),
+    [updateParams],
+  )
+  const handlePageSizeChange = useCallback(
+    (v: string) => updateParams({ pageSize: v }),
+    [updateParams],
+  )
 
   const clearFilters = useCallback(() => {
-    setAccountFilter(undefined)
-    setCategoryFilter(undefined)
     setSearchInput('')
-    setUncategorized(false)
-    setPage(1)
-  }, [])
+    updateParams({
+      accountId: undefined,
+      categoryId: undefined,
+      search: undefined,
+      uncategorized: undefined,
+    })
+  }, [updateParams])
 
-  const handleSortChange = useCallback((key: string, dir: SortDir) => {
-    setSortBy(key)
-    setSortDir(dir)
-    setPage(1)
-  }, [])
+  const handleSortChange = useCallback(
+    (key: string, dir: SortDir) => updateParams({ sortBy: key, sortDir: dir }),
+    [updateParams],
+  )
 
   // Click-a-cell-to-filter handlers (kept in sync with the top filter bar).
-  const filterByAccount = useCallback((id: number) => {
-    setAccountFilter(id)
-    setPage(1)
-  }, [])
-  const clearAccountFilter = useCallback(() => {
-    setAccountFilter(undefined)
-    setPage(1)
-  }, [])
-  const filterByCategory = useCallback((id: number) => {
-    setCategoryFilter(id)
-    setUncategorized(false)
-    setPage(1)
-  }, [])
-  const filterUncategorized = useCallback(() => {
-    setUncategorized(true)
-    setCategoryFilter(undefined)
-    setPage(1)
-  }, [])
-  const clearCategoryFilter = useCallback(() => {
-    setCategoryFilter(undefined)
-    setUncategorized(false)
-    setPage(1)
-  }, [])
-  const filterByDescription = useCallback((text: string) => {
-    setSearchInput(text)
-    setPage(1)
-  }, [])
-  const clearSearchFilter = useCallback(() => {
-    setSearchInput('')
-    setPage(1)
-  }, [])
+  const filterByAccount = useCallback((id: number) => updateParams({ accountId: id }), [updateParams])
+  const clearAccountFilter = useCallback(() => updateParams({ accountId: undefined }), [updateParams])
+  const filterByCategory = useCallback(
+    (id: number) => updateParams({ categoryId: id, uncategorized: undefined }),
+    [updateParams],
+  )
+  const filterUncategorized = useCallback(
+    () => updateParams({ uncategorized: true, categoryId: undefined }),
+    [updateParams],
+  )
+  const clearCategoryFilter = useCallback(
+    () => updateParams({ categoryId: undefined, uncategorized: undefined }),
+    [updateParams],
+  )
+  const filterByDescription = useCallback((text: string) => setSearchInput(text), [])
+  const clearSearchFilter = useCallback(() => setSearchInput(''), [])
 
   const openEdit = useCallback((row: TransactionDto) => {
     setEditRow(row)
@@ -492,6 +572,20 @@ export default function TransactionsPage() {
           />
           Uncategorized only
         </label>
+        {(from || to) && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+            {formatDateRange(from, to)}
+            <button
+              type="button"
+              onClick={clearDateRange}
+              title="Clear date range"
+              aria-label="Clear date range"
+              className="rounded-full p-0.5 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:hover:bg-blue-800/60"
+            >
+              <X size={12} />
+            </button>
+          </span>
+        )}
         {isFetching && !isLoading && (
           <span className="inline-flex items-center gap-1.5 text-gray-400">
             <Spinner size="sm" /> Updating…
@@ -544,7 +638,7 @@ export default function TransactionsPage() {
             variant="ghost"
             size="sm"
             disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
+            onClick={() => goToPage(page - 1)}
             icon={<ChevronLeft size={16} />}
           >
             Prev
@@ -556,7 +650,7 @@ export default function TransactionsPage() {
             variant="ghost"
             size="sm"
             disabled={page >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => goToPage(page + 1)}
             icon={<ChevronRight size={16} />}
           >
             Next

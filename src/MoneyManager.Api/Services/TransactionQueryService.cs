@@ -97,7 +97,8 @@ public class TransactionQueryService
                         ? null
                         : new ReportingCategory(effective.Id, effective.Name, effective.Icon),
                     IsIncome: effective?.Name == "Income",
-                    IsTransfer: effective?.Name == "Transfer");
+                    IsTransfer: effective?.Name == "Transfer",
+                    Description: t.Description);
             })
             .ToList();
     }
@@ -126,8 +127,13 @@ public class TransactionQueryService
         if (filters.AccountId.HasValue)
             query = query.Where(t => t.Account.Id == filters.AccountId.Value);
 
+        // Category filter matches the whole subtree: the category itself and its
+        // direct children. This makes a drill-down from a parent-rolled-up chart
+        // slice reconcile with the slice total (see ADR-0005 / chart drill-down).
         if (filters.CategoryId.HasValue)
-            query = query.Where(t => t.Category != null && t.Category.Id == filters.CategoryId.Value);
+            query = query.Where(t => t.Category != null &&
+                (t.Category.Id == filters.CategoryId.Value ||
+                 (t.Category.Parent != null && t.Category.Parent.Id == filters.CategoryId.Value)));
 
         // "Uncategorized" matches both a missing category and the dedicated
         // "Uncategorized" category. See CONTEXT.md ("Uncategorized").

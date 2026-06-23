@@ -1,12 +1,22 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Chart from 'react-apexcharts'
 import { useNetIncome, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
-import { Select, Spinner, Card } from '@/components/ui'
+import { Select, Spinner, Card, ChartCard, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { CHART_COLORS, chartAxis } from '@/lib/chartTheme'
 import type { BalanceChart } from '@/types'
-import type { ApexOptions } from 'apexcharts'
+import type { EChartsOption } from 'echarts'
+
+/** Build a Transactions drill-in URL for the calendar month of `firstDateISO`. */
+function monthTransactionsUrl(firstDateISO: string): string {
+  const d = new Date(firstDateISO)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const from = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  const to = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-01`
+  return `/transactions?from=${from}&to=${to}`
+}
 
 export default function NetIncomePage() {
   const [period, setPeriod] = useState('12')
@@ -17,6 +27,69 @@ export default function NetIncomePage() {
   const { data: periods, isLoading: periodsLoading } = useChartPeriods()
   const { data: chartData, isLoading: dataLoading } = useNetIncome(period)
 
+  const data: BalanceChart[] = useMemo(() => chartData ?? [], [chartData])
+
+  const option = useMemo<EChartsOption>(() => {
+    const months = data.map(d => d.month)
+    const incomeValues = data.map(d => d.income)
+    // Expenses arrive as a signed sum (debits negative), so the expense bars plot
+    // downward and net is income + expenses. (Pre-migration code used
+    // income - expenses, which double-negated and showed net far above income.)
+    const expenseValues = data.map(d => d.expenses)
+    const netValues = data.map(d => d.income + d.expenses)
+    // Trailing 3-month average of net, to read the trend through monthly noise.
+    const rollingNet = netValues.map((_, i) => {
+      const window = netValues.slice(Math.max(0, i - 2), i + 1)
+      return Math.round(window.reduce((a, b) => a + b, 0) / window.length)
+    })
+    const axis = chartAxis(isDark)
+
+    return {
+      grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
+      legend: { top: 0 },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        valueFormatter: (val) => formatCAD(Number(val), { fractionDigits: 0 }),
+      },
+      xAxis: {
+        type: 'category',
+        data: months,
+        axisLabel: { color: axis.label },
+        axisLine: { lineStyle: { color: axis.line } },
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: axis.label,
+          formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
+        },
+        splitLine: { lineStyle: { color: axis.split } },
+      },
+      series: [
+        { name: 'Income', type: 'bar', data: incomeValues, itemStyle: { color: CHART_COLORS.income } },
+        { name: 'Expenses', type: 'bar', data: expenseValues, itemStyle: { color: CHART_COLORS.expense } },
+        { name: 'Net Income', type: 'line', data: netValues, lineStyle: { width: 3, color: CHART_COLORS.net }, itemStyle: { color: CHART_COLORS.net } },
+        { name: 'Net (3-mo avg)', type: 'line', data: rollingNet, symbol: 'none', smooth: true, lineStyle: { width: 2, color: '#F59E0B', type: 'dashed' }, itemStyle: { color: '#F59E0B' } },
+      ],
+    }
+  }, [data, isDark])
+
+  const onEvents = useMemo(
+    () => ({
+      click: (params: { dataIndex: number }) => {
+        const item = data[params.dataIndex]
+        if (item) navigate(monthTransactionsUrl(item.firstDate))
+      },
+    }),
+    [data, navigate],
+  )
+
+  const periodOptions = useMemo(
+    () => (periods ?? []).map(p => ({ label: p.label, value: p.code })),
+    [periods],
+  )
+
   if (periodsLoading || dataLoading) {
     return (
       <div className="flex items-center justify-center p-16">
@@ -24,70 +97,6 @@ export default function NetIncomePage() {
       </div>
     )
   }
-
-  const data: BalanceChart[] = chartData ?? []
-
-  const months = data.map(d => d.month)
-  const incomeValues = data.map(d => d.income)
-  const expenseValues = data.map(d => d.expenses)
-  const netValues = data.map(d => d.income - d.expenses)
-
-  const options: ApexOptions = {
-    chart: {
-      type: 'bar',
-      background: 'transparent',
-      toolbar: { show: false },
-      events: {
-        dataPointSelection: (_e, _chart, config) => {
-          const idx = config?.dataPointIndex as number
-          const item = data[idx]
-          if (item) navigate(`/charts/month/${item.monthKey}`)
-        },
-      },
-    },
-    theme: { mode: isDark ? 'dark' : 'light' },
-    plotOptions: {
-      bar: { columnWidth: '60%' },
-    },
-    stroke: {
-      width: [0, 0, 3],
-    },
-    colors: ['#22c55e', '#ef4444', '#3b82f6'],
-    xaxis: {
-      categories: months,
-      labels: {
-        style: { colors: isDark ? '#d1d5db' : '#374151' },
-      },
-    },
-    yaxis: {
-      labels: {
-        formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
-        style: { colors: isDark ? '#d1d5db' : '#374151' },
-      },
-    },
-    tooltip: {
-      theme: isDark ? 'dark' : 'light',
-      y: { formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }) },
-    },
-    legend: {
-      labels: { colors: isDark ? '#d1d5db' : '#374151' },
-    },
-    dataLabels: { enabled: false },
-    grid: {
-      borderColor: isDark ? '#374151' : '#e5e7eb',
-    },
-  }
-
-  const series = [
-    { name: 'Income', type: 'bar' as const, data: incomeValues },
-    { name: 'Expenses', type: 'bar' as const, data: expenseValues },
-    { name: 'Net Income', type: 'line' as const, data: netValues },
-  ]
-
-  const periodOptions = (periods ?? []).map(p => ({
-    label: p.label,
-    value: p.code,
-  }))
 
   return (
     <div className="space-y-6 p-6">
@@ -103,14 +112,9 @@ export default function NetIncomePage() {
         />
       </div>
 
-      <Card>
-        <Chart
-          options={options}
-          series={series}
-          type="line"
-          height={400}
-        />
-      </Card>
+      <ChartCard isEmpty={data.length === 0} height={400}>
+        <EChart option={option} height={400} onEvents={onEvents} />
+      </ChartCard>
 
       <Card title="Monthly Breakdown">
         <div className="overflow-x-auto">
@@ -121,16 +125,18 @@ export default function NetIncomePage() {
                 <th className="pb-2 font-medium text-right">Income</th>
                 <th className="pb-2 font-medium text-right">Expenses</th>
                 <th className="pb-2 font-medium text-right">Net</th>
+                <th className="pb-2 font-medium text-right">Savings rate</th>
               </tr>
             </thead>
             <tbody>
               {data.map(row => {
-                const net = row.income - row.expenses
+                const net = row.income + row.expenses
+                const savingsRate = row.income > 0 ? Math.round((net / row.income) * 100) : null
                 return (
                   <tr
                     key={row.monthKey}
                     className="border-b border-gray-100 dark:border-gray-700/50 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
-                    onClick={() => navigate(`/charts/month/${row.monthKey}`)}
+                    onClick={() => navigate(monthTransactionsUrl(row.firstDate))}
                   >
                     <td className="py-2 text-gray-900 dark:text-gray-100">
                       {row.month}
@@ -149,6 +155,17 @@ export default function NetIncomePage() {
                       }`}
                     >
                       {formatCAD(net, { fractionDigits: 0 })}
+                    </td>
+                    <td
+                      className={`py-2 text-right tabular-nums ${
+                        savingsRate == null
+                          ? 'text-gray-400'
+                          : savingsRate >= 0
+                            ? 'text-gray-700 dark:text-gray-300'
+                            : 'text-red-600 dark:text-red-400'
+                      }`}
+                    >
+                      {savingsRate == null ? '—' : `${savingsRate}%`}
                     </td>
                   </tr>
                 )

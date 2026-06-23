@@ -1,14 +1,14 @@
 import { type ReactNode, type UIEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Chart from 'react-apexcharts'
-import type { ApexOptions } from 'apexcharts'
+import type { EChartsOption } from 'echarts'
 import { useInfiniteTransactions, useUpdateTransaction } from '@/hooks/useTransactions'
 import { useNetIncome, useCumulativeSpending, useSpendingByCategory } from '@/hooks/useCharts'
 import { useCategories } from '@/hooks/useCategories'
 import { useCreateBackup } from '@/hooks/useSystem'
-import { Card, Spinner, Button, Badge, CategoryIcon, Money } from '@/components/ui'
+import { Card, Spinner, Button, Badge, CategoryIcon, Money, EChart } from '@/components/ui'
 import { EditTransactionDialog } from '@/components/EditTransactionDialog'
 import { formatCAD } from '@/lib/format'
+import { CHART_COLORS, CHART_PALETTE } from '@/lib/chartTheme'
 import type { TransactionDto } from '@/types'
 import {
   Upload,
@@ -349,25 +349,29 @@ function RecentTransactionsCard() {
 function CumulativeSpendingCard() {
   const { data, isLoading } = useCumulativeSpending()
 
-  const options: ApexOptions = {
-    chart: { type: 'area', sparkline: { enabled: true }, toolbar: { show: false } },
-    stroke: { curve: 'smooth', width: 2 },
-    fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
-    colors: ['#3b82f6', '#f97316'],
+  const option: EChartsOption = {
+    grid: { left: 2, right: 2, top: 6, bottom: 2 },
     tooltip: {
-      theme: 'dark',
-      y: { formatter: (v: number) => formatCAD(v) },
+      trigger: 'axis',
+      valueFormatter: (v) => (v == null ? '—' : formatCAD(Number(v))),
     },
-    xaxis: { labels: { show: false } },
-    yaxis: { labels: { show: false } },
+    xAxis: { type: 'category', show: false, data: data?.map(d => d.dayNumber) ?? [] },
+    yAxis: { type: 'value', show: false },
+    series: [
+      {
+        name: 'This Month', type: 'line', smooth: true, showSymbol: false,
+        lineStyle: { width: 2, color: '#3B82F6' }, itemStyle: { color: '#3B82F6' },
+        areaStyle: { opacity: 0.18 },
+        data: data?.map(d => (Number.isFinite(d.thisMonthExpenses) ? d.thisMonthExpenses : null)) ?? [],
+      },
+      {
+        name: 'Last Month', type: 'line', smooth: true, showSymbol: false,
+        lineStyle: { width: 2, color: '#F97316' }, itemStyle: { color: '#F97316' },
+        areaStyle: { opacity: 0.1 },
+        data: data?.map(d => (Number.isFinite(d.lastMonthExpenses) ? d.lastMonthExpenses : null)) ?? [],
+      },
+    ],
   }
-
-  const series = data
-    ? [
-        { name: 'This Month', data: data.map(d => d.thisMonthExpenses) },
-        { name: 'Last Month', data: data.map(d => d.lastMonthExpenses) },
-      ]
-    : []
 
   return (
     <Card className="h-full">
@@ -379,7 +383,7 @@ function CumulativeSpendingCard() {
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner size="sm" /></div>
       ) : (
-        <Chart options={options} series={series} type="area" height={200} />
+        <EChart option={option} height={200} />
       )}
     </Card>
   )
@@ -388,24 +392,19 @@ function CumulativeSpendingCard() {
 function NetIncomeCard() {
   const { data, isLoading } = useNetIncome('12')
 
-  const options: ApexOptions = {
-    chart: { type: 'bar', sparkline: { enabled: true }, toolbar: { show: false } },
-    plotOptions: { bar: { columnWidth: '60%' } },
-    colors: ['#22c55e', '#ef4444'],
+  const option: EChartsOption = {
+    grid: { left: 2, right: 2, top: 6, bottom: 2 },
     tooltip: {
-      theme: 'dark',
-      y: { formatter: (v: number) => formatCAD(v) },
+      trigger: 'axis',
+      valueFormatter: (v) => formatCAD(Number(v)),
     },
-    xaxis: { labels: { show: false } },
-    yaxis: { labels: { show: false } },
+    xAxis: { type: 'category', show: false, data: data?.map(d => d.month) ?? [] },
+    yAxis: { type: 'value', show: false },
+    series: [
+      { name: 'Income', type: 'bar', itemStyle: { color: CHART_COLORS.income }, data: data?.map(d => d.income) ?? [] },
+      { name: 'Expenses', type: 'bar', itemStyle: { color: CHART_COLORS.expense }, data: data?.map(d => d.expenses) ?? [] },
+    ],
   }
-
-  const series = data
-    ? [
-        { name: 'Income', data: data.map(d => d.income) },
-        { name: 'Expenses', data: data.map(d => d.expenses) },
-      ]
-    : []
 
   return (
     <Card className="h-full">
@@ -413,7 +412,7 @@ function NetIncomeCard() {
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner size="sm" /></div>
       ) : (
-        <Chart options={options} series={series} type="bar" height={200} />
+        <EChart option={option} height={200} />
       )}
     </Card>
   )
@@ -422,21 +421,26 @@ function NetIncomeCard() {
 function SpendingByCategoryCard() {
   const { data, isLoading } = useSpendingByCategory('12')
 
-  const labels = data?.expenses?.map(d => d.name) ?? []
-  const series = data?.expenses?.map(d => d.amount) ?? []
+  const expenses = data?.expenses ?? []
 
-  const options: ApexOptions = {
-    chart: { type: 'donut', sparkline: { enabled: true } },
-    labels,
-    legend: { show: false },
-    dataLabels: { enabled: false },
+  const option: EChartsOption = {
     tooltip: {
-      theme: 'dark',
-      y: { formatter: (v: number) => formatCAD(v) },
+      trigger: 'item',
+      valueFormatter: (v) => formatCAD(Number(v)),
     },
-    plotOptions: {
-      pie: { donut: { size: '65%' } },
-    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['62%', '90%'],
+        label: { show: false },
+        labelLine: { show: false },
+        data: expenses.map((d, i) => ({
+          value: d.amount,
+          name: d.name,
+          itemStyle: { color: CHART_PALETTE[i % CHART_PALETTE.length] },
+        })),
+      },
+    ],
   }
 
   return (
@@ -448,10 +452,10 @@ function SpendingByCategoryCard() {
       />
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner size="sm" /></div>
-      ) : !series.length ? (
+      ) : !expenses.length ? (
         <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">No data</p>
       ) : (
-        <Chart options={options} series={series} type="donut" height={200} />
+        <EChart option={option} height={200} />
       )}
     </Card>
   )

@@ -1,80 +1,71 @@
-import { useState, useMemo } from 'react'
-import Chart from 'react-apexcharts'
+import { useState, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useSpendingByCategory, useChartPeriods } from '@/hooks/useCharts'
-import { Select, Spinner, Card, CategoryIcon } from '@/components/ui'
+import { useCategories } from '@/hooks/useCategories'
+import { useTheme } from '@/components/layout/useTheme'
+import { Select, Spinner, Card, CategoryIcon, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { CHART_PALETTE } from '@/lib/chartTheme'
 import type { CategoryChart } from '@/types'
-import type { ApexOptions } from 'apexcharts'
+import type { EChartsOption } from 'echarts'
 
-const PALETTE = [
-  '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
-  '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#84CC16',
-  '#06B6D4', '#D946EF', '#F43F5E', '#22D3EE', '#A3E635',
-  '#FB923C', '#818CF8', '#2DD4BF', '#FBBF24', '#C084FC',
-]
+/** Compact change-vs-previous-period label for a category. */
+function deltaLabel(amount: number, previous: number): string {
+  if (previous <= 0) return amount > 0 ? 'new' : ''
+  const pct = Math.round(((amount - previous) / previous) * 100)
+  if (pct === 0) return '0%'
+  return `${pct > 0 ? '▲' : '▼'}${Math.abs(pct)}%`
+}
 
 function DonutChart({
   title,
   data,
-  highlighted,
-  onSliceClick,
+  onDrill,
 }: {
   title: string
   data: CategoryChart[]
-  highlighted: number | null
-  onSliceClick: (index: number | null) => void
+  onDrill: (name: string) => void
 }) {
-  const labels = data.map(d => d.name)
-  const series = data.map(d => d.amount)
-  const total = series.reduce((a, b) => a + b, 0)
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
+  const total = data.reduce((a, d) => a + d.amount, 0)
 
-  const options = useMemo<ApexOptions>(
+  const option = useMemo<EChartsOption>(
     () => ({
-      chart: {
-        type: 'donut' as const,
-        background: 'transparent',
-        events: {
-          dataPointSelection: (
-            _e: unknown,
-            _chart: unknown,
-            config?: Record<string, unknown>,
-          ) => {
-            const idx = config?.dataPointIndex as number | undefined
-            if (idx != null) onSliceClick(idx === highlighted ? null : idx)
-          },
-        },
-      },
-      labels,
-      colors: PALETTE.slice(0, data.length),
-      theme: { mode: 'dark' as const },
-      legend: { show: false },
-      dataLabels: { enabled: false },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '60%',
-            labels: {
-              show: true,
-              total: {
-                show: true,
-                label: 'Total',
-                formatter: () => formatCAD(total, { fractionDigits: 0 }),
-              },
-            },
-          },
-        },
-      },
       tooltip: {
-        y: {
-          formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
+        trigger: 'item',
+        valueFormatter: (val) => formatCAD(Number(val), { fractionDigits: 0 }),
+      },
+      title: {
+        text: formatCAD(total, { fractionDigits: 0 }),
+        subtext: 'Total',
+        left: 'center',
+        top: 'center',
+        textStyle: { color: isDark ? '#F3F4F6' : '#111827', fontSize: 18 },
+        subtextStyle: { color: isDark ? '#9CA3AF' : '#6B7280', fontSize: 12 },
+      },
+      series: [
+        {
+          type: 'pie',
+          radius: ['62%', '90%'],
+          center: ['50%', '50%'],
+          avoidLabelOverlap: false,
+          label: { show: false },
+          labelLine: { show: false },
+          data: data.map((d, i) => ({
+            value: d.amount,
+            name: d.name,
+            itemStyle: { color: CHART_PALETTE[i % CHART_PALETTE.length] },
+          })),
         },
-      },
-      states: {
-        active: { filter: { type: 'darken', value: 0.6 } },
-      },
-      stroke: { show: false },
+      ],
     }),
-    [data, labels, total, highlighted, onSliceClick],
+    [data, total, isDark],
+  )
+
+  const onEvents = useMemo(
+    () => ({ click: (params: { name: string }) => onDrill(params.name) }),
+    [onDrill],
   )
 
   return (
@@ -84,33 +75,23 @@ function DonutChart({
           <p className="py-12 text-sm text-gray-400">No data for this period</p>
         ) : (
           <>
-            <Chart
-              options={options}
-              series={series}
-              type="donut"
-              width="100%"
-              height={320}
-            />
+            <EChart option={option} height={320} onEvents={onEvents} className="w-full" />
             <ul className="mt-4 w-full space-y-1.5 max-h-64 overflow-y-auto">
               {data.map((item, i) => (
                 <li
                   key={item.name}
                   role="button"
                   tabIndex={0}
-                  onClick={() => onSliceClick(i === highlighted ? null : i)}
+                  title={`View ${item.name} transactions`}
+                  onClick={() => onDrill(item.name)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ' ')
-                      onSliceClick(i === highlighted ? null : i)
+                    if (e.key === 'Enter' || e.key === ' ') onDrill(item.name)
                   }}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors ${
-                    highlighted === i
-                      ? 'bg-gray-100 dark:bg-gray-700'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                  }`}
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 >
                   <span
                     className="h-3 w-3 rounded-full shrink-0"
-                    style={{ backgroundColor: PALETTE[i % PALETTE.length] }}
+                    style={{ backgroundColor: CHART_PALETTE[i % CHART_PALETTE.length] }}
                   />
                   <CategoryIcon icon={item.icon ?? undefined} size={16} className="shrink-0 text-gray-500 dark:text-gray-400" />
                   <span className="flex-1 truncate text-gray-900 dark:text-gray-100">
@@ -119,8 +100,14 @@ function DonutChart({
                   <span className="font-medium tabular-nums text-gray-900 dark:text-gray-100">
                     {formatCAD(item.amount, { fractionDigits: 0 })}
                   </span>
-                  <span className="w-14 text-right text-gray-500 dark:text-gray-400 tabular-nums">
-                    {item.percentage.toFixed(1)}%
+                  <span
+                    className="w-14 text-right text-xs text-gray-400 tabular-nums"
+                    title={`Previous period: ${formatCAD(item.previousAmount, { fractionDigits: 0 })}`}
+                  >
+                    {deltaLabel(item.amount, item.previousAmount)}
+                  </span>
+                  <span className="w-12 text-right text-gray-500 dark:text-gray-400 tabular-nums">
+                    {item.percentage.toFixed(0)}%
                   </span>
                 </li>
               ))}
@@ -134,15 +121,29 @@ function DonutChart({
 
 export default function SpendingByCategoryPage() {
   const [period, setPeriod] = useState('12')
-  const [incomeHighlight, setIncomeHighlight] = useState<number | null>(null)
-  const [expenseHighlight, setExpenseHighlight] = useState<number | null>(null)
+  const navigate = useNavigate()
 
   const { data: periods, isLoading: periodsLoading } = useChartPeriods()
+  const { data: categories } = useCategories()
   const { data, isLoading, isError } = useSpendingByCategory(period)
 
   const periodOptions = useMemo(
     () => (periods ?? []).map(p => ({ label: p.label, value: p.code })),
     [periods],
+  )
+
+  // Drill a (parent-rolled-up) slice into the canonical Transactions surface,
+  // filtered to that category subtree for the same period (ADR-0005). Falls back
+  // to a description search if the name can't be resolved to a category id.
+  const drillToCategory = useCallback(
+    (name: string) => {
+      const cat = categories?.find(c => c.name === name)
+      const params = new URLSearchParams({ period })
+      if (cat) params.set('categoryId', String(cat.id))
+      else params.set('search', name)
+      navigate(`/transactions?${params.toString()}`)
+    },
+    [categories, period, navigate],
   )
 
   if (isLoading || periodsLoading) {
@@ -181,18 +182,8 @@ export default function SpendingByCategoryPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <DonutChart
-          title="Income by Category"
-          data={income}
-          highlighted={incomeHighlight}
-          onSliceClick={setIncomeHighlight}
-        />
-        <DonutChart
-          title="Expenses by Category"
-          data={expenses}
-          highlighted={expenseHighlight}
-          onSliceClick={setExpenseHighlight}
-        />
+        <DonutChart title="Income by Category" data={income} onDrill={drillToCategory} />
+        <DonutChart title="Expenses by Category" data={expenses} onDrill={drillToCategory} />
       </div>
     </div>
   )

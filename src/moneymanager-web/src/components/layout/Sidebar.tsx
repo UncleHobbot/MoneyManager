@@ -10,6 +10,10 @@ import {
   Wallet,
   DollarSign,
   PieChart,
+  LineChart,
+  Store,
+  Workflow,
+  Target,
   Landmark,
   Tags,
   BookOpen,
@@ -95,7 +99,12 @@ export function Sidebar() {
           <NavItem to="/charts/income" icon={<DollarSign size={16} />} label="Net Income" onClick={closeMobile} />
           <NavItem to="/charts/cumulative" icon={<TrendingUp size={16} />} label="Cumulative Spending" onClick={closeMobile} />
           <NavItem to="/charts/spending" icon={<PieChart size={16} />} label="By Category" onClick={closeMobile} />
+          <NavItem to="/charts/trend" icon={<LineChart size={16} />} label="Spending Trend" onClick={closeMobile} />
+          <NavItem to="/charts/merchants" icon={<Store size={16} />} label="Top Merchants" onClick={closeMobile} />
+          <NavItem to="/charts/cash-flow" icon={<Workflow size={16} />} label="Cash Flow" onClick={closeMobile} />
         </CollapsibleGroup>
+
+        <NavItem to="/budgets" icon={<Target size={18} />} label="Budgets" onClick={closeMobile} />
 
         <NavItem to="/import" icon={<Upload size={18} />} label="Import" onClick={closeMobile} />
         <NavItem to="/ai" icon={<Bot size={18} />} label="AI Analysis" onClick={closeMobile} />

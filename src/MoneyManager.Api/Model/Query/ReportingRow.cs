@@ -30,4 +30,5 @@ public sealed record ReportingRow(
     decimal SignedAmount,
     ReportingCategory? EffectiveCategory,
     bool IsIncome,
-    bool IsTransfer);
+    bool IsTransfer,
+    string Description);

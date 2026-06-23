@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using MoneyManager.Api.Data;
 using MoneyManager.Api.Model.Query;
 using MoneyManager.Api.Services;
 
@@ -20,7 +18,10 @@ public static class ChartEndpoints
         group.MapGet("/net-income", GetNetIncome);
         group.MapGet("/cumulative-spending", GetCumulativeSpending);
         group.MapGet("/spending-by-category", GetSpendingByCategory);
-        group.MapGet("/month/{month}", GetMonthTransactions);
+        group.MapGet("/spending-trend", GetSpendingTrend);
+        group.MapGet("/top-merchants", GetTopMerchants);
+        group.MapGet("/cash-flow", GetCashFlow);
+        group.MapGet("/budget-vs-actual", GetBudgetVsActual);
         group.MapGet("/periods", GetPeriods);
     }
 
@@ -36,22 +37,70 @@ public static class ChartEndpoints
         return TypedResults.Ok(result);
     }
 
+    internal static async Task<IResult> GetSpendingTrend(string period, DataService dataService)
+    {
+        var result = await dataService.ChartSpendingTrendAsync(period ?? "12");
+        return TypedResults.Ok(result);
+    }
+
+    internal static async Task<IResult> GetTopMerchants(string period, DataService dataService, int limit = 15)
+    {
+        var result = await dataService.ChartTopMerchantsAsync(period ?? "12", limit);
+        return TypedResults.Ok(result);
+    }
+
+    internal static async Task<IResult> GetCashFlow(string period, DataService dataService)
+    {
+        var result = await dataService.ChartCashFlowAsync(period ?? "12");
+        return TypedResults.Ok(result);
+    }
+
+    internal static async Task<IResult> GetBudgetVsActual(DataService dataService)
+    {
+        var result = await dataService.ChartBudgetVsActualAsync();
+        return TypedResults.Ok(result);
+    }
+
     internal static async Task<IResult> GetSpendingByCategory(
         string period,
         TransactionQueryService queryService)
     {
         var (startDate, endDate) = (ChartPeriod.Find(period ?? "12") ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
-        var filters = new TransactionFilters(StartDate: startDate, EndDate: endDate);
-        var rows = await queryService.GetReportingRowsAsync(filters);
 
-        // Filter to rows with an EffectiveCategory (drops uncategorized, which
-        // the pre-migration source filter also dropped) and exclude transfers.
-        // Group by EffectiveCategory; each group is one rolled-up category.
+        // The immediately-preceding window of the same length, for a per-category
+        // delta. Skipped for unbounded "a" (StartDate == MinValue), where there is
+        // no earlier window to compare against.
+        // Align the previous window to the same calendar span. For month-aligned
+        // periods (this/last month, last 12 months, year variants) step back by
+        // whole months so "previous" is the prior calendar period, not a day-count
+        // window that straddles month boundaries. Day-based periods (weeks) fall
+        // back to an equal-length window. Skipped for unbounded "a" (MinValue).
+        var hasPrevious = startDate > DateTime.MinValue.AddYears(1);
+        DateTime prevStart;
+        if (!hasPrevious)
+            prevStart = startDate;
+        else if (startDate.Day == 1 && endDate.Day == 1)
+            prevStart = startDate.AddMonths(-((endDate.Year - startDate.Year) * 12 + (endDate.Month - startDate.Month)));
+        else
+            prevStart = startDate - (endDate - startDate);
+
+        var rows = await queryService.GetReportingRowsAsync(
+            new TransactionFilters(StartDate: prevStart, EndDate: endDate));
+
+        // Previous-window spend per category id (absolute).
+        var previousByCategory = rows
+            .Where(r => r.Date < startDate && !r.IsTransfer && r.EffectiveCategory != null)
+            .GroupBy(r => r.EffectiveCategory!.Id)
+            .ToDictionary(g => g.Key, g => Math.Abs(g.Sum(r => r.SignedAmount)));
+
+        // Current-window groups (one per rolled-up category), excluding transfers
+        // and uncategorized.
         var grouped = rows
-            .Where(r => !r.IsTransfer && r.EffectiveCategory != null)
+            .Where(r => r.Date >= startDate && !r.IsTransfer && r.EffectiveCategory != null)
             .GroupBy(r => r.EffectiveCategory!)
             .Select(g => new
             {
+                Id = g.Key.Id,
                 Name = g.Key.Name,
                 Icon = g.Key.Icon,
                 RawSignedAmount = g.Sum(r => r.SignedAmount),
@@ -70,6 +119,7 @@ public static class ChartEndpoints
             x.Name,
             x.Icon,
             Amount = Math.Abs(x.RawSignedAmount),
+            PreviousAmount = previousByCategory.GetValueOrDefault(x.Id, 0m),
             Percentage = totalIncome > 0 ? Math.Round((double)(Math.Abs(x.RawSignedAmount) / totalIncome * 100), 2) : 0
         }).OrderByDescending(x => x.Amount).ToList();
 
@@ -78,49 +128,11 @@ public static class ChartEndpoints
             x.Name,
             x.Icon,
             Amount = Math.Abs(x.RawSignedAmount),
+            PreviousAmount = previousByCategory.GetValueOrDefault(x.Id, 0m),
             Percentage = totalExpenses > 0 ? Math.Round((double)(Math.Abs(x.RawSignedAmount) / totalExpenses * 100), 2) : 0
         }).OrderByDescending(x => x.Amount).ToList();
 
         return TypedResults.Ok(new { income, expenses });
-    }
-
-    internal static async Task<IResult> GetMonthTransactions(
-        string month,
-        DataService dataService,
-        TransactionQueryService queryService)
-    {
-        // Parse "yyMM" into a date window, then route through the same
-        // ReportingRow projection the other chart endpoints use.
-        var startDate = DateTime.ParseExact(month, "yyMM", System.Globalization.CultureInfo.CurrentCulture);
-        var endDate = startDate.AddMonths(1);
-        var filters = new TransactionFilters(StartDate: startDate, EndDate: endDate);
-        var rows = await queryService.GetReportingRowsAsync(filters);
-
-        // The endpoint still returns full TransactionDto rows for the month
-        // view (the frontend renders the original transaction list). We
-        // re-fetch via the same listable-transactions path the older
-        // ChartGetTransactionsAsync(month) used; the ReportingRow call above
-        // exists only to compute the category breakdown consistently.
-        var transactionsForDtos = await dataService.GetTransactionsAsync();
-        var dtos = await transactionsForDtos
-            .Where(t => t.Date >= startDate && t.Date < endDate)
-            .Select(t => t.ToDto())
-            .ToListAsync();
-
-        var categories = rows
-            .Where(r => !r.IsTransfer && r.EffectiveCategory != null)
-            .GroupBy(r => r.EffectiveCategory!)
-            .Select(g => new
-            {
-                Name = g.Key.Name,
-                Icon = g.Key.Icon,
-                Amount = Math.Abs(g.Sum(r => r.SignedAmount)),
-                Count = g.Count(),
-            })
-            .OrderByDescending(x => x.Amount)
-            .ToList();
-
-        return TypedResults.Ok(new { transactions = dtos, categories });
     }
 
     internal static IResult GetPeriods()

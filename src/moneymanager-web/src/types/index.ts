@@ -87,6 +87,65 @@ export interface CategoryChart {
   icon: string | null
   amount: number
   percentage: number
+  /** Spend in the immediately-preceding window of the same length (0 if none). */
+  previousAmount: number
+}
+
+export interface SpendingTrendMonth {
+  label: string
+  from: string
+  to: string
+}
+
+export interface SpendingTrendSeries {
+  categoryId: number | null
+  name: string
+  icon: string | null
+  data: number[]
+}
+
+export interface SpendingTrendChart {
+  months: SpendingTrendMonth[]
+  series: SpendingTrendSeries[]
+}
+
+export interface MerchantSpend {
+  name: string
+  amount: number
+  count: number
+}
+
+export interface SankeyNode {
+  name: string
+  categoryId: number | null
+  kind: 'income' | 'hub' | 'expense' | 'uncategorized' | 'other' | 'savings' | 'deficit'
+}
+
+export interface SankeyLink {
+  source: string
+  target: string
+  value: number
+}
+
+export interface CashFlowChart {
+  nodes: SankeyNode[]
+  links: SankeyLink[]
+}
+
+export interface BudgetDto {
+  id: number
+  categoryId: number
+  categoryName: string
+  icon: string | null
+  amount: number
+}
+
+export interface BudgetVsActual {
+  categoryId: number
+  name: string
+  icon: string | null
+  budget: number
+  actual: number
 }
 
 export interface ImportResult {

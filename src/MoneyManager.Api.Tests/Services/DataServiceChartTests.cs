@@ -1,4 +1,5 @@
 using FluentAssertions;
+using MoneyManager.Api.Data;
 using MoneyManager.Api.Model.Chart;
 using MoneyManager.Api.Tests.TestHelpers;
 
@@ -85,6 +86,152 @@ public class DataServiceChartTests : IDisposable
 
         var feb = result.Single(b => b.MonthKey == "2502");
         feb.Expenses.Should().Be(-29.49m, "Restaurant (Food top-level) must appear after bug fix");
+    }
+
+    // ----------------------------------------------------------------
+    // ChartSpendingTrendAsync (monthly spending by parent category)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartSpendingTrend_RollsUpSubcategoriesAndExcludesNonExpenses()
+    {
+        int foodId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+            foodId = ctx.Categories.First(c => c.Name == "Food").Id;
+
+        var result = await _svc.DataService.ChartSpendingTrendAsync("a");
+
+        // Only Food has expenses: Groceries rolls up to Food, Netflix is
+        // uncategorized (null category), Salary is income, and the transfer is on a
+        // hidden account. One series, no "Other" bucket.
+        result.Series.Should().ContainSingle();
+        var food = result.Series.Single();
+        food.Name.Should().Be("Food");
+        food.CategoryId.Should().Be(foodId);
+
+        var monthLabels = result.Months.Select(m => m.Label).ToList();
+        var jan = monthLabels.IndexOf("Jan 25");
+        var feb = monthLabels.IndexOf("Feb 25");
+        jan.Should().BeGreaterThanOrEqualTo(0);
+        feb.Should().BeGreaterThanOrEqualTo(0);
+
+        food.Data[jan].Should().Be(85.50m); // Loblaws (Groceries -> Food)
+        food.Data[feb].Should().Be(12.50m); // Restaurant (Food)
+        food.Data.Sum().Should().Be(98.00m);
+
+        result.Series.Should().NotContain(s =>
+            s.Name == "Income" || s.Name == "Transfer" || s.Name == "Uncategorized" || s.Name == "Other");
+    }
+
+    [Fact]
+    public async Task ChartSpendingTrend_AlignsSeriesDataWithMonths()
+    {
+        var result = await _svc.DataService.ChartSpendingTrendAsync("a");
+
+        result.Months.Should().NotBeEmpty();
+        result.Series.Should().OnlyContain(s => s.Data.Length == result.Months.Count);
+    }
+
+    // ----------------------------------------------------------------
+    // ChartTopMerchantsAsync (spend grouped by Description)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartTopMerchants_RanksExpenseMerchants_IncludingUncategorized()
+    {
+        var result = await _svc.DataService.ChartTopMerchantsAsync("a");
+
+        // Expense merchants ordered by spend; income (Salary) and the hidden-account
+        // transfer are excluded; uncategorized spend (Netflix) still counts.
+        result.Select(m => m.Name).Should().Equal("Loblaws Groceries", "Netflix", "Restaurant");
+
+        var loblaws = result.First();
+        loblaws.Amount.Should().Be(85.50m);
+        loblaws.Count.Should().Be(1);
+
+        result.Should().NotContain(m => m.Name == "Salary Deposit");
+        result.Should().NotContain(m => m.Name == "Internal Transfer");
+    }
+
+    [Fact]
+    public async Task ChartTopMerchants_RespectsLimit()
+    {
+        var result = await _svc.DataService.ChartTopMerchantsAsync("a", limit: 2);
+
+        result.Should().HaveCount(2);
+        result.Select(m => m.Name).Should().Equal("Loblaws Groceries", "Netflix");
+    }
+
+    // ----------------------------------------------------------------
+    // ChartCashFlowAsync (income -> hub -> expenses + savings)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartCashFlow_BuildsBalancedSankey_WithSavings()
+    {
+        const string hub = "Total Income";
+        var result = await _svc.DataService.ChartCashFlowAsync("a");
+
+        decimal Link(string source, string target) =>
+            result.Links.Single(l => l.Source == source && l.Target == target).Value;
+
+        // Income (3000) -> hub -> Food (98.00) + Uncategorized (16.99) + Savings (2885.01).
+        Link("Income", hub).Should().Be(3000m);
+        Link(hub, "Food").Should().Be(98.00m);
+        Link(hub, "Uncategorized").Should().Be(16.99m);
+        Link(hub, "Savings").Should().Be(2885.01m);
+
+        result.Nodes.Select(n => n.Name).Should().Contain(new[] { "Income", hub, "Food", "Uncategorized", "Savings" });
+        result.Nodes.Should().NotContain(n => n.Name == "Deficit");
+
+        // The hub balances: total inflow == total outflow.
+        var inflow = result.Links.Where(l => l.Target == hub).Sum(l => l.Value);
+        var outflow = result.Links.Where(l => l.Source == hub).Sum(l => l.Value);
+        inflow.Should().Be(outflow);
+
+        // The hidden-account transfer never appears.
+        result.Nodes.Should().NotContain(n => n.Name == "Transfer" || n.Name == "Internal Transfer");
+    }
+
+    // ----------------------------------------------------------------
+    // ChartBudgetVsActualAsync (current-month spend vs budget)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartBudgetVsActual_ComparesCurrentMonthSpendToBudget()
+    {
+        int foodId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+        {
+            var food = ctx.Categories.First(c => c.Name == "Food");
+            var account = ctx.Accounts.First(a => !a.IsHideFromGraph);
+            ctx.Budgets.Add(new Budget { Category = food, Amount = 600m });
+            // A current-month expense under Food (the seed's Food rows are in 2025).
+            ctx.Transactions.Add(new Transaction
+            {
+                Account = account,
+                Date = DateTime.Today,
+                Description = "Groceries today",
+                OriginalDescription = "GROCERIES TODAY",
+                Amount = 120m,
+                IsDebit = true,
+                Category = food,
+            });
+            ctx.SaveChanges();
+            foodId = food.Id;
+        }
+
+        var result = await _svc.DataService.ChartBudgetVsActualAsync();
+
+        var foodRow = result.Single(x => x.CategoryId == foodId);
+        foodRow.Budget.Should().Be(600m);
+        foodRow.Actual.Should().Be(120m); // only the current-month row counts
+    }
+
+    [Fact]
+    public async Task ChartBudgetVsActual_EmptyWhenNoBudgets()
+    {
+        (await _svc.DataService.ChartBudgetVsActualAsync()).Should().BeEmpty();
     }
 
     [Fact]

@@ -24,6 +24,9 @@ export interface TransactionFilters {
   uncategorized?: boolean
   sortBy?: string
   sortDir?: SortDir
+  /** Explicit date window (ISO) that overrides `period` — used by chart drill-ins. */
+  from?: string
+  to?: string
 }
 
 export function useTransactions(filters: TransactionFilters, page = 1, pageSize = 50) {
@@ -35,6 +38,8 @@ export function useTransactions(filters: TransactionFilters, page = 1, pageSize 
     uncategorized,
     sortBy = 'date',
     sortDir = 'desc',
+    from,
+    to,
   } = filters
   return useQuery<PaginatedResult<TransactionDto>>({
     queryKey: [
@@ -46,6 +51,8 @@ export function useTransactions(filters: TransactionFilters, page = 1, pageSize 
       uncategorized,
       sortBy,
       sortDir,
+      from,
+      to,
       page,
       pageSize,
     ],
@@ -60,6 +67,8 @@ export function useTransactions(filters: TransactionFilters, page = 1, pageSize 
             uncategorized: uncategorized || undefined,
             sortBy,
             sortDir,
+            from: from || undefined,
+            to: to || undefined,
             page,
             pageSize,
           },
@@ -94,9 +103,9 @@ export function useInfiniteTransactions(
 }
 
 export function useTransactionStats(filters: TransactionFilters) {
-  const { period, accountId, categoryId, search, uncategorized } = filters
+  const { period, accountId, categoryId, search, uncategorized, from, to } = filters
   return useQuery<TransactionStats>({
-    queryKey: ['transactions', 'stats', period, accountId, categoryId, search, uncategorized],
+    queryKey: ['transactions', 'stats', period, accountId, categoryId, search, uncategorized, from, to],
     queryFn: () =>
       api
         .get('/transactions/stats', {
@@ -106,6 +115,8 @@ export function useTransactionStats(filters: TransactionFilters) {
             categoryId,
             search: search || undefined,
             uncategorized: uncategorized || undefined,
+            from: from || undefined,
+            to: to || undefined,
           },
         })
         .then(r => r.data),

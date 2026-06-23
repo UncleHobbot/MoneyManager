@@ -12,7 +12,10 @@ import SettingsPage from '@/pages/SettingsPage'
 import NetIncomePage from '@/pages/NetIncomePage'
 import CumulativeSpendingPage from '@/pages/CumulativeSpendingPage'
 import SpendingByCategoryPage from '@/pages/SpendingByCategoryPage'
-import MonthDetailPage from '@/pages/MonthDetailPage'
+import SpendingTrendPage from '@/pages/SpendingTrendPage'
+import TopMerchantsPage from '@/pages/TopMerchantsPage'
+import CashFlowPage from '@/pages/CashFlowPage'
+import BudgetsPage from '@/pages/BudgetsPage'
 import DashboardPage from '@/pages/DashboardPage'
 import TransactionsPage from '@/pages/TransactionsPage'
 import AIAnalysisPage from '@/pages/AIAnalysisPage'
@@ -39,7 +42,10 @@ function App() {
               <Route path="/charts/income" element={<NetIncomePage />} />
               <Route path="/charts/cumulative" element={<CumulativeSpendingPage />} />
               <Route path="/charts/spending" element={<SpendingByCategoryPage />} />
-              <Route path="/charts/month/:month" element={<MonthDetailPage />} />
+              <Route path="/charts/trend" element={<SpendingTrendPage />} />
+              <Route path="/charts/merchants" element={<TopMerchantsPage />} />
+              <Route path="/charts/cash-flow" element={<CashFlowPage />} />
+              <Route path="/budgets" element={<BudgetsPage />} />
               <Route path="/ai" element={<AIAnalysisPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/accounts" element={<AccountsPage />} />

@@ -7,8 +7,6 @@ import { setupServer } from 'msw/node'
 import { AccountsPage } from '@/pages/AccountsPage'
 import type { Account } from '@/types'
 
-vi.mock('react-apexcharts', () => ({ default: () => null }))
-
 const mockAccounts: Account[] = [
   {
     id: 1,

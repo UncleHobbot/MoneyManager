@@ -1,97 +1,126 @@
-# Plan — TransactionQueryService (Candidate 2)
+# Charts: improvement + expansion plan
 
-Deepening outcome of the `/improve-codebase-architecture` grilling loop on
-2026-06-21. See also `CONTEXT.md` (Listable Transaction term) and ADRs
-0002, 0003.
+Outcome of the `/grill-with-docs` design session on charts (2026-06-22). Decisions
+are captured in `CONTEXT.md` (Merchant/Payee, Budget) and ADR-0005/0006/0007. This
+file is the sequenced build plan. (Supersedes the completed TransactionQueryService
+plan — see git history + ADR-0002/0003.)
 
-## Locked decisions
+## Goal
 
-| # | Decision | Choice |
-|---|---|---|
-| Q1 | Scope | Read-only: `GetAll` + `GetStats`. `ApplyAll` stays separate. |
-| Q2 | Return shape | `Page<TransactionDto>` and named `TransactionStats`. |
-| Q3 | Interface shape | Two methods on one module; shared `TransactionFilters`. |
-| Q4 | Adapter strategy | One adapter (EF Core on `IDbContextFactory`). No `ITransactionQueryStore`. |
-| Q5 | Where it lives | New class `TransactionQueryService` in `Services/`. `GetTransactionsAsync()` stays on `DataService`. |
-| Q6 | `TransactionFilters` shape | `StartDate`/`EndDate` (not period code); `bool Uncategorized` with same string-match semantics. |
-| Q7 | `IsHideFromGraph` rule | Invariant of the module, not an option. Concept "Listable Transaction" in `CONTEXT.md`. |
-| Q8 | Migration | Incremental, four commits, TDD inside commit 1. |
-| Q9 | Sort by amount | Use `AmountExt` (canonical source). |
+Make charts more informative (comparison + drill-down everywhere), prettier
+(single themed engine), and broaden the catalog toward a real finance assistant —
+without inventing data we don't have.
 
-## Implementation steps (commit-by-commit)
+## Decisions (reference)
 
-### Commit 1 — Add `TransactionQueryService` + value objects (TDD red→green)
+- **Primary job:** retrospective-first, one scoped forward-looking bet (Budget).
+- **New charts, in priority order:** spending trend over time → top merchants →
+  cash-flow Sankey. (Calendar heatmap deferred.)
+- **Drill-down:** every chart element → canonical `TransactionsPage`, URL-filtered.
+  `MonthDetailPage` retired. — ADR-0005
+- **Engine:** standardize on Apache ECharts; migrate off ApexCharts. — ADR-0006
+- **Styling:** one `chartTheme(isDark)` factory + `<ChartCard>` shell (ECharts-shaped).
+- **Merchant:** no entity; group by `Transaction.Description`; Rules own normalization. — CONTEXT
+- **Budget:** `Budget(Category=parent, Amount)`, opt-in recurring monthly; per-month
+  history (Y) deferred but designed-for. — ADR-0007, CONTEXT
+- **Trend form:** stacked area, absolute $, parent rollup, top-7 + "Other", click-isolate.
+- **Sankey form:** income categories → "Total Income" hub → expense categories +
+  "Savings"; deficit shown as an extra source node; parent rollup, top-N + "Other".
+- **Navigation:** flat sidebar "Charts" group + a Dashboard mini-card per chart.
 
-- [ ] Create value objects in `src/MoneyManager.Api/Model/Query/` (or `Services/`):
-  - `TransactionFilters` (record)
-  - `TransactionSort` (record) + `SortDirection` (enum)
-  - `Paging` (record, generic-use, no `Transaction` prefix)
-  - `Page<T>` (record)
-  - `TransactionStats` (record)
-- [ ] Create `src/MoneyManager.Api/Services/TransactionQueryService.cs`:
-  - Constructor injects `IDbContextFactory<DataContext>`
-  - `Task<Page<TransactionDto>> GetPageAsync(TransactionFilters, TransactionSort, Paging, CancellationToken = default)`
-  - `Task<TransactionStats> GetStatsAsync(TransactionFilters, CancellationToken = default)`
-  - Both apply the listable-transaction invariant (`!Account.IsHideFromGraph`)
-  - Eager-load `Account`, `Category`, `Category.Parent`
-  - `Uncategorized` filter: `Category == null || Category.Name.ToLower() == "uncategorized"`
-  - `Search` filter: `EF.Functions.Like` on `Description` and `OriginalDescription`
-  - Amount sort uses `AmountExt`
-- [ ] Register in `Program.cs`: `services.AddScoped<TransactionQueryService>();`
-- [ ] Write `src/MoneyManager.Api.Tests/Services/TransactionQueryServiceTests.cs` (TDD red first):
-  - `GetPage_ReturnsEmpty_WhenNoTransactions`
-  - `GetPage_ExcludesHiddenAccounts` (Listable Transaction invariant)
-  - `GetPage_FiltersByDateWindow`
-  - `GetPage_FiltersByAccount`
-  - `GetPage_FiltersByCategory`
-  - `GetPage_FiltersBySearch_Description` and `_OriginalDescription`
-  - `GetPage_FiltersUncategorized` (both `null` and `Name == "Uncategorized"`)
-  - `GetPage_SortsByDate_Asc`, `_Desc` (default)
-  - `GetPage_SortsByAmount_Asc`, `_Desc` (uses `AmountExt`; verify EF translates — fall back to inline only if test fails with `InvalidOperationException`)
-  - `GetPage_SortsByDescription_Asc`, `_Desc`
-  - `GetPage_PaginatesCorrectly` (totalCount, page, pageSize, items.Count)
-  - `GetPage_StableOrdering` (ThenBy Id)
-  - `GetStats_AggregatesIncomeAndExpenses`
-  - `GetStats_RespectsFilters`
-  - `GetStats_ExcludesHiddenAccounts`
-- [ ] Extend `TestHelpers/DbContextHelper.cs` `ServiceBundle` with a `TransactionQueryService` property
-- [ ] Verify: `dotnet build src/MoneyManager.Api` and `dotnet test src/MoneyManager.Api.Tests` both pass
-- [ ] Verify: existing endpoint tests still pass (no behavior change)
+## Phase 0 — Foundations (prerequisites)
 
-### Commit 2 — Migrate `GetAll` endpoint to use `TransactionQueryService`
+- [x] Add `echarts` (modular imports) via in-repo `EChart` wrapper over
+  `echarts/core` — `echarts-for-react` rejected (CommonJS, breaks Vite ESM). See
+  ADR-0006 note.
+- [x] Build `chartTheme(isDark)` factory + shared palette (`CHART_PALETTE`,
+  `CHART_COLORS`, `chartAxis`) + `<ChartCard>` (card + empty + loading). Unit-tested
+  (`chartTheme.test.ts`). Verified light & dark in browser.
+- [ ] Migrate the 6 existing ApexCharts sites to ECharts:
+  - [x] Net Income (also fixed a latent net-income sign bug — see below)
+  - [x] Cumulative Spending (light-mode bug fixed)
+  - [x] Spending-by-Category donuts (light-mode bug fixed; dropped ECharts built-in
+    legend in favor of the existing custom legend list)
+  - [x] 3 Dashboard minis
+  - [x] Month-detail donuts — page retired (replaced by Transactions date-range drill)
+- [x] Remove `apexcharts` / `react-apexcharts` (done; main bundle 827KB → 310KB).
+- [x] Fix the hard-coded `theme: 'dark'` light-mode bug (done as each donut/cumulative
+  chart migrated; Net Income already theme-correct via `chartTheme`).
 
-- [ ] Update `TransactionEndpoints.GetAll` to accept `TransactionQueryService` (DI)
-- [ ] Inside `GetAll`: compute `StartDate`/`EndDate` from `period` via existing `dataService.GetDates(period, ...)`, build `TransactionFilters` + `TransactionSort` + `Paging`, call `GetPageAsync`, wrap result in `TypedResults.Ok(...)`
-- [ ] Update existing `TransactionEndpointsTests.GetAll_*` tests if their signatures need the new dependency; otherwise they should pass unchanged
-- [ ] Verify: `dotnet test` green
+EChart wrapper notes: `animation: false` in `chartTheme` (snappy + keeps the canvas
+idle); `isDisposed()` guards on resize/setOption. Residual "[ECharts] instance has
+been disposed" warnings are a dev-only React StrictMode double-mount artifact — they
+do not occur in the production build.
+- [x] Lift `TransactionsPage` filters into URL query params (deep-linkable);
+  retire `MonthDetailPage`; Net Income month click → `/transactions?from&to`;
+  Spending slice → `/transactions?categoryId` (subtree). Backend: category-subtree
+  filter + `from`/`to` on GetAll/GetStats. Verified in browser (chip, deep-link,
+  totals reconcile with slice).
 
-### Commit 3 — Migrate `GetStats` endpoint
+**Phase 0 complete.** Backend 205 tests, web 88 tests green.
 
-- [ ] Same pattern for `TransactionEndpoints.GetStats`
-- [ ] Replace anonymous-type return with named `TransactionStats`; keep endpoint's `TypedResults.Ok(stats)` wrapper
-- [ ] Update `GetStats_RespectsSearchFilter` test — remove reflection (`GetProperty("count")`), cast to `TransactionStats` directly
-- [ ] Verify: `dotnet test` green
+**Bug fixed in passing (Net Income migration):** the chart and breakdown table
+computed `net = income - expenses`, but `expenses` is a signed sum (debits
+negative), so net was double-negated and rendered far above income (e.g. +$13,582
+for a month that was actually -$1,688). Corrected to `income + expenses`; verified
+against the API's own `balance` field. Pre-existing in the ApexCharts version.
 
-### Commit 4 — Cleanup
+## Phase 1 — New retrospective charts (ECharts)
 
-- [ ] Delete `TransactionEndpoints.ApplyFilters` and `TransactionEndpoints.ApplySort` (now dead)
-- [ ] Refactor `GetItems` reflection helper out of `TransactionsControllerTests.cs` if all uses are gone
-- [ ] Verify: `dotnet build` shows no unused-private-member warnings, `dotnet test` green, `npm run lint` (frontend untouched, but check)
+- [x] **Spending Trend over time** — stacked area, parent rollup, top-7 + "Other",
+  monthly buckets, expenses only, transfers excluded, `ChartPeriod` selector
+  (default 12mo), legend toggle to isolate, click a segment → drill
+  (`/transactions?from&to&categoryId`). Backend `GET /api/charts/spending-trend`
+  (+2 tests); sidebar + header nav. (Screenshot pending — preview window was
+  collapsed during the run; page mounts clean, no console errors.)
+- [x] **Top Merchants** — group by `Description` (top 15); horizontal bars; click bar
+  → `/transactions?search=<Description>`. Backend `GET /api/charts/top-merchants`
+  (+2 tests); added `Description` to `ReportingRow` (CONTEXT updated). Note: the bar
+  groups by exact `Description`; the drill uses `search` (LIKE %…%), so the drilled
+  list is a superset of the bar (documented CONTEXT behavior — merchant drill is
+  fuzzy, unlike the exact category-subtree drill). Verified: endpoint data correct,
+  page mounts clean, search drill filters.
+- [x] **Cash-flow Sankey** — ECharts sankey; income→"Total Income" hub→expenses
+  (top-8 + "Other") + "Savings"; deficit shown as a source node feeding the hub;
+  node drill (category subtree / uncategorized). Backend `GET /api/charts/cash-flow`
+  (+1 test asserting the hub balances). Verified in browser (deficit case renders
+  correctly, no Savings node).
 
-## Out-of-scope (deferred)
+**Phase 1 complete** (trend, top merchants, cash-flow). Backend 210 tests, web 88 tests green.
 
-- `RuleEndpoints.ApplyAll` migration to use the new module for finding candidates (per ADR-0002, this is a separate operation)
-- `GetById` / `GetPossibleRules` / `Update` migration off `GetTransactionsAsync`
-- `TransactionDto.Transaction` self-reference cleanup
-- `GetDates` period-code value object (Candidate 1)
-- `ReportingRow` with `IsUncategorized` / `IsIncome` / `IsTransfer` flags (Candidate 3) — will replace the string-match in `TransactionQueryService` when it lands
-- `ExportCsv` (uses `AIGetTransactionsCSVAsync`, untouched)
+## Phase 2 — Forward bet: Budget
 
-## Review checklist (after Commit 4)
+- [x] `Budget` entity + `DbSet<Budget>` + `BudgetService` + `/api/budgets` (GET/PUT/
+  DELETE). Program.cs creates the table for existing dev DBs. (216 backend tests.)
+- [x] Budget management UI — `/budgets` page: per top-level category, set/clear an
+  opt-in monthly amount (Income/Transfer/Uncategorized excluded). Verified in browser
+  (set → persists + chart updates + Clear button; clear → removed).
+- [x] **Budget vs Actual** chart (this month) — grouped horizontal bars (Actual
+  colored green/red by over/under, Budget gray), via `ChartBudgetVsActualAsync`
+  reusing `ReportingRow` at the parent-rollup level.
+- [x] Budget **pace** overlay on Cumulative Spending — a dashed amber line ramping
+  from 0 to the total monthly budget (shown only when budgets exist). Verified in
+  browser.
 
-- [ ] `TransactionQueryService` interface matches the locked decisions
-- [ ] All Listable-Transaction invariants enforced inside the module
-- [ ] No reflection-based assertions remain in `TransactionEndpointsTests`
-- [ ] CONTEXT.md "Listable Transaction" entry still accurate
-- [ ] ADR-0002 and ADR-0003 still describe the shipped design
-- [ ] No new `IDbContextFactory` leaks introduced (visual review; tests won't catch)
+**Phase 2 complete** (Budget entity/CRUD, management UI, Budget vs Actual, pace overlay).
+
+## Phase 3 — Existing-chart enhancements ("more informative")
+
+- [x] Net Income: trailing 3-month average line + a Savings-rate column in the
+  breakdown table. (Frontend-only.) Verified in browser.
+- [x] Spending-by-Category: per-category Δ vs the previous equal-length window
+  (`▲/▼ %` in the legend); drill on slice already shipped in Phase 0. Backend adds
+  `previousAmount` to `/api/charts/spending-by-category`. Verified in browser.
+- [x] Cumulative: budget pace line shipped in Phase 2.
+- [~] Cumulative "generalize beyond this-vs-last-month" — **trimmed** (needs a
+  backend rework of the cumulative endpoint to take a period; deferred as a separate
+  candidate. The pace line already added the main value here.)
+
+**Phase 3 complete** (Net Income trend/savings-rate, category period-over-period delta).
+Backend 216 tests, web 88 tests green.
+
+## Notes / housekeeping spotted (out of scope, not yet decided)
+
+- `BalanceChart` DTO is misnamed (holds income/expenses, not balances). The
+  `Balance` table is never written — net-worth-over-time remains blocked until a
+  balance-ingestion or running-balance mechanism is decided (separate session).
