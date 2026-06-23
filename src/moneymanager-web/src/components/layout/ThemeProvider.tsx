@@ -5,7 +5,9 @@ import { ThemeContext, THEME_STORAGE_KEY, type Theme } from './ThemeContext'
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY)
-    return stored === 'light' ? 'light' : 'dark'
+    if (stored === 'light' || stored === 'dark') return stored
+    // No stored choice yet: follow the OS preference (default to dark).
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
   })
 
   useEffect(() => {
