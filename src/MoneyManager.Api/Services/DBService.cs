@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MoneyManager.Api.Data;
+using MoneyManager.Api.Helpers;
 
 namespace MoneyManager.Api.Services;
 
@@ -12,13 +13,10 @@ public class DBService(IDbContextFactory<DataContext> contextFactory, IConfigura
     private static readonly SemaphoreSlim _backupLock = new(1, 1);
 
     /// <summary>
-    /// Gets the configured backup directory path.
+    /// Gets the backup directory path, derived from the database directory (ADR-0008).
     /// </summary>
-    /// <returns>The backup directory path from configuration, or a default path.</returns>
-    private string GetBackupPath()
-    {
-        return configuration["BackupPath"] ?? Path.Combine(AppContext.BaseDirectory, "backups");
-    }
+    /// <returns>The absolute backup directory path (<c>{dataDir}/backup</c>).</returns>
+    private string GetBackupPath() => DataPaths.GetBackupDirectory(configuration);
 
     /// <summary>
     /// Creates a backup of the MoneyManager SQLite database.

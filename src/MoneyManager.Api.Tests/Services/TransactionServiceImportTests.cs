@@ -22,16 +22,12 @@ public class TransactionServiceImportTests : IDisposable
     private readonly TestDbContextFactory _factory;
     private readonly DataService _dataService;
     private readonly IMemoryCache _cache;
-    private readonly string _backupDir;
 
     public TransactionServiceImportTests()
     {
         _factory = DbContextHelper.CreateFactory();
         _cache = new MemoryCache(new MemoryCacheOptions());
         _dataService = new DataService(_factory, _cache, new TransactionQueryService(_factory));
-
-        _backupDir = Path.Combine(Path.GetTempPath(), $"mm_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_backupDir);
 
         using var ctx = _factory.CreateDbContext();
         ctx.Accounts.Add(new Account { Name = "Chequing", ShownName = "Chequing", Type = 0, Number = "12345" });
@@ -44,17 +40,10 @@ public class TransactionServiceImportTests : IDisposable
     {
         _factory.Dispose();
         (_cache as IDisposable)?.Dispose();
-        try { Directory.Delete(_backupDir, true); } catch { /* cleanup best effort */ }
     }
 
     private TransactionService CreateTransactionService()
-    {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { { "BackupPath", _backupDir } })
-            .Build();
-        var dbService = new DBService(_factory, config);
-        return new TransactionService(_factory, _dataService, dbService);
-    }
+        => new(_factory, _dataService);
 
     private static Stream ToStream(string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 

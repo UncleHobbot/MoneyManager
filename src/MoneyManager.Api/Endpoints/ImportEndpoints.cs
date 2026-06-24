@@ -1,3 +1,4 @@
+using MoneyManager.Api.Helpers;
 using MoneyManager.Api.Model.Api;
 using MoneyManager.Api.Services;
 using MoneyManager.Api.Services.Import;
@@ -95,10 +96,7 @@ public static class ImportEndpoints
     // ── Private helpers ─────────────────────────────────────────────
 
     private static string GetArchivePath(IConfiguration configuration)
-    {
-        return configuration["CsvArchivePath"]
-            ?? Path.Combine(AppContext.BaseDirectory, "csv-archive");
-    }
+        => DataPaths.GetImportedDirectory(configuration);
 
     private static string? GetSafeArchiveFilePath(string fileName, IConfiguration configuration)
     {
@@ -167,15 +165,32 @@ public static class ImportEndpoints
         var archiveDir = GetArchivePath(configuration);
         Directory.CreateDirectory(archiveDir);
 
-        var datePart = DateTime.Now.ToString("yyyy-MM-dd");
-        // Wire-format change: archive filenames now use the short BankType
-        // ("Mint.csv", "RBC.csv", "CIBC.csv") instead of the legacy enum form
-        // ("Mint_CSV.csv", ...). Old archive files remain readable.
-        var archiveFileName = $"{datePart} {bankType}.csv";
+        // Filename: "{yyyy-MM-dd HHmmss} {BankType} {original}.csv". The timestamp
+        // plus the original name keep batch uploads of the same bank on the same
+        // day unique (the previous "{date} {BankType}.csv" form overwrote them).
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HHmmss");
+        var original = SanitizeForFileName(Path.GetFileNameWithoutExtension(file.FileName));
+        var archiveFileName = $"{timestamp} {bankType} {original}.csv";
         var archivePath = Path.Combine(archiveDir, archiveFileName);
 
         await using var source = file.OpenReadStream();
         await using var dest = File.Create(archivePath);
         await source.CopyToAsync(dest);
+    }
+
+    /// <summary>
+    /// Strips path separators and characters illegal in a file name from the
+    /// client-supplied original name, so it can be embedded safely in the archive
+    /// filename. Falls back to "import" when nothing usable remains.
+    /// </summary>
+    internal static string SanitizeForFileName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "import";
+
+        var invalid = Path.GetInvalidFileNameChars();
+        var cleaned = new string(name.Where(c => !invalid.Contains(c)).ToArray()).Trim();
+
+        return string.IsNullOrEmpty(cleaned) ? "import" : cleaned;
     }
 }
