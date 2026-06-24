@@ -21,16 +21,12 @@ public class TransactionServicePipelineTests : IDisposable
     private readonly TestDbContextFactory _factory;
     private readonly DataService _dataService;
     private readonly IMemoryCache _cache;
-    private readonly string _backupDir;
 
     public TransactionServicePipelineTests()
     {
         _factory = DbContextHelper.CreateFactory();
         _cache = new MemoryCache(new MemoryCacheOptions());
         _dataService = new DataService(_factory, _cache, new TransactionQueryService(_factory));
-
-        _backupDir = Path.Combine(Path.GetTempPath(), $"mm_pipeline_test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_backupDir);
 
         using var ctx = _factory.CreateDbContext();
         ctx.Accounts.Add(new Account { Name = "Chequing", ShownName = "Chequing", Type = 0, Number = "12345" });
@@ -44,17 +40,10 @@ public class TransactionServicePipelineTests : IDisposable
     {
         _factory.Dispose();
         (_cache as IDisposable)?.Dispose();
-        try { Directory.Delete(_backupDir, true); } catch { /* best effort */ }
     }
 
     private TransactionService CreateService()
-    {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { { "BackupPath", _backupDir } })
-            .Build();
-        var dbService = new DBService(_factory, config);
-        return new TransactionService(_factory, _dataService, dbService);
-    }
+        => new(_factory, _dataService);
 
     private static Stream ToStream(string content = "header\n") =>
         new MemoryStream(Encoding.UTF8.GetBytes(content));
@@ -64,7 +53,7 @@ public class TransactionServicePipelineTests : IDisposable
     // ----------------------------------------------------------------
 
     [Fact]
-    public async Task ImportAsync_WithNoRows_ReturnsZeroCounts_AndStillBacksUp()
+    public async Task ImportAsync_WithNoRows_ReturnsZeroCounts()
     {
         var service = CreateService();
         var importer = new FakeImporter { Rows = [] };
@@ -75,9 +64,6 @@ public class TransactionServicePipelineTests : IDisposable
         result.TotalCount.Should().Be(0);
         result.SkippedCount.Should().Be(0);
         result.BankType.Should().Be("Fake");
-
-        // Backup happens regardless of row count.
-        Directory.GetFiles(_backupDir, "*.db").Should().HaveCount(1);
     }
 
     [Fact]

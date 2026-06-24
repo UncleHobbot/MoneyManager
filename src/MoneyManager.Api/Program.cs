@@ -30,7 +30,6 @@ builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<TransactionQueryService>();
 builder.Services.AddScoped<BudgetService>();
 builder.Services.AddSingleton<DBService>();
-builder.Services.AddSingleton<SettingsService>();
 
 // CORS — allow Vite dev server
 builder.Services.AddCors(options =>

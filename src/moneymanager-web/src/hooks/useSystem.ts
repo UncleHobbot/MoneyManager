@@ -1,27 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
-import type { BackupInfo, SettingsModel } from '@/types'
-
-export function useSettings() {
-  return useQuery<SettingsModel>({
-    queryKey: ['settings'],
-    queryFn: () => api.get('/settings').then(r => r.data),
-  })
-}
-
-export function useUpdateSettings() {
-  const qc = useQueryClient()
-  return useMutation<SettingsModel, Error, SettingsModel>({
-    mutationFn: async (settings: SettingsModel) => {
-      await api.put('/settings', settings)
-      return settings
-    },
-    onSuccess: (settings) => {
-      qc.setQueryData(['settings'], settings)
-      qc.invalidateQueries({ queryKey: ['settings'] })
-    },
-  })
-}
+import type { BackupInfo } from '@/types'
 
 export function useBackups() {
   return useQuery<BackupInfo[]>({

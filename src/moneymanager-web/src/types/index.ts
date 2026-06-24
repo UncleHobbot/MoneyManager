@@ -175,11 +175,6 @@ export interface AnalysisResult {
   model: string
 }
 
-export interface SettingsModel {
-  isDarkMode: boolean
-  backupPath: string | null
-}
-
 export interface BackupInfo {
   fileName: string
   createdAt: string

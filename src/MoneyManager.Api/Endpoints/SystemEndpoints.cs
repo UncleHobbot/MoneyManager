@@ -1,10 +1,9 @@
-using MoneyManager.Api.Model;
 using MoneyManager.Api.Services;
 
 namespace MoneyManager.Api.Endpoints;
 
 /// <summary>
-/// Minimal API endpoints for system operations including backup/restore and settings.
+/// Minimal API endpoints for system operations: database backup and restore.
 /// </summary>
 public static class SystemEndpoints
 {
@@ -19,8 +18,6 @@ public static class SystemEndpoints
         group.MapGet("/backups", ListBackups);
         group.MapPost("/backups/{filename}/restore", RestoreBackup);
         group.MapDelete("/backups/cleanup", CleanupBackups);
-        group.MapGet("/settings", GetSettings);
-        group.MapPut("/settings", SaveSettings);
     }
 
     internal static async Task<IResult> Backup(DBService dbService)
@@ -49,17 +46,5 @@ public static class SystemEndpoints
     {
         var deleted = await dbService.CleanupBackupsAsync(keep);
         return TypedResults.Ok(deleted);
-    }
-
-    internal static async Task<IResult> GetSettings(SettingsService settingsService)
-    {
-        var settings = await settingsService.GetSettingsAsync();
-        return TypedResults.Ok(settings);
-    }
-
-    internal static async Task<IResult> SaveSettings(SettingsModel data, SettingsService settingsService)
-    {
-        await settingsService.SaveSettingsAsync(data);
-        return TypedResults.Ok();
     }
 }

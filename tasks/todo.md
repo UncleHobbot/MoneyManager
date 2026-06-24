@@ -1,126 +1,121 @@
-# Charts: improvement + expansion plan
+# CSV multi-import + backup/path management plan
 
-Outcome of the `/grill-with-docs` design session on charts (2026-06-22). Decisions
-are captured in `CONTEXT.md` (Merchant/Payee, Budget) and ADR-0005/0006/0007. This
-file is the sequenced build plan. (Supersedes the completed TransactionQueryService
-plan — see git history + ADR-0002/0003.)
+Outcome of the `/grill-with-docs` session (2026-06-24). Design is captured in
+`CONTEXT.md` ("Bank Import Adapter", new "Database backup") and ADR-0008. This file
+is the sequenced build plan.
 
 ## Goal
 
-Make charts more informative (comparison + drill-down everywhere), prettier
-(single themed engine), and broaden the catalog toward a real finance assistant —
-without inventing data we don't have.
+1. Allow uploading multiple CSV files at once (not one-by-one).
+2. Archive each imported CSV into `{dataDir}/imported`.
+3. Always store DB backups in `{dataDir}/backup`; remove the Backup Path setting.
+4. Remove the dead Dark Mode setting (theme is the top-right toggle).
 
-## Decisions (reference)
+`dataDir` = the directory of the SQLite DB file from the connection string
+(prod `/app/data`, dev `../../data`). Pure derivation, no config override.
 
-- **Primary job:** retrospective-first, one scoped forward-looking bet (Budget).
-- **New charts, in priority order:** spending trend over time → top merchants →
-  cash-flow Sankey. (Calendar heatmap deferred.)
-- **Drill-down:** every chart element → canonical `TransactionsPage`, URL-filtered.
-  `MonthDetailPage` retired. — ADR-0005
-- **Engine:** standardize on Apache ECharts; migrate off ApexCharts. — ADR-0006
-- **Styling:** one `chartTheme(isDark)` factory + `<ChartCard>` shell (ECharts-shaped).
-- **Merchant:** no entity; group by `Transaction.Description`; Rules own normalization. — CONTEXT
-- **Budget:** `Budget(Category=parent, Amount)`, opt-in recurring monthly; per-month
-  history (Y) deferred but designed-for. — ADR-0007, CONTEXT
-- **Trend form:** stacked area, absolute $, parent rollup, top-7 + "Other", click-isolate.
-- **Sankey form:** income categories → "Total Income" hub → expense categories +
-  "Savings"; deficit shown as an extra source node; parent rollup, top-N + "Other".
-- **Navigation:** flat sidebar "Charts" group + a Dashboard mini-card per chart.
+---
 
-## Phase 0 — Foundations (prerequisites)
+## Phase 1 — Backend: data-dir derivation + path wiring
 
-- [x] Add `echarts` (modular imports) via in-repo `EChart` wrapper over
-  `echarts/core` — `echarts-for-react` rejected (CommonJS, breaks Vite ESM). See
-  ADR-0006 note.
-- [x] Build `chartTheme(isDark)` factory + shared palette (`CHART_PALETTE`,
-  `CHART_COLORS`, `chartAxis`) + `<ChartCard>` (card + empty + loading). Unit-tested
-  (`chartTheme.test.ts`). Verified light & dark in browser.
-- [ ] Migrate the 6 existing ApexCharts sites to ECharts:
-  - [x] Net Income (also fixed a latent net-income sign bug — see below)
-  - [x] Cumulative Spending (light-mode bug fixed)
-  - [x] Spending-by-Category donuts (light-mode bug fixed; dropped ECharts built-in
-    legend in favor of the existing custom legend list)
-  - [x] 3 Dashboard minis
-  - [x] Month-detail donuts — page retired (replaced by Transactions date-range drill)
-- [x] Remove `apexcharts` / `react-apexcharts` (done; main bundle 827KB → 310KB).
-- [x] Fix the hard-coded `theme: 'dark'` light-mode bug (done as each donut/cumulative
-  chart migrated; Net Income already theme-correct via `chartTheme`).
+- [ ] Add a shared helper (e.g. `Helpers/DataPaths.cs`) that resolves the DB file's
+      directory from `IConfiguration` via `SqliteConnectionStringBuilder`
+      (`ConnectionStrings:DefaultConnection`), returned as an absolute path.
+      → verify: unit test resolves both `/app/data/...` and `../../data/...` forms.
+- [ ] `DBService.GetBackupPath()` → `{dataDir}/backup`; drop `IConfiguration["BackupPath"]`.
+- [ ] `ImportEndpoints.GetArchivePath()` → `{dataDir}/imported`; drop `IConfiguration["CsvArchivePath"]`.
+      → verify: backup + archive land under the data dir, not `bin/.../`.
 
-EChart wrapper notes: `animation: false` in `chartTheme` (snappy + keeps the canvas
-idle); `isDisposed()` guards on resize/setOption. Residual "[ECharts] instance has
-been disposed" warnings are a dev-only React StrictMode double-mount artifact — they
-do not occur in the production build.
-- [x] Lift `TransactionsPage` filters into URL query params (deep-linkable);
-  retire `MonthDetailPage`; Net Income month click → `/transactions?from&to`;
-  Spending slice → `/transactions?categoryId` (subtree). Backend: category-subtree
-  filter + `from`/`to` on GetAll/GetStats. Verified in browser (chip, deep-link,
-  totals reconcile with slice).
+## Phase 2 — Backend: archive filename uniqueness
 
-**Phase 0 complete.** Backend 205 tests, web 88 tests green.
+- [ ] Change archive filename to `{yyyy-MM-dd HHmmss} {BankType} {sanitized-original}.csv`.
+- [ ] Sanitize the original filename (strip path separators / `..` / invalid chars).
+      → verify: two same-bank uploads in one day produce two distinct files.
 
-**Bug fixed in passing (Net Income migration):** the chart and breakdown table
-computed `net = income - expenses`, but `expenses` is a signed sum (debits
-negative), so net was double-negated and rendered far above income (e.g. +$13,582
-for a month that was actually -$1,688). Corrected to `income + expenses`; verified
-against the API's own `balance` field. Pre-existing in the ApexCharts version.
+## Phase 3 — Backend: backup out of the import pipeline
 
-## Phase 1 — New retrospective charts (ECharts)
+- [ ] Remove `await dbService.BackupAsync()` from `TransactionService.ImportAsync`
+      (TransactionService.cs:51).
+- [ ] Remove the now-unused `DBService dbService` ctor dependency from `TransactionService`.
+      → verify: solution builds; pipeline no longer references DBService.
 
-- [x] **Spending Trend over time** — stacked area, parent rollup, top-7 + "Other",
-  monthly buckets, expenses only, transfers excluded, `ChartPeriod` selector
-  (default 12mo), legend toggle to isolate, click a segment → drill
-  (`/transactions?from&to&categoryId`). Backend `GET /api/charts/spending-trend`
-  (+2 tests); sidebar + header nav. (Screenshot pending — preview window was
-  collapsed during the run; page mounts clean, no console errors.)
-- [x] **Top Merchants** — group by `Description` (top 15); horizontal bars; click bar
-  → `/transactions?search=<Description>`. Backend `GET /api/charts/top-merchants`
-  (+2 tests); added `Description` to `ReportingRow` (CONTEXT updated). Note: the bar
-  groups by exact `Description`; the drill uses `search` (LIKE %…%), so the drilled
-  list is a superset of the bar (documented CONTEXT behavior — merchant drill is
-  fuzzy, unlike the exact category-subtree drill). Verified: endpoint data correct,
-  page mounts clean, search drill filters.
-- [x] **Cash-flow Sankey** — ECharts sankey; income→"Total Income" hub→expenses
-  (top-8 + "Other") + "Savings"; deficit shown as a source node feeding the hub;
-  node drill (category subtree / uncategorized). Backend `GET /api/charts/cash-flow`
-  (+1 test asserting the hub balances). Verified in browser (deficit case renders
-  correctly, no Savings node).
+## Phase 4 — Backend: delete the dead settings.json layer
 
-**Phase 1 complete** (trend, top merchants, cash-flow). Backend 210 tests, web 88 tests green.
+- [ ] Delete `SettingsService`, `Model/SettingsModel.cs`, and the `GET/PUT /system/settings`
+      endpoints (+ DI registration in Program.cs).
+- [ ] Remove the `SettingsPath` config key usage (gone with SettingsService).
+      → verify: no references to SettingsService / SettingsModel remain; build passes.
 
-## Phase 2 — Forward bet: Budget
+## Phase 5 — Backend tests
 
-- [x] `Budget` entity + `DbSet<Budget>` + `BudgetService` + `/api/budgets` (GET/PUT/
-  DELETE). Program.cs creates the table for existing dev DBs. (216 backend tests.)
-- [x] Budget management UI — `/budgets` page: per top-level category, set/clear an
-  opt-in monthly amount (Income/Transfer/Uncategorized excluded). Verified in browser
-  (set → persists + chart updates + Clear button; clear → removed).
-- [x] **Budget vs Actual** chart (this month) — grouped horizontal bars (Actual
-  colored green/red by over/under, Budget gray), via `ChartBudgetVsActualAsync`
-  reusing `ReportingRow` at the parent-rollup level.
-- [x] Budget **pace** overlay on Cumulative Spending — a dashed amber line ramping
-  from 0 to the total monthly budget (shown only when budgets exist). Verified in
-  browser.
+- [ ] Update `TransactionServicePipelineTests` / `TransactionServiceImportTests` — drop
+      backup-on-import assertions; construct `TransactionService` without `DBService`.
+- [ ] Update any import-endpoint tests that set `CsvArchivePath` / `BackupPath` config.
+- [ ] Add test for the new archive filename format + sanitization.
+      → verify: `dotnet test src/MoneyManager.Api.Tests` green.
 
-**Phase 2 complete** (Budget entity/CRUD, management UI, Budget vs Actual, pace overlay).
+## Phase 6 — Frontend: multi-file upload
 
-## Phase 3 — Existing-chart enhancements ("more informative")
+- [ ] ImportPage: `input multiple`; drop-zone accepts all `.csv` from `dataTransfer.files`;
+      state `selectedFiles: File[]`; render the selected-file list with per-file remove.
+- [ ] Upload flow: `POST /system/backup` once → on failure abort with error; else upload
+      files **sequentially**, tracking per-file status (pending → done/error).
+- [ ] Replace the single `ImportResult` block with a per-file results list + an aggregate
+      summary (total imported / skipped).
+- [ ] Keep one batch-wide Bank Type dropdown (Auto default) + Create-accounts checkbox.
+      → verify (vitest + manual): selecting 3 CSVs imports all three; one failing file
+      does not abort the others; a failed pre-batch backup blocks the batch.
 
-- [x] Net Income: trailing 3-month average line + a Savings-rate column in the
-  breakdown table. (Frontend-only.) Verified in browser.
-- [x] Spending-by-Category: per-category Δ vs the previous equal-length window
-  (`▲/▼ %` in the legend); drill on slice already shipped in Phase 0. Backend adds
-  `previousAmount` to `/api/charts/spending-by-category`. Verified in browser.
-- [x] Cumulative: budget pace line shipped in Phase 2.
-- [~] Cumulative "generalize beyond this-vs-last-month" — **trimmed** (needs a
-  backend rework of the cumulative endpoint to take a period; deferred as a separate
-  candidate. The pace line already added the main value here.)
+## Phase 7 — Frontend: backups on Settings, remove dead settings
 
-**Phase 3 complete** (Net Income trend/savings-rate, category period-over-period delta).
-Backend 216 tests, web 88 tests green.
+- [ ] Move backup management (list + Restore w/ confirm + Create + Cleanup) from the
+      orphaned `BackupPage.tsx` into a card on SettingsPage; delete `BackupPage.tsx`.
+- [ ] Remove the Dark Mode + Backup Path controls and the Save-Settings flow from
+      SettingsPage; remove `useSettings`/`useUpdateSettings` hooks and the
+      `SettingsModel` type (+ `backupPath`/`isDarkMode` fields).
+      → verify (vitest + manual): Settings shows AI Providers + Backups; no dark-mode
+      or backup-path field; theme toggle still works via the header button.
 
-## Notes / housekeeping spotted (out of scope, not yet decided)
+## Phase 8 — Verify whole
 
-- `BalanceChart` DTO is misnamed (holds income/expenses, not balances). The
-  `Balance` table is never written — net-worth-over-time remains blocked until a
-  balance-ingestion or running-balance mechanism is decided (separate session).
+- [ ] Backend: `dotnet build` + `dotnet test src/MoneyManager.Api.Tests`.
+- [ ] Frontend: `npm run build`, `npm run lint`, `npm test` (in `src/moneymanager-web`).
+- [ ] Manual smoke: multi-file import → files in `data/imported`, one backup in
+      `data/backup`, restore works from Settings.
+
+---
+
+## Review
+
+Implemented 2026-06-24. All 8 phases done.
+
+**Backend**
+- `Helpers/DataPaths.cs` resolves the data dir from the connection string; `DBService`
+  and `ImportEndpoints` derive `{dataDir}/backup` and `{dataDir}/imported`. Config keys
+  `BackupPath` / `CsvArchivePath` removed.
+- Archive filename → `{yyyy-MM-dd HHmmss} {BankType} {sanitized-original}.csv`;
+  `SanitizeForFileName` strips path separators + illegal chars.
+- Backup removed from `TransactionService.ImportAsync`; `DBService` dependency dropped.
+- Dead settings layer deleted: `SettingsService`, `SettingsModel`, `GET/PUT /system/settings`,
+  DI registration.
+
+**Frontend**
+- ImportPage: `multiple` input + multi-drop, selected-file list with remove, one
+  `POST /system/backup` before the batch (aborts on failure), sequential per-file upload
+  with per-file status + aggregate summary.
+- SettingsPage: dropped Dark Mode + Backup Path; added a Backups card (list + Restore +
+  Create + Cleanup) merged from the orphaned `BackupPage.tsx`, which was deleted.
+- Removed `useSettings`/`useUpdateSettings` hooks + `SettingsModel` type.
+
+**Verification**
+- Backend: `dotnet test` → 230 passed (incl. new `ImportEndpointsArchiveTests`).
+- Runtime: `POST /api/system/backup` lands the file in `data/backup` (path derivation
+  confirmed end-to-end).
+- Frontend: `npm run lint` clean, `npm run build` succeeds, `npm test` → 88 passed.
+- Browser smoke via preview MCP not completed — a second Vite instance wouldn't bind a
+  port alongside the user's running dev server; relied on the production build + vitest +
+  the live API check instead.
+
+**Notes / not done**
+- Backup retention is still manual (Cleanup button) — auto-cleanup intentionally out of scope.
+- No migration of old backups/archives from the previous ephemeral locations (by decision).

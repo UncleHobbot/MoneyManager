@@ -103,8 +103,9 @@ A read-side abstraction over per-bank CSV formats. Each bank (Mint, RBC,
 CIBC) implements `IBankImporter` with two operations: `Validate(stream)`
 checks structure, `ReadRows(stream)` yields `NormalizedRow` values. The
 import pipeline (`TransactionService.ImportAsync`) consumes normalized
-rows and owns backup, account/category resolution, dedup, rule
-application, and persistence.
+rows and owns account/category resolution, dedup, rule application, and
+persistence. **Backup is no longer the pipeline's concern** — see
+"Database backup" below and ADR-0008.
 
 - **Adapter properties.** Each `IBankImporter` declares: `BankType`
   (wire-format identifier), `ApplyRules` (whether the pipeline applies
@@ -122,11 +123,37 @@ application, and persistence.
   The pipeline, helpers, and tests do not change.
 - **Endpoint responsibility.** `ImportEndpoints.Upload` owns HTTP receipt,
   bank detection, and file archive (file-system side-effects). The
-  pipeline owns everything else, including backup. Pre-migration, the
-  endpoint also called backup - that double-backup bug is fixed.
-- **Archive filename format.** Changed from `{date} {enum}.csv`
-  (e.g. "2026-06-21 Mint_CSV.csv") to `{date} {bankType}.csv`
-  (e.g. "2026-06-21 Mint.csv"). Old archive files remain readable.
+  pipeline owns everything else **except backup**, which is now the
+  caller's concern (see "Database backup").
+- **Batch import.** Multiple CSV files are uploaded as a batch: the
+  frontend takes one backup, then uploads the files **sequentially** over
+  the single-file endpoint (per-file result + error isolation). A failed
+  pre-batch backup aborts the batch. Bank type is one batch-wide choice
+  (Auto-detect by default, which sniffs each file individually).
+- **Archive filename format.** `{yyyy-MM-dd HHmmss} {bankType} {original}.csv`
+  with the original filename sanitized. The timestamp + original name keep
+  batch uploads of the same bank on the same day unique (the previous
+  `{date} {bankType}.csv` form silently overwrote them). Old archive files
+  remain readable.
+
+## Database backup
+
+A point-in-time copy of the SQLite database, taken as a rollback point before
+a destructive or bulk operation (today: before an import batch) or on demand.
+
+- **Location.** Derived from the database file's directory, not configured.
+  Backups live in `{dataDir}/backup`, CSV archives in `{dataDir}/imported`,
+  where `dataDir` is the folder of the DB file from the connection string
+  (`/app/data` in prod, `../../data` in dev). There is no `BackupPath` /
+  `CsvArchivePath` override — the DB directory is the single source of truth
+  (ADR-0008).
+- **Ownership.** Backup is **caller-orchestrated**, not a side-effect of the
+  import pipeline. The frontend takes exactly one backup before a batch via
+  `POST /system/backup`; if it fails, the batch is aborted. `DBService` owns
+  create/list/restore/cleanup; the import pipeline does not back up.
+- **Retention.** Cleanup (keep newest N, default 10) is **manual only** — no
+  auto-cleanup runs. Surfaced on the Settings page alongside the backup list
+  and restore.
 
 ## ChartPeriod (vocabulary)
 

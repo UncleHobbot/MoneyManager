@@ -24,8 +24,7 @@ namespace MoneyManager.Api.Services;
 /// </remarks>
 public partial class TransactionService(
     IDbContextFactory<DataContext> contextFactory,
-    DataService dataService,
-    DBService dbService)
+    DataService dataService)
 {
 
     /// <summary>
@@ -35,10 +34,12 @@ public partial class TransactionService(
     /// <c>Import{Mint,Rbc,Cibc}CsvAsync</c> methods.
     /// </summary>
     /// <remarks>
-    /// The pipeline owns: backup, validation (via adapter), line counting,
+    /// The pipeline owns: validation (via adapter), line counting,
     /// account/category resolution (with per-call caches), dedup,
     /// optional rule application, batch save. The adapter owns: CSV parsing,
-    /// sign convention, description composition, category source.
+    /// sign convention, description composition, category source. Backup is
+    /// no longer the pipeline's concern — the caller takes one backup before an
+    /// import batch (ADR-0008).
     /// Per-call state (the <paramref name="accounts"/>/<paramref name="categories"/>
     /// caches) lives in method-local variables, so concurrent imports do not
     /// corrupt each other.
@@ -48,8 +49,6 @@ public partial class TransactionService(
         IBankImporter importer,
         bool isCreateAccounts = true)
     {
-        await dbService.BackupAsync();
-
         importer.Validate(csvStream);
 
         var total = CountStreamLines(csvStream, hasHeader: importer.HasHeaderRecord);
