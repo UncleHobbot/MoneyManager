@@ -300,3 +300,33 @@ services, not in the cache.
 - **Single adapter.** No `IReferenceDataCache` interface — consistent with
   ADR-0003. The seam is the module's own interface; it is a concrete `Singleton`
   wrapping `IMemoryCache`.
+
+## Categorization
+
+The act of matching a transaction against the auto-categorization **Rules** and,
+when exactly one matches, assigning that rule's `NewDescription` and `Category`
+and marking `IsRuleApplied`. Owned by a single module, `CategorizationService`.
+
+- **Distinct from Rule CRUD.** Managing the rules themselves (create / edit /
+  delete / list) is a separate, shallow concern. `CategorizationService` owns
+  *applying* rules to transactions, not editing rules. See "Merchant / Payee"
+  (Rules own merchant-name normalization).
+- **Matching is the deep core.** `GetMatchingRulesAsync(transaction)` returns
+  **all** rules whose pattern matches the transaction's `OriginalDescription`,
+  via a two-stage filter: a coarse SQL `LIKE` pre-filter, then a precise
+  in-memory pass applying each rule's `CompareType` (Contains / StartsWith /
+  EndsWith / Equals, case-insensitive). The same matcher serves "show the user
+  the possible rules" and auto-apply.
+- **Ambiguity rule.** Auto-application assigns a rule only when **exactly one**
+  rule matches. Zero or multiple matches leave the transaction unchanged. This
+  rule lives in the apply paths, not in the matcher.
+- **Apply seams (three).** `AutoApplyAsync(transaction, ctx)` mutates an
+  in-flight transaction inside the caller's unit of work (used by import; no
+  save). `ApplyRuleAsync(transactionId, ruleId)` and
+  `RecategorizePendingAsync()` own their context and save. `DataContext` appears
+  in the interface only on the import-participating path — see ADR-0009.
+- **Pending predicate.** `RecategorizePendingAsync` owns the candidate predicate
+  `Category == null || !IsRuleApplied` (moved out of the `RuleEndpoints.ApplyAll`
+  handler). This is the broader "needs categorization" set, not the "Uncategorized"
+  state — do not conflate (see "Uncategorized"). Routing this predicate through
+  `TransactionQueryService` is deferred (ADR-0002), not done here.

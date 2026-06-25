@@ -101,7 +101,7 @@ public static class TransactionEndpoints
             : TypedResults.Ok(transaction.ToDto());
     }
 
-    internal static async Task<IResult> GetPossibleRules(int id, DataService dataService)
+    internal static async Task<IResult> GetPossibleRules(int id, DataService dataService, CategorizationService categorization)
     {
         var query = await dataService.GetTransactionsAsync();
         var transaction = await query.FirstOrDefaultAsync(t => t.Id == id);
@@ -109,28 +109,13 @@ public static class TransactionEndpoints
         if (transaction is null)
             return TypedResults.NotFound();
 
-        var rules = await dataService.GetPossibleRulesAsync(transaction);
-        return TypedResults.Ok(rules.ToList());
+        var rules = await categorization.GetMatchingRulesAsync(transaction);
+        return TypedResults.Ok(rules);
     }
 
-    internal static async Task<IResult> ApplyRule(int id, int ruleId, DataService dataService)
+    internal static async Task<IResult> ApplyRule(int id, int ruleId, CategorizationService categorization)
     {
-        var transactions = await dataService.GetTransactionsAsync();
-        var transaction = await transactions.FirstOrDefaultAsync(t => t.Id == id);
-
-        if (transaction is null)
-            return TypedResults.NotFound();
-
-        var rules = await dataService.GetRulesAsync();
-        var rule = await rules.FirstOrDefaultAsync(r => r.Id == ruleId);
-
-        if (rule is null)
-            return TypedResults.NotFound();
-
-        await dataService.ApplyRuleAsync(transaction, rule);
-
-        var refreshedTransactions = await dataService.GetTransactionsAsync();
-        var updated = await refreshedTransactions.FirstOrDefaultAsync(t => t.Id == id);
+        var updated = await categorization.ApplyRuleAsync(id, ruleId);
         return updated is null
             ? TypedResults.NotFound()
             : TypedResults.Ok(updated.ToDto());

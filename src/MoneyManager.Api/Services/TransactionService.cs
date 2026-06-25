@@ -24,7 +24,7 @@ namespace MoneyManager.Api.Services;
 /// </remarks>
 public partial class TransactionService(
     IDbContextFactory<DataContext> contextFactory,
-    DataService dataService,
+    CategorizationService categorization,
     ReferenceDataCache cache)
 {
 
@@ -88,7 +88,7 @@ public partial class TransactionService(
             };
 
             if (importer.ApplyRules)
-                await dataService.ApplyRuleAsync(transaction, ctx);
+                await categorization.AutoApplyAsync(transaction, ctx);
 
             transactions.Add(transaction);
         }

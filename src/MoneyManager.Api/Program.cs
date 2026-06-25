@@ -25,6 +25,7 @@ builder.Services.AddDbContextFactory<DataContext>(options =>
 // Application services
 builder.Services.AddSingleton<ReferenceDataCache>();
 builder.Services.AddScoped<DataService>();
+builder.Services.AddScoped<CategorizationService>();
 builder.Services.AddScoped<AiProviderService>();
 builder.Services.AddScoped<AIService>();
 builder.Services.AddScoped<TransactionService>();

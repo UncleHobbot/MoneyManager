@@ -20,7 +20,7 @@ namespace MoneyManager.Api.Tests.Services;
 public class TransactionServiceImportTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
-    private readonly DataService _dataService;
+    private readonly CategorizationService _categorization;
     private readonly ReferenceDataCache _refCache;
     private readonly IMemoryCache _cache;
 
@@ -29,7 +29,7 @@ public class TransactionServiceImportTests : IDisposable
         _factory = DbContextHelper.CreateFactory();
         _cache = new MemoryCache(new MemoryCacheOptions());
         _refCache = new ReferenceDataCache(_factory, _cache);
-        _dataService = new DataService(_factory, _refCache, new TransactionQueryService(_factory));
+        _categorization = new CategorizationService(_factory);
 
         using var ctx = _factory.CreateDbContext();
         ctx.Accounts.Add(new Account { Name = "Chequing", ShownName = "Chequing", Type = 0, Number = "12345" });
@@ -45,7 +45,7 @@ public class TransactionServiceImportTests : IDisposable
     }
 
     private TransactionService CreateTransactionService()
-        => new(_factory, _dataService, _refCache);
+        => new(_factory, _categorization, _refCache);
 
     private static Stream ToStream(string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 

@@ -187,7 +187,8 @@ public static class DbContextHelper
         var queryService = new TransactionQueryService(factory);
         var refCache = new ReferenceDataCache(factory, cache);
         var dataService = new DataService(factory, refCache, queryService);
-        return new ServiceBundle(factory, dataService, queryService, cache);
+        var categorization = new CategorizationService(factory);
+        return new ServiceBundle(factory, dataService, queryService, cache, categorization);
     }
 }
 
@@ -240,17 +241,20 @@ public sealed class ServiceBundle : IDisposable
     public DataService DataService { get; }
     public TransactionQueryService QueryService { get; }
     public IMemoryCache Cache { get; }
+    public CategorizationService Categorization { get; }
 
     public ServiceBundle(
         TestDbContextFactory factory,
         DataService dataService,
         TransactionQueryService queryService,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        CategorizationService categorization)
     {
         Factory = factory;
         DataService = dataService;
         QueryService = queryService;
         Cache = cache;
+        Categorization = categorization;
     }
 
     public void Dispose()

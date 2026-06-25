@@ -219,9 +219,9 @@ public class TransactionEndpointsTests : IDisposable
         ctx.Transactions.Add(transaction);
         await ctx.SaveChangesAsync();
 
-        var result = await TransactionEndpoints.GetPossibleRules(transaction.Id, _svc.DataService);
+        var result = await TransactionEndpoints.GetPossibleRules(transaction.Id, _svc.DataService, _svc.Categorization);
 
-        var ok = result.Should().BeOfType<Ok<List<Rule>>>().Subject;
+        var ok = result.Should().BeOfType<Ok<IReadOnlyList<Rule>>>().Subject;
         ok.Value.Should().ContainSingle(rule => rule.OriginalDescription == "NETFLIX");
     }
 
@@ -246,7 +246,7 @@ public class TransactionEndpointsTests : IDisposable
 
         var rule = ctx.Rules.Include(r => r.Category).First(r => r.OriginalDescription == "NETFLIX");
 
-        var result = await TransactionEndpoints.ApplyRule(transaction.Id, rule.Id, _svc.DataService);
+        var result = await TransactionEndpoints.ApplyRule(transaction.Id, rule.Id, _svc.Categorization);
 
         var ok = result.Should().BeOfType<Ok<TransactionDto>>().Subject;
         ok.Value!.Description.Should().Be(rule.NewDescription);

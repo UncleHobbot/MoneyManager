@@ -64,27 +64,9 @@ public static class RuleEndpoints
         return TypedResults.Ok(await remaining.ToListAsync());
     }
 
-    internal static async Task<IResult> ApplyAll(
-        DataService dataService,
-        IDbContextFactory<DataContext> contextFactory)
+    internal static async Task<IResult> ApplyAll(CategorizationService categorization)
     {
-        await using var ctx = await contextFactory.CreateDbContextAsync();
-
-        var transactions = await ctx.Transactions
-            .Include(t => t.Category)
-            .Where(t => t.Category == null || !t.IsRuleApplied)
-            .ToListAsync();
-
-        var appliedCount = 0;
-        foreach (var transaction in transactions)
-        {
-            var wasApplied = transaction.IsRuleApplied;
-            await dataService.ApplyRuleAsync(transaction, ctx);
-            if (transaction.IsRuleApplied && !wasApplied)
-                appliedCount++;
-        }
-
-        await ctx.SaveChangesAsync();
-        return TypedResults.Ok(new { applied = appliedCount });
+        var applied = await categorization.RecategorizePendingAsync();
+        return TypedResults.Ok(new { applied });
     }
 }
