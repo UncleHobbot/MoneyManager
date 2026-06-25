@@ -35,10 +35,10 @@ public static class SystemEndpoints
     internal static async Task<IResult> RestoreBackup(
         string filename,
         DBService dbService,
-        DataService dataService)
+        ReferenceDataCache cache)
     {
         await dbService.RestoreBackupAsync(filename);
-        await dataService.WarmCacheAsync();
+        await cache.WarmAsync();
         return TypedResults.Ok();
     }
 

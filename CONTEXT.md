@@ -264,3 +264,39 @@ chart suite (see ADR-0007).
 - **Unlocks.** A "Budget vs Actual" chart (per-category actual-vs-limit bars,
   over/under coloured) and a budget **pace** overlay on the cumulative-spending
   chart (expected-by-today vs actual).
+
+## Reference Data Cache
+
+The read-mostly lookup sets that the UI and the import pipeline resolve against:
+**Accounts and Categories**. A single deep module (`ReferenceDataCache`) owns their
+in-memory storage and lifecycle; the domain lookups built on top of them
+(by id, by name, the category tree, `IsNew` filtering) stay in the consuming
+services, not in the cache.
+
+- **Interface.** `GetAccounts()` / `GetCategories()` return the cached
+  collections; `InvalidateAccounts()` / `InvalidateCategories()` evict by type;
+  `Warm()` pre-loads both. That is the whole surface — collections in, eviction
+  and warm out.
+- **Eviction, not refresh.** Invalidation is **evict-only**; the next read lazily
+  reloads via read-through. There is no "refresh-and-return" — a caller that needs
+  the fresh collection invalidates, then calls `Get*`.
+- **Read-only contract.** `Get*` hands back the live cached collection typed as
+  `IReadOnlyCollection<T>` — callers must not mutate it; the defensive `.ToList()`
+  copy lives in the consumer (e.g. `GetAccountsAsync`), not the cache.
+- **Category invariant.** Categories are always loaded with their `Parent`
+  (`Include(c => c.Parent)`), at warm and on lazy load. Consumers rely on
+  `category.Parent` being populated. Accounts are flat.
+- **Invalidation owners.** Every write to an Account (`ChangeAccountAsync`,
+  `DeleteAccountAsync`) invalidates Accounts; every write to a Category
+  (`ChangeCategoryAsync` and everything routed through it) invalidates Categories.
+  **Import** mutates reference data (it may create Accounts/Categories), so it
+  unconditionally invalidates both at the end of a run — fixing the stale-UI-cache
+  bug where a newly imported account did not appear until the next warm.
+- **Not the import's per-call memoization.** The import pipeline keeps its own
+  per-transaction `Dictionary<string, Account/Category>` (see "Bank Import
+  Adapter"). That is a different concept: it must see uncommitted inserts within
+  the same import and uses richer matching (alternative names, number
+  normalization). It does not read this cache; it only invalidates it on completion.
+- **Single adapter.** No `IReferenceDataCache` interface — consistent with
+  ADR-0003. The seam is the module's own interface; it is a concrete `Singleton`
+  wrapping `IMemoryCache`.

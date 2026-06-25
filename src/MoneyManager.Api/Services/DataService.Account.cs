@@ -8,7 +8,7 @@ namespace MoneyManager.Api.Services;
 /// </summary>
 /// <remarks>
 /// This partial class implements CRUD operations for <see cref="Account"/> entities.
-/// Uses <see cref="Microsoft.Extensions.Caching.Memory.IMemoryCache"/> for thread-safe caching.
+/// Reference data is read through and invalidated via <see cref="ReferenceDataCache"/>.
 /// All methods return updated account lists to support UI refresh patterns.
 /// </remarks>
 public partial class DataService
@@ -23,7 +23,7 @@ public partial class DataService
     /// </remarks>
     public async Task<List<Account>> GetAccountsAsync()
     {
-        var accounts = await GetCachedAccountsAsync();
+        var accounts = await cache.GetAccountsAsync();
         return accounts.ToList();
     }
 
@@ -48,7 +48,8 @@ public partial class DataService
             ctx.Accounts.Update(account);
         await ctx.SaveChangesAsync();
 
-        var accounts = await RefreshAccountsCacheAsync();
+        cache.InvalidateAccounts();
+        var accounts = await cache.GetAccountsAsync();
         return accounts.ToList();
     }
 
@@ -75,7 +76,7 @@ public partial class DataService
 
         ctx.Accounts.Remove(account);
         await ctx.SaveChangesAsync();
-        await RefreshAccountsCacheAsync();
+        cache.InvalidateAccounts();
         return true;
     }
 }

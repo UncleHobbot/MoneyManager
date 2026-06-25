@@ -23,6 +23,7 @@ builder.Services.AddDbContextFactory<DataContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Application services
+builder.Services.AddSingleton<ReferenceDataCache>();
 builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<AiProviderService>();
 builder.Services.AddScoped<AIService>();
@@ -95,9 +96,8 @@ if (dbMatch.Success)
 // Warm the in-memory caches at startup
 try
 {
-    using var scope = app.Services.CreateScope();
-    var dataService = scope.ServiceProvider.GetRequiredService<DataService>();
-    await dataService.WarmCacheAsync();
+    var cache = app.Services.GetRequiredService<ReferenceDataCache>();
+    await cache.WarmAsync();
 }
 catch (Exception ex)
 {

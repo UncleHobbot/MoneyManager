@@ -24,7 +24,8 @@ namespace MoneyManager.Api.Services;
 /// </remarks>
 public partial class TransactionService(
     IDbContextFactory<DataContext> contextFactory,
-    DataService dataService)
+    DataService dataService,
+    ReferenceDataCache cache)
 {
 
     /// <summary>
@@ -97,6 +98,11 @@ public partial class TransactionService(
             ctx.Transactions.AddRange(transactions);
             await ctx.SaveChangesAsync();
         }
+
+        // Import may have created accounts/categories; evict the reference-data cache
+        // so the UI reflects them without waiting for the next warm (CONTEXT.md).
+        cache.InvalidateAccounts();
+        cache.InvalidateCategories();
 
         return new ImportResult
         {

@@ -185,7 +185,8 @@ public static class DbContextHelper
         }
 
         var queryService = new TransactionQueryService(factory);
-        var dataService = new DataService(factory, cache, queryService);
+        var refCache = new ReferenceDataCache(factory, cache);
+        var dataService = new DataService(factory, refCache, queryService);
         return new ServiceBundle(factory, dataService, queryService, cache);
     }
 }
