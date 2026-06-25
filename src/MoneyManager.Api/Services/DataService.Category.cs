@@ -89,7 +89,7 @@ public partial class DataService
     /// </remarks>
     public async Task<Category> ChangeCategoryAsync(Category category)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         if (category.Id == 0)
             ctx.Categories.Add(category);
         else
@@ -116,7 +116,7 @@ public partial class DataService
     {
         if (category.ParentCategory == "parent")
         {
-            var ctx = await contextFactory.CreateDbContextAsync();
+            await using var ctx = await contextFactory.CreateDbContextAsync();
             var cat = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == category.Id);
             if (cat != null)
             {
@@ -140,7 +140,7 @@ public partial class DataService
     /// </remarks>
     public async Task SaveCategoryAsync(CategoryDropItem category)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         var cat = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == category.Id);
         var catParent = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == int.Parse(category.ParentCategory));
         if (cat != null && catParent != null)
@@ -165,7 +165,7 @@ public partial class DataService
     /// </remarks>
     public async Task SaveCategoryAsync(CategoryTree category)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         var cat = await ctx.Categories.FirstOrDefaultAsync(x => x.Id == category.Id);
         if (cat != null)
         {
@@ -202,7 +202,7 @@ public partial class DataService
     /// </remarks>
     public async Task<Category?> GetCategoryByNameAsync(string name)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         return await ctx.Categories.FirstOrDefaultAsync(x => x.Name.ToUpper() == name.ToUpper());
     }
 

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '@/api/client'
+import { queryKeys } from '@/lib/queryKeys'
 import type {
   BalanceChart,
   BudgetVsActual,
@@ -13,7 +14,7 @@ import type {
 
 export function useNetIncome(period: string) {
   return useQuery<BalanceChart[]>({
-    queryKey: ['charts', 'net-income', period],
+    queryKey: queryKeys.charts.netIncome(period),
     queryFn: () =>
       api.get('/charts/net-income', { params: { period } }).then(r => r.data),
   })
@@ -21,14 +22,14 @@ export function useNetIncome(period: string) {
 
 export function useCumulativeSpending() {
   return useQuery<CumulativeSpendingChart[]>({
-    queryKey: ['charts', 'cumulative-spending'],
+    queryKey: queryKeys.charts.cumulativeSpending(),
     queryFn: () => api.get('/charts/cumulative-spending').then(r => r.data),
   })
 }
 
 export function useSpendingTrend(period: string) {
   return useQuery<SpendingTrendChart>({
-    queryKey: ['charts', 'spending-trend', period],
+    queryKey: queryKeys.charts.spendingTrend(period),
     queryFn: () =>
       api.get('/charts/spending-trend', { params: { period } }).then(r => r.data),
   })
@@ -36,7 +37,7 @@ export function useSpendingTrend(period: string) {
 
 export function useTopMerchants(period: string, limit = 15) {
   return useQuery<MerchantSpend[]>({
-    queryKey: ['charts', 'top-merchants', period, limit],
+    queryKey: queryKeys.charts.topMerchants(period, limit),
     queryFn: () =>
       api.get('/charts/top-merchants', { params: { period, limit } }).then(r => r.data),
   })
@@ -44,7 +45,7 @@ export function useTopMerchants(period: string, limit = 15) {
 
 export function useCashFlow(period: string) {
   return useQuery<CashFlowChart>({
-    queryKey: ['charts', 'cash-flow', period],
+    queryKey: queryKeys.charts.cashFlow(period),
     queryFn: () =>
       api.get('/charts/cash-flow', { params: { period } }).then(r => r.data),
   })
@@ -52,7 +53,7 @@ export function useCashFlow(period: string) {
 
 export function useBudgetVsActual() {
   return useQuery<BudgetVsActual[]>({
-    queryKey: ['charts', 'budget-vs-actual'],
+    queryKey: queryKeys.charts.budgetVsActual(),
     queryFn: () => api.get('/charts/budget-vs-actual').then(r => r.data),
   })
 }
@@ -64,7 +65,7 @@ export interface SpendingByCategoryResponse {
 
 export function useSpendingByCategory(period: string) {
   return useQuery<SpendingByCategoryResponse>({
-    queryKey: ['charts', 'spending-by-category', period],
+    queryKey: queryKeys.charts.spendingByCategory(period),
     queryFn: () =>
       api
         .get('/charts/spending-by-category', { params: { period } })
@@ -74,7 +75,7 @@ export function useSpendingByCategory(period: string) {
 
 export function useChartPeriods() {
   return useQuery<ChartPeriod[]>({
-    queryKey: ['charts', 'periods'],
+    queryKey: queryKeys.charts.periods(),
     queryFn: () => api.get('/charts/periods').then(r => r.data),
   })
 }

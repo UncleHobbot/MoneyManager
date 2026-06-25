@@ -17,6 +17,10 @@ public partial class DataService
     /// </returns>
     public async Task<IQueryable<Rule>> GetRulesAsync()
     {
+        // Intentionally not `await using`: the returned IQueryable is bound to this
+        // context, which callers enumerate (ToListAsync/FirstOrDefaultAsync) after
+        // this method returns. Disposing here would break them. Materializing this
+        // method to a list (so the context can be disposed) is a separate change.
         var ctx = await contextFactory.CreateDbContextAsync();
         return ctx.Rules
             .Include(x => x.Category)
@@ -31,7 +35,7 @@ public partial class DataService
     /// <returns>The saved <see cref="Rule"/> entity with its database-generated ID populated.</returns>
     public async Task<Rule> SaveNewRuleAsync(Rule rule)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         rule.Id = 0;
         ctx.Rules.Update(rule);
         await ctx.SaveChangesAsync();
@@ -50,7 +54,7 @@ public partial class DataService
     /// </returns>
     public async Task<IQueryable<Rule>> ChangeRuleAsync(Rule rule)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         if (rule.Id == 0)
             ctx.Rules.Add(rule);
         else
@@ -68,7 +72,7 @@ public partial class DataService
     /// </returns>
     public async Task<IQueryable<Rule>> DeleteRuleAsync(Rule rule)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         ctx.Rules.Remove(rule);
         await ctx.SaveChangesAsync();
         return await GetRulesAsync();

@@ -41,7 +41,7 @@ public partial class DataService
     /// </remarks>
     public async Task<List<Account>> ChangeAccountAsync(Account account)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         if (account.Id == 0)
             ctx.Accounts.Add(account);
         else
@@ -67,7 +67,7 @@ public partial class DataService
     /// </remarks>
     public async Task<bool> DeleteAccountAsync(int accountId)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         var hasTransactions = await ctx.Transactions.AnyAsync(t => t.Account.Id == accountId);
         if (hasTransactions) return false;
 

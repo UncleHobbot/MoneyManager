@@ -51,18 +51,23 @@ credits (income).
 - **Canonical source.** `Transaction.AmountExt` (expression-bodied property on
   the entity) is the canonical source for any *materialized* use (DTO
   projection, in-memory aggregation, frontend display).
-- **EF translation limit.** EF Core 10 cannot translate `AmountExt` inside
-  query expressions (`OrderBy`, `Where`, `Select`). The expression-bodied
-  property is treated as unmapped. Sort and filter code that must run
-  server-side duplicates the formula inline.
-- **Known duplicates.** `DataService.Chart.cs` re-spells the formula inline in
-  three places (once with the opposite sign convention). The amount-sort branch
-  of `TransactionQueryService.ApplySort` duplicates it a fourth time; this is
-  the documented fallback from the Q9 grilling decision after the
-  `AmountExt`-based test failed with `InvalidOperationException`. Candidate 3
-  (ReportingRow with a persisted signed-amount column) is the planned
-  consolidation — it removes all four duplicates by introducing a column EF
-  can map.
+- **EF translation limit.** EF Core 10 cannot translate `AmountExt` inside a
+  server-side query expression (`OrderBy`, `Where`, `Select`-to-SQL): the
+  expression-bodied property is treated as unmapped. Code that must sort/filter
+  on the signed value *in SQL* re-spells the formula inline.
+- **Consolidated by ReportingRow.** Chart and stats methods no longer re-spell
+  the formula: they consume `ReportingRow.SignedAmount`, computed once
+  client-side from `AmountExt` (`GetReportingRowsAsync` materializes, then
+  projects in memory). `DataService.Chart.cs` has zero inline copies — the
+  `-row.SignedAmount` usages are a "signed → expense magnitude" convention flip,
+  not the sign formula.
+- **One intentional inline.** The amount-sort branch of
+  `TransactionQueryService.ApplySort` re-spells the formula because an `OrderBy`
+  must translate to SQL. This is the single remaining copy and is deliberate, not
+  debt. A persisted signed-amount column to remove it was considered and
+  **rejected** (ADR-0010): the duplication it targeted is already gone, and the
+  column would mean the repo's first EF migration + altering the prod database
+  for one `OrderBy`.
 
 ## Analysis Type (AI prompt catalog)
 

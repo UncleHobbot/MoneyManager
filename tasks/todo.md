@@ -1,88 +1,75 @@
-# Extract CategorizationService (deepening Candidate 2)
+# Architecture cleanup — Candidates 3, 4, 5 (one PR)
 
-Outcome of the `/improve-codebase-architecture` → `/grilling` session (2026-06-24).
-Design in `CONTEXT.md` ("Categorization") and ADR-0009. The aim is the one genuinely
-deep module hiding in the `DataService` grab-bag — rule matching + application — not a
-mechanical CRUD split.
+Outcome of the `/improve-codebase-architecture` → `/grilling` session (2026-06-25).
+The user chose one combined PR. Each candidate was grilled first.
 
-## Interface (chosen: mutation + context, ADR-0009)
+## Candidate 3 — Signed amount: DROPPED (docs only) ✅
 
-```
-Task<IReadOnlyList<Rule>> GetMatchingRulesAsync(Transaction tx)     // matcher (test surface)
-Task AutoApplyAsync(Transaction tx, DataContext ctx)               // import: exactly-one → apply, no save
-Task<Transaction?> ApplyRuleAsync(int transactionId, int ruleId)  // owns ctx + save
-Task<int> RecategorizePendingAsync()                              // owns ctx + save; absorbs ApplyAll
-```
+The duplication it targeted is already consolidated by `ReportingRow` (ADR-0004);
+the only remaining inline is one intentional `OrderBy` in `ApplySort`. A persisted
+column would mean the repo's first EF migration + altering the prod DB for one
+expression — poor trade-off.
 
-## Phase 1 — The module
+- [x] ADR-0010 records the rejection.
+- [x] `CONTEXT.md` "Signed amount" updated (stale "3 duplicates in Chart.cs / Candidate 3").
+- [x] `TransactionQueryService.ApplySort` comment updated.
 
-- [ ] `Services/CategorizationService.cs` — dep `IDbContextFactory<DataContext>` only.
-  - `GetMatchingRulesAsync` — move the two-stage `LIKE` → `CompareType` filter from
-    `DataService.GetPossibleRulesAsync`; return `IReadOnlyList<Rule>`.
-  - `AutoApplyAsync(tx, ctx)` — match; if exactly one, set Description/Category
-    (resolved in `ctx`)/IsRuleApplied; no save. (From `ApplyRuleAsync(tx, ctx)`.)
-  - `ApplyRuleAsync(txId, ruleId)` — load tx + rule, apply, save. (Absorbs
-    `TransactionEndpoints.ApplyRule`'s load/apply/save.)
-  - `RecategorizePendingAsync` — load candidates (`Category == null || !IsRuleApplied`),
-    loop `AutoApply` logic, save once, return count. (Absorbs `RuleEndpoints.ApplyAll`.)
-  → verify: builds.
+## Candidate 4 — queryKeys factory (frontend)
 
-## Phase 2 — Trim DataService.Rule.cs to CRUD
+Factory in `src/lib/queryKeys.ts`; **exact** preservation of current key arrays
+(behaviour-neutral); cover only existing keys. Cross-domain invalidations reference
+the factory.
 
-- [ ] Remove `GetPossibleRulesAsync`, `ApplyRuleAsync(tx, rule)`, `ApplyRuleAsync(tx, ctx)`.
-- [ ] Keep `GetRulesAsync`, `SaveNewRuleAsync`, `ChangeRuleAsync`, `DeleteRuleAsync`.
-  → verify: builds.
+- [ ] `src/lib/queryKeys.ts` — domains: transactions (all/list/infinite/stats),
+      charts (all + 8 builders), categories (all/tree/icons), accounts (all),
+      rules (all/possible), budgets (all), ai (providers/analysisTypes),
+      backups, csvArchive.
+- [ ] Rewire hooks: `useTransactions`, `useCharts`, `useCategories`, `useAccounts`,
+      `useRules`, `useBudgets`, `useAI`, `useSystem`.
+- [ ] Rewire pages with inline keys: `ImportPage` (csvArchive + transactions).
+- [ ] Verify each rewired key equals the old array (same prefix/segments).
+  → verify: `npm run lint`, `npm run build`, `npm test` green.
 
-## Phase 3 — Rewire consumers + DI
+## Candidate 5 — DbContext lifetime (`await using`)
 
-- [ ] `Program.cs`: `AddScoped<CategorizationService>()`.
-- [ ] `RuleEndpoints.ApplyAll`: inject `CategorizationService`, body becomes
-      `return Ok(new { applied = await categorization.RecategorizePendingAsync() })`;
-      drop the `IDbContextFactory` param + the inline candidate query/loop.
-- [ ] `TransactionEndpoints.GetPossibleRules`: load tx, then
-      `categorization.GetMatchingRulesAsync(tx)`.
-- [ ] `TransactionEndpoints.ApplyRule`: `categorization.ApplyRuleAsync(id, ruleId)`;
-      404 when it returns null; return the updated DTO.
-- [ ] `TransactionService`: drop `DataService` dep, add `CategorizationService`;
-      `ImportAsync` calls `categorization.AutoApplyAsync(tx, ctx)`.
-  → verify: builds; endpoints thin.
+Add `await using` to every bare `var ctx = await contextFactory.CreateDbContextAsync();`
+(~25 sites). No `WithContext` helper, no ADR — mechanical, compiler-enforced disposal.
 
-## Phase 4 — Tests
-
-- [ ] `ServiceBundle`: construct + expose `CategorizationService`.
-- [ ] Move the 4 `GetPossibleRulesAsync` matching tests + the apply test out of
-      `DataServiceRuleTests` into `CategorizationServiceTests`, retargeted at the module
-      (`GetMatchingRulesAsync`; `ApplyRuleAsync(txId, ruleId)` with a persisted rule).
-      Keep Rule CRUD tests on `DataService`.
-- [ ] Add a `RecategorizePendingAsync` test (pending tx + matching rule → applied, count 1).
-- [ ] Import test construction: `TransactionService` now takes `CategorizationService`.
-  → verify: `dotnet test` green; spot-check apply-all + import auto-categorize at runtime.
+- [ ] `DataService.Account.cs` (2), `DataService.Category.cs` (5),
+      `DataService.Rule.cs` (4), `DataService.Transaction.cs` (3),
+      `DataService.AI.cs` (1).
+- [ ] `AiProviderService.cs` (6), `DBService.cs` (2), `CategoryEndpoints.cs` (1),
+      `Program.cs` (1, startup).
+- [ ] Watch for methods that return a value built from `ctx` after the using scope —
+      ensure the value is materialized before dispose (most already are).
+  → verify: `dotnet test` green; API boots.
 
 ## Review
 
-Implemented 2026-06-24. All phases done.
+Implemented 2026-06-25. One combined PR.
 
-- `Services/CategorizationService.cs` — `GetMatchingRulesAsync` (two-stage matcher,
-  `CompareType` switch extracted to a private `Matches`), `AutoApplyAsync(tx, ctx)`
-  (import, no save), `ApplyRuleAsync(txId, ruleId)` (owns ctx + save, re-fetches with
-  includes for the DTO), `RecategorizePendingAsync` (owns ctx + save; absorbs the
-  ApplyAll candidate predicate + loop + count). Dep: `IDbContextFactory` only.
-- `DataService.Rule.cs` trimmed to CRUD (`GetRules`/`SaveNewRule`/`ChangeRule`/`DeleteRule`).
-- Consumers rewired: `RuleEndpoints.ApplyAll` is a one-liner; `TransactionEndpoints`
-  `GetPossibleRules`/`ApplyRule` call the module; `TransactionService` dropped its
-  `DataService` dep for `CategorizationService` and `ImportAsync` calls `AutoApplyAsync`.
-  `Program.cs` registers it scoped.
-- `CONTEXT.md` "Categorization" entry + ADR-0009 (mutation+ctx over pure decision).
+**C3 (dropped, docs only)** — ADR-0010 records the rejection; `CONTEXT.md` "Signed
+amount" + the `ApplySort` comment updated. The duplication was already consolidated
+by `ReportingRow`; one intentional inline remains in `ApplySort`.
+
+**C4 (queryKeys factory)** — `src/lib/queryKeys.ts` owns all key shapes (exact
+preservation, behaviour-neutral). Rewired `useTransactions`, `useCharts`,
+`useCategories`, `useAccounts`, `useRules`, `useBudgets`, `useAI`, `useSystem`, and
+`ImportPage`. No raw key arrays remain. `import type` avoids a runtime cycle with
+`useTransactions`.
+
+**C5 (`await using`)** — added to 23 of 25 bare context sites (`DataService.*`,
+`AiProviderService`, `DBService`, `CategoryEndpoints`, `Program.cs`). The two
+remaining — `GetRulesAsync`, `GetTransactionsAsync` — return a context-bound
+`IQueryable` that callers enumerate after return; disposing would break them, so they
+carry a comment. Materializing them (so they can dispose) is a deferred follow-up
+(grilling variant A).
 
 **Verification**
-- `dotnet test` → 236 passed. Matching/apply tests moved to `CategorizationServiceTests`
-  (+ `RecategorizePending` + `ApplyRule` 404 cases); Rule CRUD tests stay on DataService;
-  endpoint-handler tests retargeted at the module.
-- Runtime: API boots (CategorizationService resolves); `/api/rules` 200,
-  `/api/transactions/{id}/possible-rules` (module read path) 200.
+- Backend: `dotnet test` → 236 passed; API boots, CRUD + backup endpoints 200, no
+  "disposed" errors.
+- Frontend: `npm run lint` clean, `npm run build` ok, `npm test` → 88 passed.
 
-**Not done / out of scope**
-- Routing the `RecategorizePending` candidate predicate through `TransactionQueryService`
-  (ADR-0002 direction) — deferred.
-- The optional cheap peel (AccountService/CategoryService) — not done; DataService keeps
-  account/category/transaction/chart/AI. The genuinely deep module (Categorization) is out.
+**Follow-up**
+- Materialize `GetRulesAsync` / `GetTransactionsAsync` to `IReadOnlyList<T>` and update
+  callers, removing the last two context leaks.

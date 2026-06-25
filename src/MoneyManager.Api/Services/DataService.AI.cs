@@ -65,7 +65,7 @@ public partial class DataService
     /// </remarks>
     public async Task<List<TransactionAI>> AIGetTransactionsAsync(DateTime startDate, DateTime endDate)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
 
         var trans = await ctx.Transactions
             .Where(x => x.Date >= startDate && x.Date < endDate)

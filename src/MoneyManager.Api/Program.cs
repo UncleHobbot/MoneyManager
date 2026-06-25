@@ -66,7 +66,7 @@ if (dbMatch.Success)
     // Ensure schema exists (handles both fresh DBs and empty files)
     using (var scope = app.Services.CreateScope())
     {
-        var ctx = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<DataContext>>().CreateDbContextAsync();
+        await using var ctx = await scope.ServiceProvider.GetRequiredService<IDbContextFactory<DataContext>>().CreateDbContextAsync();
         await ctx.Database.EnsureCreatedAsync();
 
         // For existing databases (e.g. migrated from legacy), create new tables that EnsureCreated skips

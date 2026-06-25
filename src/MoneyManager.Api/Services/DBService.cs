@@ -30,7 +30,7 @@ public class DBService(IDbContextFactory<DataContext> contextFactory, IConfigura
             var backupPath = GetBackupPath();
             Directory.CreateDirectory(backupPath);
 
-            var ctx = await contextFactory.CreateDbContextAsync();
+            await using var ctx = await contextFactory.CreateDbContextAsync();
             await using var location = new SqliteConnection(ctx.Database.GetConnectionString());
             var backupFile = Path.Combine(backupPath, $"MoneyManagerBackup_{DateTime.Now:yyyyMMddHHmmss}.db");
             await using var destination = new SqliteConnection($"Data Source={backupFile}");
@@ -84,7 +84,7 @@ public class DBService(IDbContextFactory<DataContext> contextFactory, IConfigura
             if (!File.Exists(backupFile))
                 throw new FileNotFoundException($"Backup file not found: {filename}");
 
-            var ctx = await contextFactory.CreateDbContextAsync();
+            await using var ctx = await contextFactory.CreateDbContextAsync();
             var connectionString = ctx.Database.GetConnectionString();
 
             await using var source = new SqliteConnection($"Data Source={backupFile}");

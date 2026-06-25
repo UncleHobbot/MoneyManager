@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
+import { queryKeys } from '@/lib/queryKeys'
 import type { BackupInfo } from '@/types'
 
 export function useBackups() {
   return useQuery<BackupInfo[]>({
-    queryKey: ['backups'],
+    queryKey: queryKeys.backups,
     queryFn: () => api.get('/system/backups').then(r => r.data),
   })
 }
@@ -13,7 +14,7 @@ export function useCreateBackup() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api.post('/system/backup').then(r => r.data as BackupInfo),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['backups'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.backups }),
   })
 }
 
@@ -22,7 +23,7 @@ export function useRestoreBackup() {
   return useMutation({
     mutationFn: (fileName: string) =>
       api.post(`/system/backups/${encodeURIComponent(fileName)}/restore`).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['backups'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.backups }),
   })
 }
 
@@ -31,6 +32,6 @@ export function useCleanupBackups() {
   return useMutation({
     mutationFn: (keep: number = 10) =>
       api.delete(`/system/backups/cleanup`, { params: { keep } }).then(r => r.data as number),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['backups'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.backups }),
   })
 }

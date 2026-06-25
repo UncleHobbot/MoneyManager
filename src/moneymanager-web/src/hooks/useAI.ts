@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
+import { queryKeys } from '@/lib/queryKeys'
 import type {
   AiProvider,
   AiProviderRequest,
@@ -10,7 +11,7 @@ import type {
 
 export function useAiProviders() {
   return useQuery<AiProvider[]>({
-    queryKey: ['ai', 'providers'],
+    queryKey: queryKeys.ai.providers(),
     queryFn: () => api.get('/ai/providers').then(r => r.data),
   })
 }
@@ -22,7 +23,7 @@ export function useUpdateAiProvider() {
       id
         ? api.put(`/ai/providers/${id}`, data).then(r => r.data)
         : api.post('/ai/providers', data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai', 'providers'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.ai.providers() }),
   })
 }
 
@@ -30,7 +31,7 @@ export function useDeleteAiProvider() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => api.delete(`/ai/providers/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ai', 'providers'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.ai.providers() }),
   })
 }
 
@@ -43,7 +44,7 @@ export function useRunAnalysis() {
 
 export function useAnalysisTypes() {
   return useQuery<AnalysisType[]>({
-    queryKey: ['ai', 'analysis-types'],
+    queryKey: queryKeys.ai.analysisTypes(),
     queryFn: () => api.get('/ai/analysis-types').then(r => r.data),
   })
 }

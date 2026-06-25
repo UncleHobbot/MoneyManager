@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import api from '@/api/client'
+import { queryKeys } from '@/lib/queryKeys'
 import type {
   CreateTransactionRequest,
   PaginatedResult,
@@ -42,20 +43,7 @@ export function useTransactions(filters: TransactionFilters, page = 1, pageSize 
     to,
   } = filters
   return useQuery<PaginatedResult<TransactionDto>>({
-    queryKey: [
-      'transactions',
-      period,
-      accountId,
-      categoryId,
-      search,
-      uncategorized,
-      sortBy,
-      sortDir,
-      from,
-      to,
-      page,
-      pageSize,
-    ],
+    queryKey: queryKeys.transactions.list(filters, page, pageSize),
     queryFn: () =>
       api
         .get('/transactions', {
@@ -86,7 +74,7 @@ export function useInfiniteTransactions(
   enabled = true,
 ) {
   return useInfiniteQuery<PaginatedResult<TransactionDto>>({
-    queryKey: ['transactions', 'infinite', period, accountId, categoryId, pageSize],
+    queryKey: queryKeys.transactions.infinite(period, accountId, categoryId, pageSize),
     initialPageParam: 1,
     enabled,
     queryFn: ({ pageParam }) =>
@@ -105,7 +93,7 @@ export function useInfiniteTransactions(
 export function useTransactionStats(filters: TransactionFilters) {
   const { period, accountId, categoryId, search, uncategorized, from, to } = filters
   return useQuery<TransactionStats>({
-    queryKey: ['transactions', 'stats', period, accountId, categoryId, search, uncategorized, from, to],
+    queryKey: queryKeys.transactions.stats(filters),
     queryFn: () =>
       api
         .get('/transactions/stats', {
@@ -129,7 +117,7 @@ export function useCreateTransaction() {
   return useMutation({
     mutationFn: (data: CreateTransactionRequest) =>
       api.post('/transactions', data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.transactions.all }),
   })
 }
 
@@ -138,7 +126,7 @@ export function useUpdateTransaction() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateTransactionRequest }) =>
       api.put(`/transactions/${id}`, data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.transactions.all }),
   })
 }
 

@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
+import { queryKeys } from '@/lib/queryKeys'
 import type { Account } from '@/types'
 
 export function useAccounts() {
   return useQuery<Account[]>({
-    queryKey: ['accounts'],
+    queryKey: queryKeys.accounts.all,
     queryFn: () => api.get('/accounts').then(r => r.data),
   })
 }
@@ -16,7 +17,7 @@ export function useUpdateAccount() {
       account.id === 0
         ? api.post('/accounts', account).then(r => r.data)
         : api.put(`/accounts/${account.id}`, account).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.accounts.all }),
   })
 }
 
@@ -24,6 +25,6 @@ export function useDeleteAccount() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => api.delete(`/accounts/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.accounts.all }),
   })
 }
