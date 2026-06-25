@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using MoneyManager.Api.Data;
 
 namespace MoneyManager.Api.Services;
@@ -21,80 +20,9 @@ namespace MoneyManager.Api.Services;
 /// </remarks>
 public partial class DataService(
     IDbContextFactory<DataContext> contextFactory,
-    IMemoryCache cache,
+    ReferenceDataCache cache,
     TransactionQueryService queryService)
 {
-    private const string AccountsCacheKey = "accounts";
-    private const string CategoriesCacheKey = "categories";
-
-    /// <summary>
-    /// Initializes the in-memory cache with Accounts and Categories from the database.
-    /// </summary>
-    /// <remarks>
-    /// Should be called once at application startup to warm the cache.
-    /// Loads reference data into <see cref="IMemoryCache"/> for fast thread-safe access.
-    /// </remarks>
-    public async Task WarmCacheAsync()
-    {
-        var ctx = await contextFactory.CreateDbContextAsync();
-        var accounts = (await ctx.Accounts.ToListAsync()).ToHashSet();
-        var categories = (await ctx.Categories.Include(c => c.Parent).ToListAsync()).ToHashSet();
-        cache.Set(AccountsCacheKey, accounts);
-        cache.Set(CategoriesCacheKey, categories);
-    }
-
-    /// <summary>
-    /// Gets the cached accounts, loading from DB if cache is empty.
-    /// </summary>
-    /// <returns>A <see cref="HashSet{T}"/> of all accounts.</returns>
-    private async Task<HashSet<Account>> GetCachedAccountsAsync()
-    {
-        if (cache.TryGetValue(AccountsCacheKey, out HashSet<Account>? accounts) && accounts != null)
-            return accounts;
-        var ctx = await contextFactory.CreateDbContextAsync();
-        accounts = (await ctx.Accounts.ToListAsync()).ToHashSet();
-        cache.Set(AccountsCacheKey, accounts);
-        return accounts;
-    }
-
-    /// <summary>
-    /// Gets the cached categories, loading from DB if cache is empty.
-    /// </summary>
-    /// <returns>A <see cref="HashSet{T}"/> of all categories with parent references loaded.</returns>
-    private async Task<HashSet<Category>> GetCachedCategoriesAsync()
-    {
-        if (cache.TryGetValue(CategoriesCacheKey, out HashSet<Category>? categories) && categories != null)
-            return categories;
-        var ctx = await contextFactory.CreateDbContextAsync();
-        categories = (await ctx.Categories.Include(c => c.Parent).ToListAsync()).ToHashSet();
-        cache.Set(CategoriesCacheKey, categories);
-        return categories;
-    }
-
-    /// <summary>
-    /// Refreshes the accounts cache from the database.
-    /// </summary>
-    /// <returns>The refreshed <see cref="HashSet{T}"/> of accounts.</returns>
-    private async Task<HashSet<Account>> RefreshAccountsCacheAsync()
-    {
-        var ctx = await contextFactory.CreateDbContextAsync();
-        var accounts = (await ctx.Accounts.ToListAsync()).ToHashSet();
-        cache.Set(AccountsCacheKey, accounts);
-        return accounts;
-    }
-
-    /// <summary>
-    /// Refreshes the categories cache from the database.
-    /// </summary>
-    /// <returns>The refreshed <see cref="HashSet{T}"/> of categories with parent references loaded.</returns>
-    private async Task<HashSet<Category>> RefreshCategoriesCacheAsync()
-    {
-        var ctx = await contextFactory.CreateDbContextAsync();
-        var categories = (await ctx.Categories.Include(c => c.Parent).ToListAsync()).ToHashSet();
-        cache.Set(CategoriesCacheKey, categories);
-        return categories;
-    }
-
     /// <summary>
     /// Gets or sets the default chart period for net income visualization. Defaults to "12" (last 12 months).
     /// </summary>

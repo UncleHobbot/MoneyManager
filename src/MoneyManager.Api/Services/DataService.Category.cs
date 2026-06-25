@@ -9,7 +9,7 @@ namespace MoneyManager.Api.Services;
 /// <remarks>
 /// This partial class implements CRUD operations for <see cref="Category"/> entities.
 /// Supports hierarchical category structures with parent-child relationships.
-/// Uses <see cref="Microsoft.Extensions.Caching.Memory.IMemoryCache"/> for thread-safe caching.
+/// Reference data is read through and invalidated via <see cref="ReferenceDataCache"/>.
 /// Excludes categories marked as new (auto-generated during import) from tree views.
 /// </remarks>
 public partial class DataService
@@ -24,7 +24,7 @@ public partial class DataService
     /// </remarks>
     public async Task<List<Category>> GetCategoriesAsync()
     {
-        var categories = await GetCachedCategoriesAsync();
+        var categories = await cache.GetCategoriesAsync();
         return categories.ToList();
     }
 
@@ -41,7 +41,7 @@ public partial class DataService
     /// </remarks>
     public async Task<HashSet<CategoryTree>> GetCategoriesTreeAsync()
     {
-        var categories = await GetCachedCategoriesAsync();
+        var categories = await cache.GetCategoriesAsync();
         var result = GetChildren(null, categories);
         foreach (var parent in result)
             foreach (var child in parent.Children)
@@ -61,7 +61,7 @@ public partial class DataService
     /// Filters out categories marked as <see cref="Category.IsNew"/>.
     /// Returns children sorted alphabetically by name.
     /// </remarks>
-    private static HashSet<CategoryTree> GetChildren(Category? parent, HashSet<Category> categories)
+    private static HashSet<CategoryTree> GetChildren(Category? parent, IReadOnlyCollection<Category> categories)
     {
         var res = new HashSet<CategoryTree>();
         foreach (var c in categories.Where(c => c.Parent == parent && !c.IsNew).OrderBy(x => x.Name))
@@ -96,7 +96,7 @@ public partial class DataService
             ctx.Categories.Update(category);
         await ctx.SaveChangesAsync();
 
-        await RefreshCategoriesCacheAsync();
+        cache.InvalidateCategories();
         return category;
     }
 
@@ -186,7 +186,7 @@ public partial class DataService
     /// </remarks>
     public async Task<Category?> GetCategoryByIdAsync(int id)
     {
-        var categories = await GetCachedCategoriesAsync();
+        var categories = await cache.GetCategoriesAsync();
         return categories.FirstOrDefault(x => x.Id == id);
     }
 
@@ -218,7 +218,7 @@ public partial class DataService
     /// </remarks>
     public async Task<Category?> GetCategoryByNameFromCacheAsync(string name)
     {
-        var categories = await GetCachedCategoriesAsync();
+        var categories = await cache.GetCategoriesAsync();
         return categories.FirstOrDefault(x => string.Equals(x.Name, name, StringComparison.CurrentCultureIgnoreCase));
     }
 }

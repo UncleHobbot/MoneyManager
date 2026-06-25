@@ -21,13 +21,15 @@ public class TransactionServiceImportTests : IDisposable
 {
     private readonly TestDbContextFactory _factory;
     private readonly DataService _dataService;
+    private readonly ReferenceDataCache _refCache;
     private readonly IMemoryCache _cache;
 
     public TransactionServiceImportTests()
     {
         _factory = DbContextHelper.CreateFactory();
         _cache = new MemoryCache(new MemoryCacheOptions());
-        _dataService = new DataService(_factory, _cache, new TransactionQueryService(_factory));
+        _refCache = new ReferenceDataCache(_factory, _cache);
+        _dataService = new DataService(_factory, _refCache, new TransactionQueryService(_factory));
 
         using var ctx = _factory.CreateDbContext();
         ctx.Accounts.Add(new Account { Name = "Chequing", ShownName = "Chequing", Type = 0, Number = "12345" });
@@ -43,7 +45,7 @@ public class TransactionServiceImportTests : IDisposable
     }
 
     private TransactionService CreateTransactionService()
-        => new(_factory, _dataService);
+        => new(_factory, _dataService, _refCache);
 
     private static Stream ToStream(string content) => new MemoryStream(Encoding.UTF8.GetBytes(content));
 
