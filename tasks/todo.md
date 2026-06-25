@@ -1,90 +1,88 @@
-# Extract ReferenceDataCache (deepening Candidate 1)
+# Extract CategorizationService (deepening Candidate 2)
 
 Outcome of the `/improve-codebase-architecture` → `/grilling` session (2026-06-24).
-Design captured in `CONTEXT.md` ("Reference Data Cache"). No ADR (easily reversed;
-ADR-0003 already covers the single-adapter stance).
+Design in `CONTEXT.md` ("Categorization") and ADR-0009. The aim is the one genuinely
+deep module hiding in the `DataService` grab-bag — rule matching + application — not a
+mechanical CRUD split.
 
-## Goal
+## Interface (chosen: mutation + context, ADR-0009)
 
-Pull the scattered account/category cache (read-through + refresh-on-write + warm,
-spread across `DataService.*`) into one deep module with a small interface:
-`GetAccounts / GetCategories / InvalidateAccounts / InvalidateCategories / Warm`.
-Also fix the bug: import that creates an account/category never invalidates the
-UI cache.
+```
+Task<IReadOnlyList<Rule>> GetMatchingRulesAsync(Transaction tx)     // matcher (test surface)
+Task AutoApplyAsync(Transaction tx, DataContext ctx)               // import: exactly-one → apply, no save
+Task<Transaction?> ApplyRuleAsync(int transactionId, int ruleId)  // owns ctx + save
+Task<int> RecategorizePendingAsync()                              // owns ctx + save; absorbs ApplyAll
+```
 
 ## Phase 1 — The module
 
-- [ ] `Services/ReferenceDataCache.cs` — `Singleton`, deps `IDbContextFactory<DataContext>`
-      + `IMemoryCache`. Owns cache keys, read-through, `Include(Parent)` for categories.
-  - `Task<IReadOnlyCollection<Account>> GetAccountsAsync()`
-  - `Task<IReadOnlyCollection<Category>> GetCategoriesAsync()`
-  - `void InvalidateAccounts()` / `void InvalidateCategories()` (evict-only)
-  - `Task WarmAsync()`
+- [ ] `Services/CategorizationService.cs` — dep `IDbContextFactory<DataContext>` only.
+  - `GetMatchingRulesAsync` — move the two-stage `LIKE` → `CompareType` filter from
+    `DataService.GetPossibleRulesAsync`; return `IReadOnlyList<Rule>`.
+  - `AutoApplyAsync(tx, ctx)` — match; if exactly one, set Description/Category
+    (resolved in `ctx`)/IsRuleApplied; no save. (From `ApplyRuleAsync(tx, ctx)`.)
+  - `ApplyRuleAsync(txId, ruleId)` — load tx + rule, apply, save. (Absorbs
+    `TransactionEndpoints.ApplyRule`'s load/apply/save.)
+  - `RecategorizePendingAsync` — load candidates (`Category == null || !IsRuleApplied`),
+    loop `AutoApply` logic, save once, return count. (Absorbs `RuleEndpoints.ApplyAll`.)
   → verify: builds.
 
-## Phase 2 — Rewire DataService onto the module
+## Phase 2 — Trim DataService.Rule.cs to CRUD
 
-- [ ] `DataService` ctor: swap `IMemoryCache cache` → `ReferenceDataCache cache`.
-- [ ] Delete from `DataService.cs`: `AccountsCacheKey`/`CategoriesCacheKey`,
-      `WarmCacheAsync`, `GetCachedAccountsAsync`, `GetCachedCategoriesAsync`,
-      `RefreshAccountsCacheAsync`, `RefreshCategoriesCacheAsync`. Keep `NetIncomeChartPeriod`.
-- [ ] `DataService.Account.cs`: `GetAccountsAsync` → `(await cache.GetAccountsAsync()).ToList()`;
-      `ChangeAccountAsync` → `cache.InvalidateAccounts(); return (await cache.GetAccountsAsync()).ToList();`;
-      `DeleteAccountAsync` → `cache.InvalidateAccounts()`.
-- [ ] `DataService.Category.cs`: all `GetCachedCategoriesAsync()` calls →
-      `cache.GetCategoriesAsync()`; `ChangeCategoryAsync` → `cache.InvalidateCategories()`.
-      → verify: builds; lookups (by id/name/tree) unchanged in behaviour.
+- [ ] Remove `GetPossibleRulesAsync`, `ApplyRuleAsync(tx, rule)`, `ApplyRuleAsync(tx, ctx)`.
+- [ ] Keep `GetRulesAsync`, `SaveNewRuleAsync`, `ChangeRuleAsync`, `DeleteRuleAsync`.
+  → verify: builds.
 
-## Phase 3 — Warm call sites + DI
+## Phase 3 — Rewire consumers + DI
 
-- [ ] `Program.cs`: `AddSingleton<ReferenceDataCache>()`; startup warm resolves the
-      singleton directly from `app.Services` and calls `WarmAsync()` (no scope needed).
-- [ ] `SystemEndpoints.RestoreBackup`: inject `ReferenceDataCache`, call `WarmAsync()`
-      instead of `dataService.WarmCacheAsync()`; drop the now-unused `DataService` param.
-      → verify: builds.
+- [ ] `Program.cs`: `AddScoped<CategorizationService>()`.
+- [ ] `RuleEndpoints.ApplyAll`: inject `CategorizationService`, body becomes
+      `return Ok(new { applied = await categorization.RecategorizePendingAsync() })`;
+      drop the `IDbContextFactory` param + the inline candidate query/loop.
+- [ ] `TransactionEndpoints.GetPossibleRules`: load tx, then
+      `categorization.GetMatchingRulesAsync(tx)`.
+- [ ] `TransactionEndpoints.ApplyRule`: `categorization.ApplyRuleAsync(id, ruleId)`;
+      404 when it returns null; return the updated DTO.
+- [ ] `TransactionService`: drop `DataService` dep, add `CategorizationService`;
+      `ImportAsync` calls `categorization.AutoApplyAsync(tx, ctx)`.
+  → verify: builds; endpoints thin.
 
-## Phase 4 — Import invalidation (the bug fix)
+## Phase 4 — Tests
 
-- [ ] `TransactionService` ctor: add `ReferenceDataCache cache`.
-- [ ] At the end of `ImportAsync` (after save), unconditionally
-      `cache.InvalidateAccounts(); cache.InvalidateCategories();`.
-      → verify: an import that creates an account refreshes the cache.
-
-## Phase 5 — Tests + verify
-
-- [ ] `DbContextHelper.CreateServiceBundle`: build `ReferenceDataCache` from the
-      `MemoryCache`, pass it to `DataService`.
-- [ ] `TransactionServicePipelineTests` / `TransactionServiceImportTests`: build a
-      `ReferenceDataCache` and pass it to both `DataService` and `TransactionService`.
-- [ ] Add a focused test for the module: warm → get returns seeded data; invalidate →
-      next get reflects a DB change.
-- [ ] `dotnet test` green; spot-check runtime (import creates account → appears in
-      `/api/accounts` without restart).
+- [ ] `ServiceBundle`: construct + expose `CategorizationService`.
+- [ ] Move the 4 `GetPossibleRulesAsync` matching tests + the apply test out of
+      `DataServiceRuleTests` into `CategorizationServiceTests`, retargeted at the module
+      (`GetMatchingRulesAsync`; `ApplyRuleAsync(txId, ruleId)` with a persisted rule).
+      Keep Rule CRUD tests on `DataService`.
+- [ ] Add a `RecategorizePendingAsync` test (pending tx + matching rule → applied, count 1).
+- [ ] Import test construction: `TransactionService` now takes `CategorizationService`.
+  → verify: `dotnet test` green; spot-check apply-all + import auto-categorize at runtime.
 
 ## Review
 
 Implemented 2026-06-24. All phases done.
 
-- `Services/ReferenceDataCache.cs` — Singleton; `GetAccountsAsync` / `GetCategoriesAsync`
-  (→ `IReadOnlyCollection`, `Include(Parent)`), `InvalidateAccounts` / `InvalidateCategories`
-  (evict-only), `WarmAsync`. Load methods use `await using` (no abandoned context).
-- `DataService` now depends on `ReferenceDataCache` instead of `IMemoryCache`; the 5 cache
-  methods (`WarmCacheAsync`, `GetCached*`, `Refresh*`) and the key constants are deleted.
-  `GetChildren` takes `IReadOnlyCollection<Category>`.
-- Writes invalidate by type: account writes → `InvalidateAccounts`; category writes →
-  `InvalidateCategories`. `Program.cs` warms the singleton directly (no scope);
-  `SystemEndpoints.RestoreBackup` warms via the cache (DataService param dropped).
-- **Bug fix:** `TransactionService.ImportAsync` invalidates both sets after save, so an
-  imported account/category appears in the UI without waiting for the next warm.
-- `CONTEXT.md` "Reference Data Cache" entry added. No ADR (reversible; ADR-0003 covers
-  single-adapter).
+- `Services/CategorizationService.cs` — `GetMatchingRulesAsync` (two-stage matcher,
+  `CompareType` switch extracted to a private `Matches`), `AutoApplyAsync(tx, ctx)`
+  (import, no save), `ApplyRuleAsync(txId, ruleId)` (owns ctx + save, re-fetches with
+  includes for the DTO), `RecategorizePendingAsync` (owns ctx + save; absorbs the
+  ApplyAll candidate predicate + loop + count). Dep: `IDbContextFactory` only.
+- `DataService.Rule.cs` trimmed to CRUD (`GetRules`/`SaveNewRule`/`ChangeRule`/`DeleteRule`).
+- Consumers rewired: `RuleEndpoints.ApplyAll` is a one-liner; `TransactionEndpoints`
+  `GetPossibleRules`/`ApplyRule` call the module; `TransactionService` dropped its
+  `DataService` dep for `CategorizationService` and `ImportAsync` calls `AutoApplyAsync`.
+  `Program.cs` registers it scoped.
+- `CONTEXT.md` "Categorization" entry + ADR-0009 (mutation+ctx over pure decision).
 
 **Verification**
-- `dotnet test` → 234 passed (+4 new `ReferenceDataCacheTests`: cold read-through,
-  Parent population, invalidate-reflects-new-row, warm preloads both).
-- Runtime: API boots (singleton warm succeeds); `/api/accounts` and `/api/categories`
-  return 200 through the module.
+- `dotnet test` → 236 passed. Matching/apply tests moved to `CategorizationServiceTests`
+  (+ `RecategorizePending` + `ApplyRule` 404 cases); Rule CRUD tests stay on DataService;
+  endpoint-handler tests retargeted at the module.
+- Runtime: API boots (CategorizationService resolves); `/api/rules` 200,
+  `/api/transactions/{id}/possible-rules` (module read path) 200.
 
 **Not done / out of scope**
-- Candidate 2 (split DataService into focused services) — now unblocked but separate.
-- The wider DbContext-leak (Candidate 5) untouched except inside the new module.
+- Routing the `RecategorizePending` candidate predicate through `TransactionQueryService`
+  (ADR-0002 direction) — deferred.
+- The optional cheap peel (AccountService/CategoryService) — not done; DataService keeps
+  account/category/transaction/chart/AI. The genuinely deep module (Categorization) is out.
