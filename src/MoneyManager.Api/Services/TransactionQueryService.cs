@@ -159,10 +159,10 @@ public class TransactionQueryService
     /// Amount sort uses the inline signed-amount formula
     /// (<c>IsDebit ? -Amount : Amount</c>) rather than <see cref="Transaction.AmountExt"/>
     /// because EF Core 10 cannot translate the expression-bodied property in
-    /// an <c>OrderBy</c> call (it sees <c>AmountExt</c> as unmapped). The
-    /// formula is duplicated here intentionally; Candidate 3 (ReportingRow
-    /// with a persisted signed-amount column) is the planned consolidation.
-    /// See <c>CONTEXT.md</c> ("Signed amount") and the Q9 grilling decision.
+    /// an <c>OrderBy</c> call (it sees <c>AmountExt</c> as unmapped). This is the
+    /// single intentional server-side inline of the formula; a persisted column to
+    /// remove it was considered and rejected (ADR-0010 — the chart-side duplicates
+    /// are already consolidated by ReportingRow). See <c>CONTEXT.md</c> ("Signed amount").
     /// </remarks>
     private static IQueryable<Transaction> ApplySort(IQueryable<Transaction> query, TransactionSort sort)
     {

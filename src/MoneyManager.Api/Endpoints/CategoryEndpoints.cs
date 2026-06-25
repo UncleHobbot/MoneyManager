@@ -68,7 +68,7 @@ public static class CategoryEndpoints
 
     internal static async Task<IResult> Delete(int id, IDbContextFactory<DataContext> contextFactory)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         var category = await ctx.Categories.FindAsync(id);
         if (category is null)
             return TypedResults.NotFound();

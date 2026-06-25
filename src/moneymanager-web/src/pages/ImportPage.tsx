@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, type DragEvent, type ChangeEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/api/client'
+import { queryKeys } from '@/lib/queryKeys'
 import { Button, Select, Card, DataTable, Badge, Dialog, DialogFooter, Spinner } from '@/components/ui'
 import type { Column } from '@/components/ui'
 import type { ImportResult } from '@/types'
@@ -71,13 +72,13 @@ export default function ImportPage() {
   // ── CSV archive query ──────────────────────────────────────────────────────
 
   const archiveQuery = useQuery<CsvArchiveFile[]>({
-    queryKey: ['csv-archive'],
+    queryKey: queryKeys.csvArchive,
     queryFn: () => api.get('/import/csv-archive').then(r => r.data),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (fileName: string) => api.delete(`/import/csv-archive/${encodeURIComponent(fileName)}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['csv-archive'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.csvArchive }),
   })
 
   const viewMutation = useMutation({
@@ -183,8 +184,8 @@ export default function ImportPage() {
     }
 
     setIsUploading(false)
-    queryClient.invalidateQueries({ queryKey: ['csv-archive'] })
-    queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    queryClient.invalidateQueries({ queryKey: queryKeys.csvArchive })
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all })
   }, [batchFiles, bankType, createAccounts, updateFile, queryClient])
 
   // ── Derived totals ─────────────────────────────────────────────────────────

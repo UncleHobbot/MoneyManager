@@ -22,6 +22,10 @@ public partial class DataService
     /// </remarks>
     public async Task<IQueryable<Transaction>> GetTransactionsAsync()
     {
+        // Intentionally not `await using`: the returned IQueryable is bound to this
+        // context, which callers enumerate (ToListAsync/FirstOrDefaultAsync) after
+        // this method returns. Disposing here would break them. Materializing this
+        // method to a list (so the context can be disposed) is a separate change.
         var ctx = await contextFactory.CreateDbContextAsync();
         return ctx.Transactions
             .Include(x => x.Account)
@@ -45,7 +49,7 @@ public partial class DataService
     /// </remarks>
     public async Task<IQueryable<Transaction>> ChangeTransactionAsync(Transaction transaction)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         if (transaction.Id != 0)
         {
             ctx.Transactions.Update(transaction);
@@ -79,7 +83,7 @@ public partial class DataService
         bool isDebit,
         int? categoryId)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
 
         var account = await ctx.Accounts.FindAsync(accountId);
         if (account is null)

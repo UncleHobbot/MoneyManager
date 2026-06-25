@@ -14,7 +14,7 @@ public class AiProviderService(IDbContextFactory<DataContext> contextFactory)
     /// <returns>A list of <see cref="AiProvider"/> ordered by name.</returns>
     public async Task<List<AiProvider>> GetProvidersAsync()
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         return await ctx.AiProviders.OrderBy(p => p.Name).ToListAsync();
     }
 
@@ -24,7 +24,7 @@ public class AiProviderService(IDbContextFactory<DataContext> contextFactory)
     /// <returns>The default <see cref="AiProvider"/>, or null.</returns>
     public async Task<AiProvider?> GetDefaultProviderAsync()
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         return await ctx.AiProviders.FirstOrDefaultAsync(p => p.IsDefault)
                ?? await ctx.AiProviders.FirstOrDefaultAsync();
     }
@@ -36,7 +36,7 @@ public class AiProviderService(IDbContextFactory<DataContext> contextFactory)
     /// <returns>The <see cref="AiProvider"/> if found, or null.</returns>
     public async Task<AiProvider?> GetProviderByIdAsync(int id)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         return await ctx.AiProviders.FindAsync(id);
     }
 
@@ -47,7 +47,7 @@ public class AiProviderService(IDbContextFactory<DataContext> contextFactory)
     /// <returns>The added <see cref="AiProvider"/> with generated ID.</returns>
     public async Task<AiProvider> AddProviderAsync(AiProvider provider)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
 
         if (provider.IsDefault)
         {
@@ -68,7 +68,7 @@ public class AiProviderService(IDbContextFactory<DataContext> contextFactory)
     /// <returns>The updated <see cref="AiProvider"/>, or null if not found.</returns>
     public async Task<AiProvider?> UpdateProviderAsync(AiProvider provider)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         var existing = await ctx.AiProviders.FindAsync(provider.Id);
         if (existing == null) return null;
 
@@ -97,7 +97,7 @@ public class AiProviderService(IDbContextFactory<DataContext> contextFactory)
     /// <returns>True if the provider was deleted, false if not found.</returns>
     public async Task<bool> DeleteProviderAsync(int id)
     {
-        var ctx = await contextFactory.CreateDbContextAsync();
+        await using var ctx = await contextFactory.CreateDbContextAsync();
         var provider = await ctx.AiProviders.FindAsync(id);
         if (provider == null) return false;
 
