@@ -4,19 +4,10 @@ import { useNetIncome, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, Card, ChartCard, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { transactionsUrl, monthRange } from '@/lib/transactionsUrl'
 import { CHART_COLORS, chartAxis } from '@/lib/chartTheme'
 import type { BalanceChart } from '@/types'
 import type { EChartsOption } from 'echarts'
-
-/** Build a Transactions drill-in URL for the calendar month of `firstDateISO`. */
-function monthTransactionsUrl(firstDateISO: string): string {
-  const d = new Date(firstDateISO)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const from = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`
-  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1)
-  const to = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-01`
-  return `/transactions?from=${from}&to=${to}`
-}
 
 export default function NetIncomePage() {
   const [period, setPeriod] = useState('12')
@@ -79,7 +70,7 @@ export default function NetIncomePage() {
     () => ({
       click: (params: { dataIndex: number }) => {
         const item = data[params.dataIndex]
-        if (item) navigate(monthTransactionsUrl(item.firstDate))
+        if (item) navigate(transactionsUrl(monthRange(item.firstDate)))
       },
     }),
     [data, navigate],
@@ -136,7 +127,7 @@ export default function NetIncomePage() {
                   <tr
                     key={row.monthKey}
                     className="border-b border-gray-100 dark:border-gray-700/50 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
-                    onClick={() => navigate(monthTransactionsUrl(row.firstDate))}
+                    onClick={() => navigate(transactionsUrl(monthRange(row.firstDate)))}
                   >
                     <td className="py-2 text-gray-900 dark:text-gray-100">
                       {row.month}

@@ -4,6 +4,7 @@ import { useSpendingTrend, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, ChartCard, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { transactionsUrl } from '@/lib/transactionsUrl'
 import { CHART_PALETTE, chartAxis } from '@/lib/chartTheme'
 import type { EChartsOption } from 'echarts'
 
@@ -75,9 +76,11 @@ export default function SpendingTrendPage() {
         const month = months[params.dataIndex]
         if (!month) return
         const s = series.find(x => x.name === params.seriesName)
-        const qs = new URLSearchParams({ from: month.from.slice(0, 10), to: month.to.slice(0, 10) })
-        if (s && s.categoryId != null) qs.set('categoryId', String(s.categoryId))
-        navigate(`/transactions?${qs.toString()}`)
+        navigate(transactionsUrl({
+          from: month.from.slice(0, 10),
+          to: month.to.slice(0, 10),
+          categoryId: s?.categoryId != null ? s.categoryId : undefined,
+        }))
       },
     }),
     [months, series, navigate],

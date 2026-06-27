@@ -246,6 +246,29 @@ and merchant-name normalization is owned by **Rules**.
 - **Drill-down.** Clicking a merchant routes to the canonical Transactions surface
   filtered by description search (`search=<Description>`), per ADR-0005.
 
+## Transactions drill-in
+
+The single way a chart links to the canonical Transactions surface (ADR-0005).
+`transactionsUrl(criteria)` (`lib/transactionsUrl.ts`) owns the URL grammar; the
+five chart pages resolve their facets and call it, never hand-build a query string.
+
+- **Criteria.** `TransactionsCriteria { period?, from?, to?, categoryId?, search?,
+  uncategorized? }` — a flat object whose fields map 1:1 to the query params
+  `TransactionsPage` reads. Emission mirrors the page's own `updateParams`:
+  empty/undefined dropped, `uncategorized` only when true (`=1`), `search`
+  URL-encoded. A drill link and a user-applied filter therefore produce the same URL.
+- **Module is a pure string builder.** No date math, no React, no defaults
+  injected (it never adds `period='12'` or strips conflicting keys — the server
+  owns `from`/`to`-over-`period` priority). `monthRange(dateISO) → { from, to }`,
+  co-located, owns the one piece of real date logic (calendar-month boundaries,
+  feeding the Net Income month click).
+- **Facet resolution stays on the pages.** Name→id lookup (SpendingByCategory),
+  `node.kind`/`categoryId` checks (CashFlow, SpendingTrend) are the page's
+  knowledge of its chart data; the module receives a resolved facet.
+- **Owner.** `lib/transactionsUrl.ts`. Adding a drill is one `transactionsUrl({…})`
+  call; adding a facet means one field here plus the matching read in
+  `TransactionsPage`.
+
 ## Budget
 
 An opt-in, recurring **monthly spending limit attached to a top-level (parent)

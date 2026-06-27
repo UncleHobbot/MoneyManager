@@ -4,6 +4,7 @@ import { useTopMerchants, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, ChartCard, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { transactionsUrl } from '@/lib/transactionsUrl'
 import { CHART_PALETTE, chartAxis } from '@/lib/chartTheme'
 import type { EChartsOption } from 'echarts'
 
@@ -65,7 +66,7 @@ export default function TopMerchantsPage() {
   const onEvents = useMemo(
     () => ({
       click: (params: { name: string }) =>
-        navigate(`/transactions?period=${period}&search=${encodeURIComponent(params.name)}`),
+        navigate(transactionsUrl({ period, search: params.name })),
     }),
     [navigate, period],
   )

@@ -5,6 +5,7 @@ import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, ChartCard, EChart } from '@/components/ui'
 import type { EChartClickParams } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { transactionsUrl } from '@/lib/transactionsUrl'
 import { CHART_PALETTE } from '@/lib/chartTheme'
 import type { EChartsOption } from 'echarts'
 
@@ -79,9 +80,9 @@ export default function CashFlowPage() {
         const node = nodes.find(n => n.name === params.name)
         if (!node) return
         if (node.categoryId != null) {
-          navigate(`/transactions?period=${period}&categoryId=${node.categoryId}`)
+          navigate(transactionsUrl({ period, categoryId: node.categoryId }))
         } else if (node.kind === 'uncategorized') {
-          navigate(`/transactions?period=${period}&uncategorized=1`)
+          navigate(transactionsUrl({ period, uncategorized: true }))
         }
       },
     }),

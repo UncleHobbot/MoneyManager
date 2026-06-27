@@ -5,6 +5,7 @@ import { useCategories } from '@/hooks/useCategories'
 import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, Card, CategoryIcon, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
+import { transactionsUrl } from '@/lib/transactionsUrl'
 import { CHART_PALETTE } from '@/lib/chartTheme'
 import type { CategoryChart } from '@/types'
 import type { EChartsOption } from 'echarts'
@@ -138,10 +139,7 @@ export default function SpendingByCategoryPage() {
   const drillToCategory = useCallback(
     (name: string) => {
       const cat = categories?.find(c => c.name === name)
-      const params = new URLSearchParams({ period })
-      if (cat) params.set('categoryId', String(cat.id))
-      else params.set('search', name)
-      navigate(`/transactions?${params.toString()}`)
+      navigate(transactionsUrl(cat ? { period, categoryId: cat.id } : { period, search: name }))
     },
     [categories, period, navigate],
   )
