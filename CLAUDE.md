@@ -94,7 +94,7 @@ MoneyManager is a personal financial management app (Mint.com replacement): trac
 - **Tailwind CSS v4**
 - **TanStack Query v5** (server state), **React Router v7**
 - **Axios** (`src/api/client.ts`, `baseURL: '/api'`)
-- **ApexCharts**, **lucide-react** icons
+- **ECharts** (via `EChart` wrapper component), **lucide-react** icons
 - Tests: **Vitest** + **Testing Library** (+ **MSW**)
 
 **AI** — OpenAI-compatible chat completions via `AIService`; provider config (base URL / model / key) stored as `AiProvider` entities, so the provider is pluggable.
@@ -164,7 +164,8 @@ Relationships:
 
 ## Domain Gotchas (learned)
 
-- **"Uncategorized" is a real category named "Uncategorized", not a `null` category.** In practice ~no transactions have `Category == null`; uncategorized ones point at the "Uncategorized" category (this is how the dashboard finds them). Any "uncategorized only" filter must match `Category == null || Category.Name == "Uncategorized"`.
+- **"Uncategorized" is a real category named "Uncategorized", not a `null` category.** In practice ~no transactions have `Category == null`; uncategorized ones point at the "Uncategorized" category (this is how the dashboard finds them). Any "uncategorized only" filter must match `Category == null || Category.Name == "Uncategorized" || Category.Parent.Name == "Uncategorized"` (subcategories of Uncategorized count too).
+- **EF Core entity graph gotcha:** When saving entities received from HTTP requests (e.g. `Rule` or `Category` with navigation properties like `Category`/`Parent`), call `ctx.Attach(navEntity)` on existing navigation entities **before** `ctx.Add()`/`ctx.Update()` — otherwise EF marks the entire graph as `Added` and tries to insert duplicates.
 - **Transactions cannot be deleted.** There is intentionally no delete endpoint / UI / service method — they are real historical data.
 - Accounts with `IsHideFromGraph == true` are excluded from transaction listings and charts. A transaction added to a hidden account won't appear in the grid.
 - Chart period codes: `m1` (month), `y1` (year), `12` (last 12 months), `w` (7 days), `a` (all).

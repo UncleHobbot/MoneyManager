@@ -1,74 +1,85 @@
 # MoneyManager
 
-A personal financial management desktop application designed as a Mint.com replacement.
+A personal financial management web application designed as a Mint.com replacement.
 
 ## Features
 
-- **Transaction Management** - Import, categorize, and track financial transactions
-- **Multi-Bank Support** - Import from Mint.com, RBC, and CIBC CSV exports
-- **Smart Categorization** - Auto-categorize transactions with customizable rules
-- **Account Management** - Track multiple accounts with alternative name matching
-- **Financial Visualizations** - Interactive charts for spending, income, and trends
-- **AI-Powered Insights** - Get personalized financial analysis and budgeting advice
+- **Transaction Management** — Import, categorize, and track financial transactions
+- **Multi-Bank Support** — Import from Mint.com, RBC, and CIBC CSV exports
+- **Smart Categorization** — Auto-categorize transactions with customizable rules
+- **Account Management** — Track multiple accounts with alternative name matching
+- **Financial Visualizations** — Interactive charts for spending, income, net income, and trends
+- **AI-Powered Insights** — Personalized financial analysis via pluggable OpenAI-compatible providers
+- **Budgets** — Track spending against budget targets
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| Framework | .NET 10.0 (Windows) |
-| UI Shell | Windows Forms |
-| UI Components | Blazor Hybrid + Fluent UI |
-| Database | SQLite with Entity Framework Core |
-| Charts | ApexCharts |
-| AI | OpenAI API |
+| Layer | Technology |
+|-------|------------|
+| Backend | ASP.NET Core Minimal APIs (.NET 10) |
+| Frontend | React 19 + TypeScript, Vite 8 |
+| Styling | Tailwind CSS v4 |
+| State | TanStack Query v5, React Router v7 |
+| Charts | ECharts |
+| Database | SQLite + Entity Framework Core 10 |
+| Dev orchestration | .NET Aspire (optional) |
+| AI | OpenAI-compatible chat completions |
 
 ## Getting Started
 
 ### Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- Windows OS
+- [Node.js 20+](https://nodejs.org/)
 
-### Installation
+### Run (two terminals)
 
-1. Clone the repository
-2. Configure API keys in user secrets (optional, for AI features):
-   ```bash
-   dotnet user-secrets set "OpenAI:ApiKey" "your-api-key"
-   ```
-3. Build and run:
-   ```bash
-   dotnet build
-   dotnet run
-   ```
+```bash
+# Terminal 1 — API
+dotnet run --project src/MoneyManager.Api --urls http://localhost:5000
+
+# Terminal 2 — Frontend
+cd src/moneymanager-web
+npm install
+npm run dev          # Vite on :5173, proxies /api → :5000
+```
+
+Or use Aspire to start everything at once:
+
+```bash
+dotnet run --project src/MoneyManager.AppHost
+```
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+The container serves the built SPA and the API on a single port.
 
 ## Project Structure
 
 ```
 MoneyManager/
-├── Data/                    # Entity Framework models & DbContext
-│   ├── DBContext.cs         # Database context
-│   ├── Transaction.cs       # Transaction entity
-│   ├── Account.cs           # Account entity
-│   ├── Category.cs          # Category entity with icons
-│   └── Rule.cs              # Auto-categorization rules
-├── Services/                # Business logic layer
-│   ├── DataService*.cs      # Data operations (partial classes)
-│   ├── TransactionService*.cs # Bank import handlers
-│   ├── AIService.cs         # OpenAI integration
-│   └── SettingsService.cs   # User preferences
-├── Pages/                   # Blazor pages
-│   ├── Home.razor           # Dashboard
-│   ├── Transactions.razor   # Transaction list
-│   ├── Accounts.razor       # Account management
-│   ├── Categories.razor     # Category management
-│   ├── Rules.razor          # Rule management
-│   ├── AI.razor             # AI analysis
-│   └── Charts/              # Visualization pages
-├── Components/              # Reusable Blazor components
-├── Model/                   # DTOs and enums
-├── Migrations/              # EF Core migrations
-└── wwwroot/                 # Static assets
+├── src/
+│   ├── MoneyManager.Api/          # ASP.NET Core Minimal API
+│   │   ├── Endpoints/             # Route groups (Transactions, Accounts, Categories, …)
+│   │   ├── Services/              # DataService, TransactionService, AIService, …
+│   │   ├── Data/                  # EF entities + DataContext + SQLite DB
+│   │   └── Model/                 # Request/response DTOs
+│   ├── moneymanager-web/          # React + Vite SPA
+│   │   └── src/
+│   │       ├── pages/             # Route pages
+│   │       ├── components/        # Shared + ui design system
+│   │       ├── hooks/             # TanStack Query hooks per resource
+│   │       └── api/               # Axios client
+│   ├── MoneyManager.Api.Tests/    # xUnit + FluentAssertions + NSubstitute
+│   ├── MoneyManager.AppHost/      # Aspire dev orchestrator (dev only)
+│   └── MoneyManager.ServiceDefaults/  # Shared OpenTelemetry + health checks
+├── data/                          # SQLite DB (dev, gitignored)
+├── docs/                          # ADRs, agent config
+└── legacy/                        # Retired Blazor Hybrid desktop app
 ```
 
 ## Supported Import Formats
@@ -79,48 +90,23 @@ MoneyManager/
 | RBC | CSV | Account Type, Date, Description, Amount |
 | CIBC | CSV | Date, Description, Debit, Credit |
 
-## Category Icons
-
-The application includes 22 category icons: Auto, Bills, Business, Education, Entertainment, Fees, Financial, Food, Gifts, Health, Home, Income, Investment, Kids, Loans, Misc, Personal, Pets, Shopping, Taxes, Transfer, Travel, Uncategorized.
-
 ## Auto-Categorization Rules
 
-Rules support four matching types:
-- **Contains** - Description contains the pattern
-- **StartsWith** - Description starts with the pattern
-- **EndsWith** - Description ends with the pattern
-- **Equals** - Description exactly matches the pattern
+Rules match transaction descriptions using four comparison types:
+- **Contains** — Description contains the pattern
+- **Starts With** — Description starts with the pattern
+- **Ends With** — Description ends with the pattern
+- **Equals** — Description exactly matches the pattern
 
 Rules can also transform the transaction description when applied.
 
-## Database
-
-SQLite database stored at `Data/MoneyManager.db`. Use EF Core migrations for schema changes:
-
-```bash
-dotnet ef migrations add MigrationName
-dotnet ef database update
-```
-
 ## Configuration
 
-Application settings in `appsettings.json`:
-- Connection strings
-- OpenAI configuration (API URL, model)
+Application settings in `appsettings.json` / `appsettings.Development.json`:
+- Connection strings (SQLite path)
 - Serilog logging
 
-Sensitive settings (API keys) should use .NET User Secrets:
-```bash
-dotnet user-secrets set "OpenAI:ApiKey" "your-key"
-```
-
-## Libraries
-
-- [Microsoft Fluent UI Blazor](https://www.fluentui-blazor.net/) - UI components
-- [Blazor ApexCharts](https://github.com/apexcharts/Blazor-ApexCharts) - Charts
-- [CsvHelper](https://joshclose.github.io/CsvHelper/) - CSV parsing
-- [Serilog](https://serilog.net/) - Structured logging
-- [Microsoft.Extensions.AI](https://learn.microsoft.com/en-us/dotnet/ai/) - AI integration
+AI provider configuration (base URL, model, API key) is stored in the database and managed through the Settings page.
 
 ## License
 
