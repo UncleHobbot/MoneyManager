@@ -135,10 +135,12 @@ public class TransactionQueryService
                 (t.Category.Id == filters.CategoryId.Value ||
                  (t.Category.Parent != null && t.Category.Parent.Id == filters.CategoryId.Value)));
 
-        // "Uncategorized" matches both a missing category and the dedicated
-        // "Uncategorized" category. See CONTEXT.md ("Uncategorized").
+        // "Uncategorized" matches a missing category, the dedicated "Uncategorized"
+        // category, and any subcategory whose parent is "Uncategorized".
         if (filters.Uncategorized)
-            query = query.Where(t => t.Category == null || t.Category.Name.ToLower() == "uncategorized");
+            query = query.Where(t => t.Category == null
+                || t.Category.Name.ToLower() == "uncategorized"
+                || (t.Category.Parent != null && t.Category.Parent.Name.ToLower() == "uncategorized"));
 
         if (!string.IsNullOrWhiteSpace(filters.Search))
         {

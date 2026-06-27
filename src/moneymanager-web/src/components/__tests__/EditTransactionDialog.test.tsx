@@ -111,7 +111,8 @@ describe('EditTransactionDialog', () => {
     await user.type(screen.getByLabelText('Description'), ' updated')
     expect(onDescriptionChange).toHaveBeenCalled()
 
-    await user.selectOptions(screen.getByLabelText('Category'), '12')
+    await user.click(screen.getByLabelText('Category'))
+    await user.click(screen.getByRole('option', { name: /Transport/ }))
     expect(onCategoryChange).toHaveBeenCalledWith(12)
 
     await user.click(screen.getByRole('button', { name: 'Create rule' }))
@@ -194,7 +195,8 @@ describe('EditTransactionDialog', () => {
     expect(screen.getByLabelText('Rule match text')).toHaveValue('GROCERY STORE #123')
 
     await user.type(screen.getByLabelText('Rule replacement description'), 'Grocery store')
-    await user.selectOptions(screen.getByLabelText('Rule category'), '12')
+    await user.click(screen.getByLabelText('Rule category'))
+    await user.click(screen.getByRole('option', { name: /Transport/ }))
     await user.click(screen.getByRole('button', { name: 'Save New Rule' }))
 
     expect(createMutate).toHaveBeenCalledWith(
@@ -211,11 +213,10 @@ describe('EditTransactionDialog', () => {
       { transactionId: transaction.id, ruleId: 27 },
       expect.any(Object),
     )
-    expect(onClose).toHaveBeenCalled()
-    expect(refetch).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
-  it('uses the current edit values when saving a new rule and closes after applying it', async () => {
+  it('uses the current edit values when saving a new rule and keeps dialog open', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     const onDescriptionChange = vi.fn()
@@ -270,7 +271,7 @@ describe('EditTransactionDialog', () => {
     )
 
     expect(screen.getByText('Leave blank to use the current edited description: Edited grocery store')).toBeInTheDocument()
-    expect(screen.getByLabelText('Rule category')).toHaveValue('12')
+    expect(screen.getByLabelText('Rule category')).toHaveTextContent('Transport')
 
     await user.click(screen.getByRole('button', { name: 'Save New Rule' }))
 
@@ -290,7 +291,7 @@ describe('EditTransactionDialog', () => {
     )
     expect(onDescriptionChange).toHaveBeenCalledWith('Edited grocery store')
     expect(onCategoryChange).toHaveBeenCalledWith(12)
-    expect(onClose).toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('keeps the create-rule flow available when matching rules fail to load', async () => {

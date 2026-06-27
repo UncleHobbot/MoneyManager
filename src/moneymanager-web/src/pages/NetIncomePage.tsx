@@ -67,7 +67,7 @@ export default function NetIncomePage() {
         splitLine: { lineStyle: { color: axis.split } },
       },
       series: [
-        { name: 'Income', type: 'bar', data: incomeValues, itemStyle: { color: CHART_COLORS.income } },
+        { name: 'Income', type: 'bar', data: incomeValues, itemStyle: { color: CHART_COLORS.income }, barGap: '-100%' },
         { name: 'Expenses', type: 'bar', data: expenseValues, itemStyle: { color: CHART_COLORS.expense } },
         { name: 'Net Income', type: 'line', data: netValues, lineStyle: { width: 3, color: CHART_COLORS.net }, itemStyle: { color: CHART_COLORS.net } },
         { name: 'Net (3-mo avg)', type: 'line', data: rollingNet, symbol: 'none', smooth: true, lineStyle: { width: 2, color: '#F59E0B', type: 'dashed' }, itemStyle: { color: '#F59E0B' } },
@@ -171,6 +171,31 @@ export default function NetIncomePage() {
                 )
               })}
             </tbody>
+            {data.length > 0 && (() => {
+              const totalIncome = data.reduce((sum, r) => sum + r.income, 0)
+              const totalExpenses = data.reduce((sum, r) => sum + r.expenses, 0)
+              const totalNet = totalIncome + totalExpenses
+              const totalSavingsRate = totalIncome > 0 ? Math.round((totalNet / totalIncome) * 100) : null
+              return (
+                <tfoot>
+                  <tr className="border-t-2 border-gray-300 dark:border-gray-600 font-semibold">
+                    <td className="py-2 text-gray-900 dark:text-gray-100">Total</td>
+                    <td className="py-2 text-right text-green-600 dark:text-green-400">
+                      {formatCAD(totalIncome, { fractionDigits: 0 })}
+                    </td>
+                    <td className="py-2 text-right text-red-600 dark:text-red-400">
+                      {formatCAD(totalExpenses, { fractionDigits: 0 })}
+                    </td>
+                    <td className={`py-2 text-right ${totalNet >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {formatCAD(totalNet, { fractionDigits: 0 })}
+                    </td>
+                    <td className={`py-2 text-right tabular-nums ${totalSavingsRate == null ? 'text-gray-400' : totalSavingsRate >= 0 ? 'text-gray-700 dark:text-gray-300' : 'text-red-600 dark:text-red-400'}`}>
+                      {totalSavingsRate == null ? '—' : `${totalSavingsRate}%`}
+                    </td>
+                  </tr>
+                </tfoot>
+              )
+            })()}
           </table>
         </div>
       </Card>

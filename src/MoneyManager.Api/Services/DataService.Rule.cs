@@ -55,6 +55,10 @@ public partial class DataService
     public async Task<IQueryable<Rule>> ChangeRuleAsync(Rule rule)
     {
         await using var ctx = await contextFactory.CreateDbContextAsync();
+        if (rule.Category is { Id: > 0 })
+            ctx.Attach(rule.Category);
+        if (rule.Category?.Parent is { Id: > 0 })
+            ctx.Attach(rule.Category.Parent);
         if (rule.Id == 0)
             ctx.Rules.Add(rule);
         else

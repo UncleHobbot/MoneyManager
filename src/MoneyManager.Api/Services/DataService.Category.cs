@@ -90,6 +90,8 @@ public partial class DataService
     public async Task<Category> ChangeCategoryAsync(Category category)
     {
         await using var ctx = await contextFactory.CreateDbContextAsync();
+        if (category.Parent is { Id: > 0 })
+            ctx.Attach(category.Parent);
         if (category.Id == 0)
             ctx.Categories.Add(category);
         else

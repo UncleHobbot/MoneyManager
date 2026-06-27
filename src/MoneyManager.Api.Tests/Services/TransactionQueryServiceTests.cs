@@ -172,6 +172,36 @@ public class TransactionQueryServiceTests : IDisposable
         page.Items.Should().NotContain(t => t.Description == "Restaurant");
     }
 
+    [Fact]
+    public async Task GetPage_FiltersUncategorized_IncludesSubcategoriesOfUncategorized()
+    {
+        using (var ctx = _svc.Factory.CreateDbContext())
+        {
+            var uncategorized = ctx.Categories.First(c => c.Name == "Uncategorized");
+            var withdrawal = new Category { Name = "Withdrawal", Parent = uncategorized };
+            ctx.Categories.Add(withdrawal);
+            var chequing = ctx.Accounts.First(a => a.Name == "RBC Chequing");
+            ctx.Transactions.Add(new Transaction
+            {
+                Account = chequing,
+                Date = new DateTime(2025, 1, 26),
+                Description = "ATM Withdrawal",
+                OriginalDescription = "ATM",
+                Amount = 100m,
+                IsDebit = true,
+                Category = withdrawal,
+            });
+            await ctx.SaveChangesAsync();
+        }
+
+        var filters = FiltersForAllSeed() with { Uncategorized = true };
+
+        var page = await _svc.QueryService.GetPageAsync(filters, new TransactionSort(), new Paging(1, 50));
+
+        page.Items.Should().Contain(t => t.Description == "ATM Withdrawal");
+        page.Items.Should().NotContain(t => t.Description == "Loblaws Groceries");
+    }
+
     // ----------------------------------------------------------------
     // GetPage — sort
     // ----------------------------------------------------------------

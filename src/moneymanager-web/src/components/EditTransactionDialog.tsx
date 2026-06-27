@@ -1,6 +1,6 @@
-import { useMemo, useState, type FC } from 'react'
+import { useState, type FC } from 'react'
 import { useApplyRuleToTransaction, usePossibleRules, useUpdateRule } from '@/hooks/useRules'
-import { Button, Dialog, DialogFooter, Input, Select, Spinner, CategoryIcon } from '@/components/ui'
+import { Button, CategorySelect, Dialog, DialogFooter, Input, Select, Spinner, CategoryIcon } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
 import type { Category, Rule, TransactionDto } from '@/types'
 
@@ -60,10 +60,6 @@ function EditTransactionDialogContent({
   const [newRuleDescription, setNewRuleDescription] = useState('')
   const [newRuleCategoryId, setNewRuleCategoryId] = useState<number | undefined>()
 
-  const categoryOptions = useMemo(
-    () => categories.map(category => ({ label: category.name, value: category.id })),
-    [categories],
-  )
   const possibleRules = usePossibleRules(transaction.id, !transaction.isRuleApplied)
   const applyRule = useApplyRuleToTransaction()
   const updateRule = useUpdateRule()
@@ -116,7 +112,14 @@ function EditTransactionDialogContent({
 
         applyRule.mutate(
           { transactionId: transaction.id, ruleId: createdRule.id },
-          { onSuccess: handleRuleApplied },
+          {
+            onSuccess: (updatedTransaction: TransactionDto) => {
+              onDescriptionChange(updatedTransaction.description)
+              onCategoryChange(updatedTransaction.category?.id)
+              possibleRules.refetch()
+              setPreferredRulePanel('apply')
+            },
+          },
         )
       },
     })
@@ -149,13 +152,12 @@ function EditTransactionDialogContent({
       </p>
 
       <div className="mt-4 flex flex-col gap-4">
-        <Select
+        <CategorySelect
           id="edit-transaction-category"
           label="Category"
-          options={categoryOptions}
-          value={categoryId ?? ''}
-          onChange={(value) => onCategoryChange(value ? Number(value) : undefined)}
-          placeholder="Select category"
+          categories={categories}
+          value={categoryId}
+          onChange={onCategoryChange}
         />
         <Input
           id="edit-transaction-description"
@@ -235,13 +237,12 @@ function EditTransactionDialogContent({
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Leave blank to use the current edited description: {description}
               </p>
-              <Select
+              <CategorySelect
                 id="edit-rule-category"
                 label="Rule category"
-                options={categoryOptions}
-                value={effectiveRuleCategoryId ?? ''}
-                onChange={(value) => setNewRuleCategoryId(value ? Number(value) : undefined)}
-                placeholder="Select category"
+                categories={categories}
+                value={effectiveRuleCategoryId}
+                onChange={setNewRuleCategoryId}
               />
               <div className="flex justify-start">
                 <Button
@@ -318,13 +319,12 @@ function EditTransactionDialogContent({
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Leave blank to use the current edited description: {description}
             </p>
-            <Select
+            <CategorySelect
               id="edit-rule-category"
               label="Rule category"
-              options={categoryOptions}
-              value={effectiveRuleCategoryId ?? ''}
-              onChange={(value) => setNewRuleCategoryId(value ? Number(value) : undefined)}
-              placeholder="Select category"
+              categories={categories}
+              value={effectiveRuleCategoryId}
+              onChange={setNewRuleCategoryId}
             />
             <div className="flex justify-start">
               <Button
