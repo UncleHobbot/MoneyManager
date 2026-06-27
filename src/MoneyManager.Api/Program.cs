@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Endpoints;
 using MoneyManager.Api.Services;
+using MoneyManager.Api.Services.Ai;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,16 @@ builder.Services.AddScoped<DataService>();
 builder.Services.AddScoped<CategorizationService>();
 builder.Services.AddScoped<AiProviderService>();
 builder.Services.AddScoped<AIService>();
+
+// AI transport seam. The adapter serves any OpenAI-compatible provider (OpenAI,
+// DeepSeek, Z.AI GLM). It opts out of the global StandardResilienceHandler: LLM
+// calls run longer than the 10s/30s default timeouts and must not be retried
+// (paid, non-idempotent). A plain 100s timeout is the right amount of resilience.
+#pragma warning disable EXTEXP0001 // RemoveAllResilienceHandlers is experimental; stable enough here and the cleanest way to drop the global handler for one client.
+builder.Services.AddHttpClient<IChatCompletion, OpenAiCompatibleChatCompletion>(client =>
+        client.Timeout = TimeSpan.FromSeconds(100))
+    .RemoveAllResilienceHandlers();
+#pragma warning restore EXTEXP0001
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<TransactionQueryService>();
 builder.Services.AddScoped<BudgetService>();

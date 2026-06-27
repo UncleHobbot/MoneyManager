@@ -1,37 +1,24 @@
-using System.Text;
-using System.Text.Json;
 using MoneyManager.Api.Model.AI;
+using MoneyManager.Api.Services.Ai;
 
 namespace MoneyManager.Api.Services;
 
 /// <summary>
-/// Provides AI-powered financial analysis using configurable AI providers.
+/// Builds a financial-analysis request (system persona + per-type user prompt +
+/// CSV data) and maps the result to an <see cref="AnalysisResult"/>. The actual
+/// transport lives behind the <see cref="IChatCompletion"/> seam (see CONTEXT.md
+/// "AI Transport / Chat Completion"); this service owns prompt assembly, provider
+/// resolution, and result mapping — all of it testable against a fake.
 /// </summary>
-/// <remarks>
-/// This service handles HTTP communication with an OpenAI-compatible chat
-/// completion API: it builds the request (system prompt + user prompt +
-/// optional CSV data), sends it via a static <see cref="HttpClient"/>, and
-/// parses the response into an <see cref="AnalysisResult"/>. Analysis-type
-/// data (prompts, temperatures) lives in <see cref="AnalysisType"/> - this
-/// service consumes that catalog via <see cref="AnalysisType.Find"/>.
-///
-/// Thread Safety: <see cref="HttpClient"/> is static and thread-safe.
-/// Each analysis call is independent and can run concurrently.
-/// </remarks>
-public class AIService(AiProviderService aiProviderService, DataService dataService)
+public class AIService(
+    AiProviderService aiProviderService,
+    DataService dataService,
+    IChatCompletion chatCompletion)
 {
     /// <summary>
-    /// The static HTTP client used for making API requests to AI providers.
-    /// Reused across all instances to improve performance and avoid socket
-    /// exhaustion. Headers are cleared and reset for each request.
-    /// </summary>
-    private static readonly HttpClient httpClient = new();
-
-    /// <summary>
     /// The system prompt that establishes the certified-financial-advisor
-    /// persona. Kept as a const on the service for now; extracting to a
-    /// resource or separate file is a separate candidate (it changes
-    /// rarely, and the const keeps it co-located with the only consumer).
+    /// persona. Kept as a const here (co-located with its only consumer);
+    /// extracting it to a resource is a separate candidate.
     /// </summary>
     private const string SystemPrompt = """
         <System>
@@ -73,39 +60,17 @@ public class AIService(AiProviderService aiProviderService, DataService dataServ
         """;
 
     /// <summary>
-    /// Performs financial analysis on transactions for a specified period
-    /// and analysis type. Main entry point.
+    /// Performs financial analysis on transactions for a period and analysis
+    /// type. Unknown keys preserve pre-migration behavior: empty user prompt and
+    /// the highest-creativity temperature (0.7). Never throws — all errors are
+    /// captured in the returned <see cref="AnalysisResult"/>.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Resolves the <see cref="AnalysisType"/> from
-    /// <paramref name="analysisType"/> via <see cref="AnalysisType.Find"/>.
-    /// Unknown keys preserve pre-migration behavior: the AI gets called
-    /// with an empty user prompt and the highest-creativity temperature
-    /// (0.7). This matches what the legacy <c>AnalysisTypePrompts</c>
-    /// switches returned for default cases.
-    /// </para>
-    /// <para>
-    /// The method does not throw; all errors are captured in the returned
-    /// <see cref="AnalysisResult"/>.
-    /// </para>
-    /// </remarks>
     public async Task<AnalysisResult> GetAnalysisAsync(string period, string analysisType, int? providerId = null)
     {
         var type = AnalysisType.Find(analysisType);
         var prompt = type?.Prompt ?? string.Empty;
         var temperature = type?.Temperature ?? 0.7;
 
-        var data = await dataService.AIGetTransactionsCSVAsync(period);
-        return await GetAIResponseAsync(prompt, data, temperature, providerId);
-    }
-
-    /// <summary>
-    /// Sends a request to the AI API for financial analysis. Returns success
-    /// or failure with an error message; never throws.
-    /// </summary>
-    private async Task<AnalysisResult> GetAIResponseAsync(string prompt, string? data, double temperature = 0.7, int? providerId = null)
-    {
         var provider = providerId.HasValue
             ? await aiProviderService.GetProviderByIdAsync(providerId.Value)
             : await aiProviderService.GetDefaultProviderAsync();
@@ -113,59 +78,18 @@ public class AIService(AiProviderService aiProviderService, DataService dataServ
         if (provider == null)
             return new AnalysisResult(false, "No AI provider configured. Please add an AI provider in Settings.", 0);
 
-        var apiKey = provider.EncryptedApiKey; // TODO: decrypt in future
-        var apiUrl = provider.ApiUrl;
-        var model = provider.Model ?? "gpt-4o";
+        var data = await dataService.AIGetTransactionsCSVAsync(period);
 
-        var messages = new List<OpenAIMessage>
-        {
-            new()
-            {
-                role = "system",
-                content = SystemPrompt,
-            },
-            new()
-            {
-                role = "user",
-                content = prompt,
-            },
-        };
+        var request = new ChatRequest(
+            Endpoint: provider.ApiUrl,
+            ApiKey: provider.EncryptedApiKey, // TODO: decrypt in future
+            Model: provider.Model ?? "gpt-4o",
+            SystemPrompt: SystemPrompt,
+            UserPrompt: prompt,
+            Data: data,
+            Temperature: temperature);
 
-        if (!string.IsNullOrWhiteSpace(data))
-            messages.Add(new OpenAIMessage
-            {
-                role = "user",
-                content = $"Analyze the following CSV data:\n\n{data}",
-            });
-
-        var request = new OpenAIChatRequest
-        {
-            model = model,
-            messages = messages,
-            temperature = temperature,
-        };
-
-        var json = JsonSerializer.Serialize(request);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        httpClient.DefaultRequestHeaders.Clear();
-        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-
-        var response = await httpClient.PostAsync(apiUrl, content);
-        var responseString = await response.Content.ReadAsStringAsync();
-
-        if (response.IsSuccessStatusCode)
-        {
-            var doc = JsonSerializer.Deserialize<OpenAIChatResponse>(responseString);
-            if (doc is { Choices.Count: > 0 })
-            {
-                var result = doc.Choices[0].Message.Content;
-                return new AnalysisResult(true, result, doc.Usage.TotalTokens);
-            }
-
-            return new AnalysisResult(false, "Error: No choices in response.", doc?.Usage?.TotalTokens ?? 0);
-        }
-
-        return new AnalysisResult(false, responseString, 0);
+        var result = await chatCompletion.CompleteAsync(request);
+        return new AnalysisResult(result.Success, result.Content, result.TotalTokens);
     }
 }

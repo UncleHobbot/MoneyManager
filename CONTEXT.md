@@ -306,6 +306,40 @@ services, not in the cache.
   ADR-0003. The seam is the module's own interface; it is a concrete `Singleton`
   wrapping `IMemoryCache`.
 
+## AI Transport / Chat Completion
+
+The seam between AI analysis logic and the network. `AIService` assembles the
+request (system persona + per-type user prompt + CSV) and maps the result; the
+actual call lives behind `IChatCompletion`, implemented by
+`OpenAiCompatibleChatCompletion` (see ADR-0011).
+
+- **Interface.** `IChatCompletion.CompleteAsync(ChatRequest) → ChatResult`.
+  `ChatRequest(Endpoint, ApiKey, Model, SystemPrompt, UserPrompt, Data, Temperature)`
+  is provider-neutral; `ChatResult(Success, Content, TotalTokens)` carries the
+  error text in `Content` on failure.
+- **Adapter is pure transport, never throws.** Non-2xx and transport exceptions
+  both map to `ChatResult(false, …)`. The `Authorization: Bearer` header is set
+  **per request**, not on the shared `HttpClient` — concurrent calls with
+  different keys cannot race (the bug the seam fixed).
+- **One adapter for all OpenAI-compatible providers.** OpenAI, **DeepSeek**, and
+  **Z.AI GLM** share the wire format; they differ only by `AiProvider.ApiUrl` +
+  `Model`. Adding one is a new `AiProvider` row, not new code.
+- **`ProviderType` is the future discriminator.** A provider needing a genuinely
+  different wire format (e.g. Anthropic `x-api-key`) gets its **own**
+  `IChatCompletion` adapter selected by `ProviderType` — added only when it
+  actually exists, not speculatively (ADR-0003, ADR-0011). Do not build a provider
+  factory while every adapter would be identical.
+- **Provider resolution stays in `AIService`.** It resolves the `AiProvider`
+  (by id or default) and passes `Endpoint/ApiKey/Model` into the adapter; the
+  "no provider configured" failure is the service's concern, transport failures
+  are the adapter's.
+- **Resilience opt-out.** The AI `HttpClient` drops the global
+  `StandardResilienceHandler` (10s/30s, retries) for a plain 100s timeout — LLM
+  calls run long and a paid, non-idempotent completion must not be retried.
+- **Wire types are adapter-internal.** The `OpenAi*` request/response types are
+  `internal` to `OpenAiCompatibleChatCompletion`; only the fields actually
+  read/written are modelled. `AnalysisResult` stays a domain type in `Model/AI`.
+
 ## Categorization
 
 The act of matching a transaction against the auto-categorization **Rules** and,
