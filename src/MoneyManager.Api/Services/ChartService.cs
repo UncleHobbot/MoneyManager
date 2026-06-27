@@ -1,42 +1,23 @@
-using Microsoft.EntityFrameworkCore;
-using MoneyManager.Api.Data;
 using MoneyManager.Api.Helpers;
 using MoneyManager.Api.Model.Chart;
 using MoneyManager.Api.Model.Query;
 
 namespace MoneyManager.Api.Services;
 
-/// <content>
-/// Contains methods for retrieving and processing transaction data for chart visualization and analysis.
-/// </content>
-public partial class DataService
+/// <summary>
+/// The single home for chart aggregation: turns <see cref="ReportingRow"/>
+/// projections into chart DTOs. Consumes (never produces) reporting rows via
+/// <see cref="TransactionQueryService"/> and reuses <see cref="BudgetService"/>
+/// for budgets, so it touches no database directly. See CONTEXT.md
+/// ("Chart aggregation") and ADR-0004 (ReportingRow).
+/// </summary>
+public class ChartService(TransactionQueryService queryService, BudgetService budgetService)
 {
     /// <summary>
-    /// Aggregates transaction data by month to calculate net income (income vs expenses).
+    /// Aggregates transactions by month into income vs expenses. Transfers are
+    /// excluded (chart convention); Income/Expense split and sign convention come
+    /// precomputed on <see cref="ReportingRow"/>. Ordered chronologically.
     /// </summary>
-    /// <param name="chartPeriod">The period code (e.g., "12", "y1", "m1", "w", "a").</param>
-    /// <returns>
-    /// A list of BalanceChart objects grouped by month, each containing:
-    /// - Month label and key for display and sorting
-    /// - Total Income: Sum of transactions in the "Income" category (or subcategories)
-    /// - Total Expenses: Sum of all non-income transactions
-    /// </returns>
-    /// <remarks>
-    /// This method:
-    /// 1. Retrieves <see cref="ReportingRow">reporting rows</see> for the period
-    ///    (excludes hidden accounts via the listability invariant; category
-    ///    name-match for Income is precomputed as <see cref="ReportingRow.IsIncome"/>;
-    ///    sign convention is precomputed as <see cref="ReportingRow.SignedAmount"/>).
-    /// 2. Filters out transfers (<c>IsTransfer</c> flag) — chart convention.
-    /// 3. Groups the remaining rows by month (format: "MMM yy").
-    /// 4. Sums signed amounts into Income (<c>IsIncome</c>) and Expenses buckets.
-    ///
-    /// Income is positive (credits); Expenses is negative (debits) — both follow
-    /// the canonical <see cref="ReportingRow.SignedAmount"/> convention from
-    /// <c>CONTEXT.md</c> ("Signed amount").
-    ///
-    /// The result is ordered chronologically by first date in each month.
-    /// </remarks>
     public async Task<List<BalanceChart>> ChartNetIncomeAsync(string chartPeriod)
     {
         var (startDate, endDate) = (ChartPeriod.Find(chartPeriod) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
@@ -44,7 +25,7 @@ public partial class DataService
         var filters = new TransactionFilters(StartDate: startDate, EndDate: endDate);
         var rows = await queryService.GetReportingRowsAsync(filters);
 
-        var result = rows
+        return rows
             .Where(r => !r.IsTransfer)
             .GroupBy(r => r.Date.ToString("MMM yy"))
             .Select(g => new BalanceChart
@@ -58,15 +39,12 @@ public partial class DataService
             })
             .OrderBy(x => x.FirstDate)
             .ToList();
-
-        return result;
     }
 
     /// <summary>
     /// Builds the monthly spending-by-category trend for a period: the top 7 parent
     /// categories by total spend plus an "Other" bucket, one value per month.
-    /// Expenses only; transfers excluded. Reuses <see cref="ReportingRow"/> (the
-    /// listability invariant, parent rollup, and sign convention) — see CONTEXT.md.
+    /// Expenses only; transfers excluded.
     /// </summary>
     public async Task<SpendingTrendChart> ChartSpendingTrendAsync(string chartPeriod)
     {
@@ -139,8 +117,7 @@ public partial class DataService
     /// <summary>
     /// Returns the top spending merchants over a period, grouped by transaction
     /// <c>Description</c> (the Rules-normalized merchant label — see CONTEXT.md
-    /// "Merchant / Payee"). Expenses only (income and transfers excluded);
-    /// uncategorized spend still counts. Reuses <see cref="ReportingRow"/>.
+    /// "Merchant / Payee"). Expenses only; uncategorized spend still counts.
     /// </summary>
     public async Task<List<MerchantSpend>> ChartTopMerchantsAsync(string chartPeriod, int limit = 15)
     {
@@ -160,11 +137,78 @@ public partial class DataService
     }
 
     /// <summary>
+    /// Breaks a period's spend into income and expense categories with a
+    /// per-category delta against the immediately-preceding window of the same
+    /// length, plus each category's share of its side. Transfers and uncategorized
+    /// rows are excluded; categories are parent-rolled-up via <see cref="ReportingRow"/>.
+    /// </summary>
+    public async Task<SpendingByCategoryChart> ChartSpendingByCategoryAsync(string chartPeriod)
+    {
+        var (startDate, endDate) = (ChartPeriod.Find(chartPeriod) ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
+
+        // The immediately-preceding window of the same length, for a per-category
+        // delta. Align the previous window to the same calendar span: for
+        // month-aligned periods step back by whole months so "previous" is the
+        // prior calendar period, not a day-count window straddling month
+        // boundaries. Day-based periods (weeks) fall back to an equal-length
+        // window. Skipped for unbounded "a" (StartDate == MinValue).
+        var hasPrevious = startDate > DateTime.MinValue.AddYears(1);
+        DateTime prevStart;
+        if (!hasPrevious)
+            prevStart = startDate;
+        else if (startDate.Day == 1 && endDate.Day == 1)
+            prevStart = startDate.AddMonths(-((endDate.Year - startDate.Year) * 12 + (endDate.Month - startDate.Month)));
+        else
+            prevStart = startDate - (endDate - startDate);
+
+        var rows = await queryService.GetReportingRowsAsync(
+            new TransactionFilters(StartDate: prevStart, EndDate: endDate));
+
+        // Previous-window spend per category id (absolute).
+        var previousByCategory = rows
+            .Where(r => r.Date < startDate && !r.IsTransfer && r.EffectiveCategory != null)
+            .GroupBy(r => r.EffectiveCategory!.Id)
+            .ToDictionary(g => g.Key, g => Math.Abs(g.Sum(r => r.SignedAmount)));
+
+        // Current-window groups (one per rolled-up category), excluding transfers
+        // and uncategorized.
+        var grouped = rows
+            .Where(r => r.Date >= startDate && !r.IsTransfer && r.EffectiveCategory != null)
+            .GroupBy(r => r.EffectiveCategory!)
+            .Select(g => (
+                g.Key.Id,
+                g.Key.Name,
+                g.Key.Icon,
+                Raw: g.Sum(r => r.SignedAmount),
+                IsIncome: g.First().IsIncome))
+            .ToList();
+
+        var incomeItems = grouped.Where(x => x.IsIncome).ToList();
+        var expenseItems = grouped.Where(x => !x.IsIncome).ToList();
+
+        var totalIncome = incomeItems.Sum(x => Math.Abs(x.Raw));
+        var totalExpenses = expenseItems.Sum(x => Math.Abs(x.Raw));
+
+        List<CategoryChart> Project(
+            List<(int Id, string Name, string? Icon, decimal Raw, bool IsIncome)> items,
+            decimal total) => items
+            .Select(x => new CategoryChart(
+                x.Name,
+                x.Icon,
+                Math.Abs(x.Raw),
+                previousByCategory.GetValueOrDefault(x.Id, 0m),
+                total > 0 ? Math.Round((double)(Math.Abs(x.Raw) / total * 100), 2) : 0))
+            .OrderByDescending(c => c.Amount)
+            .ToList();
+
+        return new SpendingByCategoryChart(Project(incomeItems, totalIncome), Project(expenseItems, totalExpenses));
+    }
+
+    /// <summary>
     /// Builds the cash-flow Sankey for a period: income category nodes flow into a
     /// single "Total Income" hub, which flows out to expense category nodes (top
     /// <paramref name="topExpenses"/> + "Other") plus a "Savings" node. A surplus
-    /// produces the Savings flow; a deficit adds a "Deficit" source feeding the hub
-    /// so inflow and outflow balance. Reuses <see cref="ReportingRow"/>.
+    /// produces the Savings flow; a deficit adds a "Deficit" source feeding the hub.
     /// </summary>
     public async Task<CashFlowChart> ChartCashFlowAsync(string chartPeriod, int topExpenses = 8)
     {
@@ -264,13 +308,12 @@ public partial class DataService
     /// <summary>
     /// Compares each budgeted (parent) category's monthly limit to its actual spend
     /// for the current calendar month. Actual is summed from <see cref="ReportingRow"/>
-    /// at the same parent-rollup level as the budget; categories without a budget are
-    /// absent. See CONTEXT.md ("Budget") / ADR-0007.
+    /// at the same parent-rollup level as the budget; budgets come from
+    /// <see cref="BudgetService"/>. See CONTEXT.md ("Budget") / ADR-0007.
     /// </summary>
     public async Task<List<BudgetVsActual>> ChartBudgetVsActualAsync()
     {
-        await using var ctx = await contextFactory.CreateDbContextAsync();
-        var budgets = await ctx.Budgets.Include(b => b.Category).ToListAsync();
+        var budgets = await budgetService.GetBudgetsAsync();
         if (budgets.Count == 0)
             return [];
 
@@ -288,43 +331,20 @@ public partial class DataService
 
         return budgets
             .Select(b => new BudgetVsActual(
-                b.Category.Id,
-                b.Category.Name,
-                b.Category.Icon,
+                b.CategoryId,
+                b.CategoryName,
+                b.Icon,
                 b.Amount,
-                actualByCategory.GetValueOrDefault(b.Category.Id, 0m)))
+                actualByCategory.GetValueOrDefault(b.CategoryId, 0m)))
             .OrderByDescending(x => x.Actual)
             .ToList();
     }
 
     /// <summary>
-    /// Calculates cumulative spending by day of month for the current month and previous month.
+    /// Cumulative expenses by day of month for the current month vs the previous
+    /// month (31 entries). Days beyond a month's length, or future days this month,
+    /// carry <c>null</c> for that month. Used to read spending velocity.
     /// </summary>
-    /// <returns>
-    /// A list of CumulativeSpendingChart objects (31 entries, one for each day of month) containing:
-    /// - DayNumber: The day number (1-31)
-    /// - LastMonthExpenses: Cumulative expenses on that day last month
-    /// - ThisMonthExpenses: Cumulative expenses on that day this month (only up to today)
-    /// </returns>
-    /// <remarks>
-    /// This method creates a day-by-day comparison of spending patterns between two months:
-    ///
-    /// 1. Retrieves <see cref="ReportingRow">reporting rows</see> from the first
-    ///    day of last month to today (today's transactions excluded by the
-    ///    exclusive end of the date window, matching pre-migration behavior).
-    /// 2. Filters to expenses only (<c>!IsIncome &amp;&amp; !IsTransfer</c>).
-    /// 3. For each day (1-31), sums <c>-SignedAmount</c> over rows whose date
-    ///    falls in [monthStart, dayBoundary). The negation flips the canonical
-    ///    "debits negative" convention to the "expenses positive" convention
-    ///    this chart has always used; see <c>CONTEXT.md</c> ("Signed amount").
-    ///
-    /// Days beyond the actual month length will have <c>null</c> for that month's
-    /// expenses. Future days in the current month will have <c>null</c> for this
-    /// month's expenses.
-    ///
-    /// This is used to visualize spending velocity and identify whether the
-    /// current month is ahead or behind the previous month's pace.
-    /// </remarks>
     public async Task<List<CumulativeSpendingChart>> ChartCumulativeSpendingAsync()
     {
         var result = new List<CumulativeSpendingChart>();

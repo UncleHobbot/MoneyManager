@@ -15,13 +15,11 @@ namespace MoneyManager.Api.Services;
 /// </list>
 /// Uses <see cref="IMemoryCache"/> for thread-safe account/category caching in the web environment.
 /// Uses <see cref="IDbContextFactory{TContext}"/> for creating per-operation database contexts.
-/// Chart methods depend on <see cref="TransactionQueryService"/> for the read-side
-/// <c>ReportingRow</c> projection; see ADR-0004 and CONTEXT.md ("Reporting Row").
+/// Chart aggregation lives in <see cref="ChartService"/> (see CONTEXT.md "Chart aggregation").
 /// </remarks>
 public partial class DataService(
     IDbContextFactory<DataContext> contextFactory,
-    ReferenceDataCache cache,
-    TransactionQueryService queryService)
+    ReferenceDataCache cache)
 {
     /// <summary>
     /// Gets or sets the default chart period for net income visualization. Defaults to "12" (last 12 months).

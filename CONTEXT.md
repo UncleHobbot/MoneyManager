@@ -224,6 +224,30 @@ convention, the parent-rollup rule, or the "Income"/"Transfer" name matches.
   expenses by category). When `GetStatsAsync` or `ApplyAll` migrate to
   consume `ReportingRow`, the flag should be added — see Q3 grilling.
 
+## Chart aggregation
+
+The single home for turning transactions into chart DTOs: `ChartService`. It owns
+all seven chart aggregations (net income, spending trend, top merchants, cash-flow
+Sankey, budget-vs-actual, cumulative spending, spending-by-category).
+
+- **Consumes, never produces, `ReportingRow`.** Every method routes through
+  `TransactionQueryService.GetReportingRowsAsync` for its rows — the listability
+  invariant, parent rollup, and sign convention come precomputed. This is the
+  consumer side; producing `ReportingRow` stays on `TransactionQueryService` (the
+  "reporting service" rejected in the Reporting Row grilling was about *production*,
+  a different seam — no conflict).
+- **No direct database access.** `ChartService(TransactionQueryService, BudgetService)`.
+  Budget-vs-actual reads budgets via `BudgetService.GetBudgetsAsync()` rather than
+  re-spelling a `ctx.Budgets` query, so the module touches no `DbContext`.
+- **Endpoints are thin.** `ChartEndpoints` handlers resolve the period default and
+  call one `ChartService` method. The old orphan — `GetSpendingByCategory` aggregating
+  inline in the endpoint (with the untested previous-window delta) — now lives in
+  `ChartService.ChartSpendingByCategoryAsync` and is covered by tests.
+- **History.** Extracted from the `DataService` grab-bag (the old `DataService.Chart.cs`
+  partial); `DataService` no longer depends on `TransactionQueryService`. Same
+  extraction lineage as `TransactionQueryService`, `CategorizationService`,
+  `BudgetService`, `ReferenceDataCache`.
+
 ## Merchant / Payee
 
 The counterparty of a transaction, as shown to the user. There is intentionally

@@ -5,11 +5,11 @@ using MoneyManager.Api.Tests.TestHelpers;
 
 namespace MoneyManager.Api.Tests.Services;
 
-public class DataServiceChartTests : IDisposable
+public class ChartServiceTests : IDisposable
 {
     private readonly ServiceBundle _svc;
 
-    public DataServiceChartTests()
+    public ChartServiceTests()
     {
         _svc = DbContextHelper.CreateServiceBundle();
     }
@@ -29,7 +29,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartNetIncome_GroupsByMonth()
     {
-        var result = await _svc.DataService.ChartNetIncomeAsync("a");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("a");
 
         // Seed spans Jan 2025 and Feb 2025 (listable transactions only).
         result.Should().HaveCount(2);
@@ -40,7 +40,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartNetIncome_OrderedByFirstDate()
     {
-        var result = await _svc.DataService.ChartNetIncomeAsync("a");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("a");
 
         result.Select(b => b.FirstDate).Should().BeInAscendingOrder();
     }
@@ -48,7 +48,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartNetIncome_IncomeBucketSumsCreditsAsPositive()
     {
-        var result = await _svc.DataService.ChartNetIncomeAsync("a");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("a");
 
         // January 2025 contains Salary Deposit (Income, +3000).
         var jan = result.Single(b => b.MonthKey == "2501");
@@ -62,7 +62,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartNetIncome_ExpensesBucketSumsDebitsAsNegative()
     {
-        var result = await _svc.DataService.ChartNetIncomeAsync("a");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("a");
 
         // January 2025: Loblaws (-85.50). Expenses are negative.
         var jan = result.Single(b => b.MonthKey == "2501");
@@ -79,7 +79,7 @@ public class DataServiceChartTests : IDisposable
         // Regression guard for the bug fixed by ReportingRow migration:
         // Salary (Income, top-level) and Restaurant (Food, top-level) previously
         // were excluded by the latent `Category.Parent.Id` NULL-comparison bug.
-        var result = await _svc.DataService.ChartNetIncomeAsync("a");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("a");
 
         var jan = result.Single(b => b.MonthKey == "2501");
         jan.Income.Should().Be(3000m, "Salary (Income top-level) must appear after bug fix");
@@ -99,7 +99,7 @@ public class DataServiceChartTests : IDisposable
         using (var ctx = _svc.Factory.CreateDbContext())
             foodId = ctx.Categories.First(c => c.Name == "Food").Id;
 
-        var result = await _svc.DataService.ChartSpendingTrendAsync("a");
+        var result = await _svc.ChartService.ChartSpendingTrendAsync("a");
 
         // Only Food has expenses: Groceries rolls up to Food, Netflix is
         // uncategorized (null category), Salary is income, and the transfer is on a
@@ -126,7 +126,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartSpendingTrend_AlignsSeriesDataWithMonths()
     {
-        var result = await _svc.DataService.ChartSpendingTrendAsync("a");
+        var result = await _svc.ChartService.ChartSpendingTrendAsync("a");
 
         result.Months.Should().NotBeEmpty();
         result.Series.Should().OnlyContain(s => s.Data.Length == result.Months.Count);
@@ -139,7 +139,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartTopMerchants_RanksExpenseMerchants_IncludingUncategorized()
     {
-        var result = await _svc.DataService.ChartTopMerchantsAsync("a");
+        var result = await _svc.ChartService.ChartTopMerchantsAsync("a");
 
         // Expense merchants ordered by spend; income (Salary) and the hidden-account
         // transfer are excluded; uncategorized spend (Netflix) still counts.
@@ -156,7 +156,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartTopMerchants_RespectsLimit()
     {
-        var result = await _svc.DataService.ChartTopMerchantsAsync("a", limit: 2);
+        var result = await _svc.ChartService.ChartTopMerchantsAsync("a", limit: 2);
 
         result.Should().HaveCount(2);
         result.Select(m => m.Name).Should().Equal("Loblaws Groceries", "Netflix");
@@ -170,7 +170,7 @@ public class DataServiceChartTests : IDisposable
     public async Task ChartCashFlow_BuildsBalancedSankey_WithSavings()
     {
         const string hub = "Total Income";
-        var result = await _svc.DataService.ChartCashFlowAsync("a");
+        var result = await _svc.ChartService.ChartCashFlowAsync("a");
 
         decimal Link(string source, string target) =>
             result.Links.Single(l => l.Source == source && l.Target == target).Value;
@@ -221,7 +221,7 @@ public class DataServiceChartTests : IDisposable
             foodId = food.Id;
         }
 
-        var result = await _svc.DataService.ChartBudgetVsActualAsync();
+        var result = await _svc.ChartService.ChartBudgetVsActualAsync();
 
         var foodRow = result.Single(x => x.CategoryId == foodId);
         foodRow.Budget.Should().Be(600m);
@@ -231,7 +231,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartBudgetVsActual_EmptyWhenNoBudgets()
     {
-        (await _svc.DataService.ChartBudgetVsActualAsync()).Should().BeEmpty();
+        (await _svc.ChartService.ChartBudgetVsActualAsync()).Should().BeEmpty();
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public class DataServiceChartTests : IDisposable
         // Netflix has Category = null and falls into the Expenses bucket
         // (IsIncome == false because EffectiveCategory is null). EffectiveCategory
         // being null does not exclude a row from ChartNetIncome.
-        var result = await _svc.DataService.ChartNetIncomeAsync("a");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("a");
 
         var feb = result.Single(b => b.MonthKey == "2502");
         feb.Expenses.Should().Be(-29.49m, "Netflix (Category=null) contributes -16.99 to Expenses");
@@ -268,7 +268,7 @@ public class DataServiceChartTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
-        var result = await _svc.DataService.ChartNetIncomeAsync("a");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("a");
 
         // January numbers must NOT include the -200 transfer.
         var jan = result.Single(b => b.MonthKey == "2501");
@@ -283,7 +283,7 @@ public class DataServiceChartTests : IDisposable
         // the listability invariant in GetReportingRowsAsync. It would
         // otherwise show up as a transfer (excluded anyway) but the test
         // documents the layered invariants.
-        var result = await _svc.DataService.ChartNetIncomeAsync("a");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("a");
 
         result.Should().HaveCount(2);
         // Sum of all buckets across months, excluding the 500 hidden debit.
@@ -299,7 +299,7 @@ public class DataServiceChartTests : IDisposable
         // Today is wherever the test runner is; "a" includes everything in seed.
         // "y3" = 2 years ago. With seed in 2025, "y3" picks the year before
         // the year before today's year. Use a deterministic "no match" period.
-        var result = await _svc.DataService.ChartNetIncomeAsync("y3");
+        var result = await _svc.ChartService.ChartNetIncomeAsync("y3");
 
         // y3 = two full years ago. Seed (2025) only matches y3 if today's
         // year is 2027. On any other year, the result should be empty.
@@ -337,7 +337,7 @@ public class DataServiceChartTests : IDisposable
     [Fact]
     public async Task ChartCumulativeSpending_HasEntryForEveryDayOfLastMonth()
     {
-        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+        var result = await _svc.ChartService.ChartCumulativeSpendingAsync();
 
         var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
         var daysInLastMonth = DateTime.DaysInMonth(lastMonthStart.Year, lastMonthStart.Month);
@@ -354,7 +354,7 @@ public class DataServiceChartTests : IDisposable
         await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 50m, true, "Food");
         await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 10), 30m, true, "Food");
 
-        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+        var result = await _svc.ChartService.ChartCumulativeSpendingAsync();
 
         // Cumulative: day 5 onward includes 50; day 10 onward includes 80.
         result.Single(d => d.DayNumber == 1).LastMonthExpenses.Should().Be(0m);
@@ -376,7 +376,7 @@ public class DataServiceChartTests : IDisposable
         await AddTransactionAsync(day5, 40m, true, "Food");
         await AddTransactionAsync(day15, 25m, true, "Food");
 
-        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+        var result = await _svc.ChartService.ChartCumulativeSpendingAsync();
 
         result.Single(d => d.DayNumber == 5).ThisMonthExpenses.Should().Be(40m);
         result.Single(d => d.DayNumber == 14).ThisMonthExpenses.Should().Be(40m);
@@ -391,7 +391,7 @@ public class DataServiceChartTests : IDisposable
         var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
         await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 5000m, false, "Income");
 
-        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+        var result = await _svc.ChartService.ChartCumulativeSpendingAsync();
 
         result.Should().NotBeEmpty();
         result.Should().OnlyContain(d => d.LastMonthExpenses == 0m);
@@ -404,7 +404,7 @@ public class DataServiceChartTests : IDisposable
         var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
         await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 300m, true, "Transfer");
 
-        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+        var result = await _svc.ChartService.ChartCumulativeSpendingAsync();
 
         result.Should().NotBeEmpty();
         result.Should().OnlyContain(d => d.LastMonthExpenses == 0m);
@@ -439,7 +439,7 @@ public class DataServiceChartTests : IDisposable
             await ctx.SaveChangesAsync();
         }
 
-        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+        var result = await _svc.ChartService.ChartCumulativeSpendingAsync();
 
         // Food (20) + Mystery (15) = 35 from day 6 onward.
         result.Single(d => d.DayNumber == 5).LastMonthExpenses.Should().Be(20m);
@@ -457,10 +457,81 @@ public class DataServiceChartTests : IDisposable
         await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 50m, true, "Food");
         await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 10), 20m, false, "Food");
 
-        var result = await _svc.DataService.ChartCumulativeSpendingAsync();
+        var result = await _svc.ChartService.ChartCumulativeSpendingAsync();
 
         // Day 5: +50; Day 10: +50 - 20 = +30.
         result.Single(d => d.DayNumber == 5).LastMonthExpenses.Should().Be(50m);
         result.Single(d => d.DayNumber == 10).LastMonthExpenses.Should().Be(30m);
+    }
+
+    // ----------------------------------------------------------------
+    // ChartSpendingByCategoryAsync (income/expense split, %, prev-window delta)
+    //
+    // Moved here from the inline ChartEndpoints.GetSpendingByCategory handler,
+    // which had no coverage. The previous-window delta is the gnarly part.
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public async Task ChartSpendingByCategory_SplitsIncomeAndExpenses_RollsUpAndExcludes()
+    {
+        var result = await _svc.ChartService.ChartSpendingByCategoryAsync("a");
+
+        // Income side: Salary (Income, +3000). Expense side: Food (Groceries rolls
+        // up to Food: 85.50 + Restaurant 12.50 = 98.00). Netflix is uncategorized
+        // (excluded), the transfer is on a hidden account (excluded).
+        result.Income.Should().ContainSingle();
+        result.Income.Single().Name.Should().Be("Income");
+        result.Income.Single().Amount.Should().Be(3000m);
+
+        result.Expenses.Should().ContainSingle();
+        var food = result.Expenses.Single();
+        food.Name.Should().Be("Food");
+        food.Amount.Should().Be(98.00m);
+
+        result.Expenses.Should().NotContain(c => c.Name == "Uncategorized" || c.Name == "Transfer");
+    }
+
+    [Fact]
+    public async Task ChartSpendingByCategory_PercentagesAreShareOfTheirOwnSide()
+    {
+        // Add a second expense category so percentages are not trivially 100%.
+        var lastMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).AddMonths(-1);
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 5), 100m, true, "Food");
+        await AddTransactionAsync(new DateTime(lastMonthStart.Year, lastMonthStart.Month, 6), 300m, true, "Income"); // credit, income side
+
+        var result = await _svc.ChartService.ChartSpendingByCategoryAsync("a");
+
+        // Each side's percentages sum to ~100.
+        result.Income.Sum(c => c.Percentage).Should().BeApproximately(100, 0.5);
+        result.Expenses.Sum(c => c.Percentage).Should().BeApproximately(100, 0.5);
+    }
+
+    [Fact]
+    public async Task ChartSpendingByCategory_PopulatesPreviousWindowDelta()
+    {
+        // Period "m1" = this calendar month; its previous window is last month.
+        // Seed a Food expense in each so PreviousAmount is non-zero.
+        var thisMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        var lastMonth = thisMonth.AddMonths(-1);
+
+        // Use day 1 to stay inside both windows regardless of today's day.
+        await AddTransactionAsync(thisMonth, 70m, true, "Food");
+        await AddTransactionAsync(lastMonth, 40m, true, "Food");
+
+        var result = await _svc.ChartService.ChartSpendingByCategoryAsync("m1");
+
+        var food = result.Expenses.Single(c => c.Name == "Food");
+        food.Amount.Should().Be(70m);          // current month
+        food.PreviousAmount.Should().Be(40m);  // previous (last) month
+    }
+
+    [Fact]
+    public async Task ChartSpendingByCategory_UnboundedPeriod_HasNoPreviousWindow()
+    {
+        // "a" (all time) has StartDate == MinValue, so there is no earlier window.
+        var result = await _svc.ChartService.ChartSpendingByCategoryAsync("a");
+
+        result.Expenses.Should().OnlyContain(c => c.PreviousAmount == 0m);
+        result.Income.Should().OnlyContain(c => c.PreviousAmount == 0m);
     }
 }

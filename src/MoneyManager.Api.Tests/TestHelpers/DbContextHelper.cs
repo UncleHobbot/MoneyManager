@@ -186,9 +186,11 @@ public static class DbContextHelper
 
         var queryService = new TransactionQueryService(factory);
         var refCache = new ReferenceDataCache(factory, cache);
-        var dataService = new DataService(factory, refCache, queryService);
+        var dataService = new DataService(factory, refCache);
         var categorization = new CategorizationService(factory);
-        return new ServiceBundle(factory, dataService, queryService, cache, categorization);
+        var budgetService = new BudgetService(factory);
+        var chartService = new ChartService(queryService, budgetService);
+        return new ServiceBundle(factory, dataService, queryService, cache, categorization, budgetService, chartService);
     }
 }
 
@@ -242,19 +244,25 @@ public sealed class ServiceBundle : IDisposable
     public TransactionQueryService QueryService { get; }
     public IMemoryCache Cache { get; }
     public CategorizationService Categorization { get; }
+    public BudgetService BudgetService { get; }
+    public ChartService ChartService { get; }
 
     public ServiceBundle(
         TestDbContextFactory factory,
         DataService dataService,
         TransactionQueryService queryService,
         IMemoryCache cache,
-        CategorizationService categorization)
+        CategorizationService categorization,
+        BudgetService budgetService,
+        ChartService chartService)
     {
         Factory = factory;
         DataService = dataService;
         QueryService = queryService;
         Cache = cache;
         Categorization = categorization;
+        BudgetService = budgetService;
+        ChartService = chartService;
     }
 
     public void Dispose()

@@ -42,6 +42,7 @@ builder.Services.AddHttpClient<IChatCompletion, OpenAiCompatibleChatCompletion>(
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<TransactionQueryService>();
 builder.Services.AddScoped<BudgetService>();
+builder.Services.AddScoped<ChartService>();
 builder.Services.AddSingleton<DBService>();
 
 // CORS — allow Vite dev server

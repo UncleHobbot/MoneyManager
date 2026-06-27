@@ -25,114 +25,46 @@ public static class ChartEndpoints
         group.MapGet("/periods", GetPeriods);
     }
 
-    internal static async Task<IResult> GetNetIncome(string period, DataService dataService)
+    internal static async Task<IResult> GetNetIncome(string period, ChartService chartService)
     {
-        var result = await dataService.ChartNetIncomeAsync(period ?? "12");
+        var result = await chartService.ChartNetIncomeAsync(period ?? "12");
         return TypedResults.Ok(result);
     }
 
-    internal static async Task<IResult> GetCumulativeSpending(DataService dataService)
+    internal static async Task<IResult> GetCumulativeSpending(ChartService chartService)
     {
-        var result = await dataService.ChartCumulativeSpendingAsync();
+        var result = await chartService.ChartCumulativeSpendingAsync();
         return TypedResults.Ok(result);
     }
 
-    internal static async Task<IResult> GetSpendingTrend(string period, DataService dataService)
+    internal static async Task<IResult> GetSpendingTrend(string period, ChartService chartService)
     {
-        var result = await dataService.ChartSpendingTrendAsync(period ?? "12");
+        var result = await chartService.ChartSpendingTrendAsync(period ?? "12");
         return TypedResults.Ok(result);
     }
 
-    internal static async Task<IResult> GetTopMerchants(string period, DataService dataService, int limit = 15)
+    internal static async Task<IResult> GetTopMerchants(string period, ChartService chartService, int limit = 15)
     {
-        var result = await dataService.ChartTopMerchantsAsync(period ?? "12", limit);
+        var result = await chartService.ChartTopMerchantsAsync(period ?? "12", limit);
         return TypedResults.Ok(result);
     }
 
-    internal static async Task<IResult> GetCashFlow(string period, DataService dataService)
+    internal static async Task<IResult> GetCashFlow(string period, ChartService chartService)
     {
-        var result = await dataService.ChartCashFlowAsync(period ?? "12");
+        var result = await chartService.ChartCashFlowAsync(period ?? "12");
         return TypedResults.Ok(result);
     }
 
-    internal static async Task<IResult> GetBudgetVsActual(DataService dataService)
+    internal static async Task<IResult> GetBudgetVsActual(ChartService chartService)
     {
-        var result = await dataService.ChartBudgetVsActualAsync();
+        var result = await chartService.ChartBudgetVsActualAsync();
         return TypedResults.Ok(result);
     }
 
-    internal static async Task<IResult> GetSpendingByCategory(
-        string period,
-        TransactionQueryService queryService)
+    internal static async Task<IResult> GetSpendingByCategory(string period, ChartService chartService)
     {
-        var (startDate, endDate) = (ChartPeriod.Find(period ?? "12") ?? ChartPeriod.Default).GetDateRange(DateTime.Today);
-
-        // The immediately-preceding window of the same length, for a per-category
-        // delta. Skipped for unbounded "a" (StartDate == MinValue), where there is
-        // no earlier window to compare against.
-        // Align the previous window to the same calendar span. For month-aligned
-        // periods (this/last month, last 12 months, year variants) step back by
-        // whole months so "previous" is the prior calendar period, not a day-count
-        // window that straddles month boundaries. Day-based periods (weeks) fall
-        // back to an equal-length window. Skipped for unbounded "a" (MinValue).
-        var hasPrevious = startDate > DateTime.MinValue.AddYears(1);
-        DateTime prevStart;
-        if (!hasPrevious)
-            prevStart = startDate;
-        else if (startDate.Day == 1 && endDate.Day == 1)
-            prevStart = startDate.AddMonths(-((endDate.Year - startDate.Year) * 12 + (endDate.Month - startDate.Month)));
-        else
-            prevStart = startDate - (endDate - startDate);
-
-        var rows = await queryService.GetReportingRowsAsync(
-            new TransactionFilters(StartDate: prevStart, EndDate: endDate));
-
-        // Previous-window spend per category id (absolute).
-        var previousByCategory = rows
-            .Where(r => r.Date < startDate && !r.IsTransfer && r.EffectiveCategory != null)
-            .GroupBy(r => r.EffectiveCategory!.Id)
-            .ToDictionary(g => g.Key, g => Math.Abs(g.Sum(r => r.SignedAmount)));
-
-        // Current-window groups (one per rolled-up category), excluding transfers
-        // and uncategorized.
-        var grouped = rows
-            .Where(r => r.Date >= startDate && !r.IsTransfer && r.EffectiveCategory != null)
-            .GroupBy(r => r.EffectiveCategory!)
-            .Select(g => new
-            {
-                Id = g.Key.Id,
-                Name = g.Key.Name,
-                Icon = g.Key.Icon,
-                RawSignedAmount = g.Sum(r => r.SignedAmount),
-                IsIncome = g.First().IsIncome,
-            })
-            .ToList();
-
-        var incomeItems = grouped.Where(x => x.IsIncome).ToList();
-        var expenseItems = grouped.Where(x => !x.IsIncome).ToList();
-
-        var totalIncome = incomeItems.Sum(x => Math.Abs(x.RawSignedAmount));
-        var totalExpenses = expenseItems.Sum(x => Math.Abs(x.RawSignedAmount));
-
-        var income = incomeItems.Select(x => new
-        {
-            x.Name,
-            x.Icon,
-            Amount = Math.Abs(x.RawSignedAmount),
-            PreviousAmount = previousByCategory.GetValueOrDefault(x.Id, 0m),
-            Percentage = totalIncome > 0 ? Math.Round((double)(Math.Abs(x.RawSignedAmount) / totalIncome * 100), 2) : 0
-        }).OrderByDescending(x => x.Amount).ToList();
-
-        var expenses = expenseItems.Select(x => new
-        {
-            x.Name,
-            x.Icon,
-            Amount = Math.Abs(x.RawSignedAmount),
-            PreviousAmount = previousByCategory.GetValueOrDefault(x.Id, 0m),
-            Percentage = totalExpenses > 0 ? Math.Round((double)(Math.Abs(x.RawSignedAmount) / totalExpenses * 100), 2) : 0
-        }).OrderByDescending(x => x.Amount).ToList();
-
-        return TypedResults.Ok(new { income, expenses });
+        var result = await chartService.ChartSpendingByCategoryAsync(period ?? "12");
+        return TypedResults.Ok(result);
     }
 
     internal static IResult GetPeriods()
