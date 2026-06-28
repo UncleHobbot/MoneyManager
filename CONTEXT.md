@@ -270,6 +270,30 @@ and merchant-name normalization is owned by **Rules**.
 - **Drill-down.** Clicking a merchant routes to the canonical Transactions surface
   filtered by description search (`search=<Description>`), per ADR-0005.
 
+## Chart option primitives
+
+Composable ECharts option fragments shared by the Cartesian chart pages, in
+`lib/chartOptions.ts` (built on `chartTheme.ts`, ADR-0006). Pages own `series`
+(bar / line / area — irreducibly per-chart); the primitives own the repeated
+grid, axis, and CAD-tooltip grammar.
+
+- **Primitives.** `moneyGrid(overrides?)` (margins + `containLabel`),
+  `categoryAxis(isDark, data, { name? })`, `cadValueAxis(isDark, { name? })`
+  (whole-dollar labels), `cadAxisTooltip({ shadow? })` (whole-dollar, `null → "—"`).
+  A page composes them: `{ grid: moneyGrid({ top: 40 }), tooltip: cadAxisTooltip(),
+  xAxis: categoryAxis(...), yAxis: cadValueAxis(...), series: [...] }`.
+- **Axis-agnostic.** The axis builders return a type assignable to either `xAxis`
+  or `yAxis`, so horizontal charts put `cadValueAxis` on `xAxis` and `categoryAxis`
+  on `yAxis` with no cast.
+- **Unified conventions.** `categoryAxis` always draws a themed `axisLine`; the CAD
+  tooltip always renders `null` as `"—"`. (Pre-consolidation these varied per page.)
+- **Not for non-Cartesian charts.** The donut and Sankey have no grid/axes; their
+  `trigger: 'item'` tooltips and `series` stay inline (single consumers — no
+  primitive earns its place).
+- **No god-builder.** There is intentionally no `buildBarChart(...)`: the seven
+  charts' `series` shapes don't reduce to one signature, so a whole-chart builder
+  would be shallow-generic.
+
 ## Transactions drill-in
 
 The single way a chart links to the canonical Transactions surface (ADR-0005).

@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useSpendingTrend, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, ChartCard, EChart } from '@/components/ui'
-import { formatCAD } from '@/lib/format'
 import { transactionsUrl } from '@/lib/transactionsUrl'
-import { CHART_PALETTE, chartAxis } from '@/lib/chartTheme'
+import { CHART_PALETTE } from '@/lib/chartTheme'
+import { moneyGrid, categoryAxis, cadValueAxis, cadAxisTooltip } from '@/lib/chartOptions'
 import type { EChartsOption } from 'echarts'
 
 /** Neutral color for the synthetic "Other" series (categoryId === null). */
@@ -29,29 +29,12 @@ export default function SpendingTrendPage() {
   const series = useMemo(() => data?.series ?? [], [data])
 
   const option = useMemo<EChartsOption>(() => {
-    const axis = chartAxis(isDark)
     return {
-      grid: { left: 8, right: 16, top: 40, bottom: 8, containLabel: true },
+      grid: moneyGrid({ top: 40 }),
       legend: { top: 0, type: 'scroll' },
-      tooltip: {
-        trigger: 'axis',
-        valueFormatter: (v) => formatCAD(Number(v), { fractionDigits: 0 }),
-      },
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: months.map(m => m.label),
-        axisLabel: { color: axis.label },
-        axisLine: { lineStyle: { color: axis.line } },
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: {
-          color: axis.label,
-          formatter: (v: number) => formatCAD(v, { fractionDigits: 0 }),
-        },
-        splitLine: { lineStyle: { color: axis.split } },
-      },
+      tooltip: cadAxisTooltip(),
+      xAxis: categoryAxis(isDark, months.map(m => m.label), { boundaryGap: false }),
+      yAxis: cadValueAxis(isDark),
       series: series.map((s, i) => ({
         name: s.name,
         type: 'line',

@@ -4,8 +4,7 @@ import { useBudgets, useSetBudget, useDeleteBudget } from '@/hooks/useBudgets'
 import { useCategories } from '@/hooks/useCategories'
 import { useTheme } from '@/components/layout/useTheme'
 import { Spinner, Card, ChartCard, EChart, CategoryIcon, Input, Button } from '@/components/ui'
-import { formatCAD } from '@/lib/format'
-import { chartAxis } from '@/lib/chartTheme'
+import { moneyGrid, categoryAxis, cadValueAxis, cadAxisTooltip } from '@/lib/chartOptions'
 import type { EChartsOption } from 'echarts'
 import type { BudgetDto, Category } from '@/types'
 
@@ -70,25 +69,12 @@ export default function BudgetsPage() {
   const rows = useMemo(() => [...(vsActual ?? [])].reverse(), [vsActual])
 
   const option = useMemo<EChartsOption>(() => {
-    const axis = chartAxis(isDark)
     return {
-      grid: { left: 8, right: 24, top: 28, bottom: 8, containLabel: true },
+      grid: moneyGrid({ right: 24, top: 28 }),
       legend: { top: 0 },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        valueFormatter: (v) => formatCAD(Number(v), { fractionDigits: 0 }),
-      },
-      xAxis: {
-        type: 'value',
-        axisLabel: { color: axis.label, formatter: (v: number) => formatCAD(v, { fractionDigits: 0 }) },
-        splitLine: { lineStyle: { color: axis.split } },
-      },
-      yAxis: {
-        type: 'category',
-        data: rows.map(r => r.name),
-        axisLabel: { color: axis.label },
-      },
+      tooltip: cadAxisTooltip({ shadow: true }),
+      xAxis: cadValueAxis(isDark),
+      yAxis: categoryAxis(isDark, rows.map(r => r.name)),
       series: [
         {
           name: 'Actual',

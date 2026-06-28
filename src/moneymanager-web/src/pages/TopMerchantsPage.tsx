@@ -5,7 +5,8 @@ import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, ChartCard, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
 import { transactionsUrl } from '@/lib/transactionsUrl'
-import { CHART_PALETTE, chartAxis } from '@/lib/chartTheme'
+import { CHART_PALETTE } from '@/lib/chartTheme'
+import { moneyGrid, categoryAxis, cadValueAxis } from '@/lib/chartOptions'
 import type { EChartsOption } from 'echarts'
 
 export default function TopMerchantsPage() {
@@ -26,9 +27,8 @@ export default function TopMerchantsPage() {
   const ordered = useMemo(() => [...(data ?? [])].reverse(), [data])
 
   const option = useMemo<EChartsOption>(() => {
-    const axis = chartAxis(isDark)
     return {
-      grid: { left: 8, right: 24, top: 8, bottom: 8, containLabel: true },
+      grid: moneyGrid({ right: 24 }),
       tooltip: {
         trigger: 'item',
         formatter: (params) => {
@@ -39,17 +39,8 @@ export default function TopMerchantsPage() {
             : ''
         },
       },
-      xAxis: {
-        type: 'value',
-        axisLabel: { color: axis.label, formatter: (v: number) => formatCAD(v, { fractionDigits: 0 }) },
-        splitLine: { lineStyle: { color: axis.split } },
-      },
-      yAxis: {
-        type: 'category',
-        data: ordered.map(m => m.name),
-        axisLabel: { color: axis.label },
-        axisLine: { lineStyle: { color: axis.line } },
-      },
+      xAxis: cadValueAxis(isDark),
+      yAxis: categoryAxis(isDark, ordered.map(m => m.name)),
       series: [
         {
           type: 'bar',

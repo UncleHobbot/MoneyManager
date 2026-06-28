@@ -3,8 +3,7 @@ import { useCumulativeSpending } from '@/hooks/useCharts'
 import { useBudgets } from '@/hooks/useBudgets'
 import { useTheme } from '@/components/layout/useTheme'
 import { Spinner, Card, EChart } from '@/components/ui'
-import { formatCAD } from '@/lib/format'
-import { chartAxis } from '@/lib/chartTheme'
+import { moneyGrid, categoryAxis, cadValueAxis, cadAxisTooltip } from '@/lib/chartOptions'
 import type { EChartsOption } from 'echarts'
 
 export default function CumulativeSpendingPage() {
@@ -22,40 +21,16 @@ export default function CumulativeSpendingPage() {
     const points = (data ?? []).filter(
       (d) => Number.isFinite(d.lastMonthExpenses) || Number.isFinite(d.thisMonthExpenses),
     )
-    const axis = chartAxis(isDark)
-
     // Expected spend by day d if the whole monthly budget is spent evenly.
     const now = new Date()
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
 
     return {
-      grid: { left: 8, right: 16, top: 36, bottom: 36, containLabel: true },
+      grid: moneyGrid({ top: 36, bottom: 36 }),
       legend: { top: 0 },
-      tooltip: {
-        trigger: 'axis',
-        valueFormatter: (val) =>
-          val == null ? '—' : formatCAD(Number(val), { fractionDigits: 0 }),
-      },
-      xAxis: {
-        type: 'category',
-        data: points.map((d) => d.dayNumber),
-        name: 'Day of Month',
-        nameLocation: 'middle',
-        nameGap: 28,
-        nameTextStyle: { color: axis.label },
-        axisLabel: { color: axis.label },
-        axisLine: { lineStyle: { color: axis.line } },
-      },
-      yAxis: {
-        type: 'value',
-        name: 'Cumulative $ Spent',
-        nameTextStyle: { color: axis.label },
-        axisLabel: {
-          color: axis.label,
-          formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
-        },
-        splitLine: { lineStyle: { color: axis.split } },
-      },
+      tooltip: cadAxisTooltip(),
+      xAxis: categoryAxis(isDark, points.map((d) => d.dayNumber), { name: 'Day of Month' }),
+      yAxis: cadValueAxis(isDark, { name: 'Cumulative $ Spent' }),
       series: [
         {
           name: 'Last Month',

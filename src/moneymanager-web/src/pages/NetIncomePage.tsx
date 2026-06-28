@@ -5,7 +5,8 @@ import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, Card, ChartCard, EChart } from '@/components/ui'
 import { formatCAD } from '@/lib/format'
 import { transactionsUrl, monthRange } from '@/lib/transactionsUrl'
-import { CHART_COLORS, chartAxis } from '@/lib/chartTheme'
+import { CHART_COLORS } from '@/lib/chartTheme'
+import { moneyGrid, categoryAxis, cadValueAxis, cadAxisTooltip } from '@/lib/chartOptions'
 import type { BalanceChart } from '@/types'
 import type { EChartsOption } from 'echarts'
 
@@ -33,30 +34,12 @@ export default function NetIncomePage() {
       const window = netValues.slice(Math.max(0, i - 2), i + 1)
       return Math.round(window.reduce((a, b) => a + b, 0) / window.length)
     })
-    const axis = chartAxis(isDark)
-
     return {
-      grid: { left: 8, right: 8, top: 40, bottom: 8, containLabel: true },
+      grid: moneyGrid({ right: 8, top: 40 }),
       legend: { top: 0 },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        valueFormatter: (val) => formatCAD(Number(val), { fractionDigits: 0 }),
-      },
-      xAxis: {
-        type: 'category',
-        data: months,
-        axisLabel: { color: axis.label },
-        axisLine: { lineStyle: { color: axis.line } },
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: {
-          color: axis.label,
-          formatter: (val: number) => formatCAD(val, { fractionDigits: 0 }),
-        },
-        splitLine: { lineStyle: { color: axis.split } },
-      },
+      tooltip: cadAxisTooltip({ shadow: true }),
+      xAxis: categoryAxis(isDark, months),
+      yAxis: cadValueAxis(isDark),
       series: [
         { name: 'Income', type: 'bar', data: incomeValues, itemStyle: { color: CHART_COLORS.income }, barGap: '-100%' },
         { name: 'Expenses', type: 'bar', data: expenseValues, itemStyle: { color: CHART_COLORS.expense } },
