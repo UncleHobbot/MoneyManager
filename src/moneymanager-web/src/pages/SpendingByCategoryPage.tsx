@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
+import { usePersistedState } from '@/hooks/usePersistedState'
 import { useNavigate } from 'react-router-dom'
 import { useSpendingByCategory, useChartPeriods } from '@/hooks/useCharts'
 import { useCategories } from '@/hooks/useCategories'
@@ -121,7 +122,7 @@ function DonutChart({
 }
 
 export default function SpendingByCategoryPage() {
-  const [period, setPeriod] = useState('12')
+  const [period, setPeriod] = usePersistedState('chart-period:spending-by-category', '12')
   const navigate = useNavigate()
 
   const { data: periods, isLoading: periodsLoading } = useChartPeriods()

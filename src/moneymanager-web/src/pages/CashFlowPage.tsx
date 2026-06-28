@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
+import { usePersistedState } from '@/hooks/usePersistedState'
 import { useNavigate } from 'react-router-dom'
 import { useCashFlow, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
@@ -19,7 +20,7 @@ const KIND_COLORS: Record<string, string> = {
 }
 
 export default function CashFlowPage() {
-  const [period, setPeriod] = useState('12')
+  const [period, setPeriod] = usePersistedState('chart-period:cash-flow', '12')
   const navigate = useNavigate()
   const { theme } = useTheme()
   const isDark = theme === 'dark'

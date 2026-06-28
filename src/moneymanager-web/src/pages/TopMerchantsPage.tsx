@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
+import { usePersistedState } from '@/hooks/usePersistedState'
 import { useNavigate } from 'react-router-dom'
 import { useTopMerchants, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
@@ -10,7 +11,7 @@ import { moneyGrid, categoryAxis, cadValueAxis } from '@/lib/chartOptions'
 import type { EChartsOption } from 'echarts'
 
 export default function TopMerchantsPage() {
-  const [period, setPeriod] = useState('12')
+  const [period, setPeriod] = usePersistedState('chart-period:top-merchants', '12')
   const navigate = useNavigate()
   const { theme } = useTheme()
   const isDark = theme === 'dark'

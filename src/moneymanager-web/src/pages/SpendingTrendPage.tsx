@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
+import { usePersistedState } from '@/hooks/usePersistedState'
 import { useNavigate } from 'react-router-dom'
 import { useSpendingTrend, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
@@ -12,7 +13,7 @@ import type { EChartsOption } from 'echarts'
 const OTHER_COLOR = '#9CA3AF'
 
 export default function SpendingTrendPage() {
-  const [period, setPeriod] = useState('12')
+  const [period, setPeriod] = usePersistedState('chart-period:spending-trend', '12')
   const navigate = useNavigate()
   const { theme } = useTheme()
   const isDark = theme === 'dark'

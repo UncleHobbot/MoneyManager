@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { usePersistedState } from '@/hooks/usePersistedState'
 import { useNetIncome, useChartPeriods } from '@/hooks/useCharts'
 import { useTheme } from '@/components/layout/useTheme'
 import { Select, Spinner, Card, ChartCard, EChart } from '@/components/ui'
@@ -11,7 +12,7 @@ import type { BalanceChart } from '@/types'
 import type { EChartsOption } from 'echarts'
 
 export default function NetIncomePage() {
-  const [period, setPeriod] = useState('12')
+  const [period, setPeriod] = usePersistedState('chart-period:net-income', '12')
   const navigate = useNavigate()
   const { theme } = useTheme()
   const isDark = theme === 'dark'
