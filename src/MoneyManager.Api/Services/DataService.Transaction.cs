@@ -59,6 +59,33 @@ public partial class DataService
     }
 
     /// <summary>
+    /// Applies a partial update to a transaction: a non-null <paramref name="description"/>
+    /// replaces the description, a non-null <paramref name="categoryId"/> (that resolves
+    /// to an existing category) replaces the category. Returns the updated transaction
+    /// with its account and category loaded, or <c>null</c> if no transaction had that id.
+    /// </summary>
+    public async Task<Transaction?> UpdateTransactionAsync(int id, string? description, int? categoryId)
+    {
+        var query = await GetTransactionsAsync();
+        var transaction = await query.FirstOrDefaultAsync(t => t.Id == id);
+        if (transaction is null)
+            return null;
+
+        if (description is not null)
+            transaction.Description = description;
+
+        if (categoryId.HasValue)
+        {
+            var category = await GetCategoryByIdAsync(categoryId.Value);
+            if (category is not null)
+                transaction.Category = category;
+        }
+
+        await ChangeTransactionAsync(transaction);
+        return transaction;
+    }
+
+    /// <summary>
     /// Creates a new manually-entered transaction.
     /// </summary>
     /// <param name="accountId">The account the transaction belongs to.</param>

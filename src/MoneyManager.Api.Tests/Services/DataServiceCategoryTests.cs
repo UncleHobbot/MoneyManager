@@ -27,6 +27,26 @@ public class DataServiceCategoryTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteCategoryAsync_RemovesCategoryAndInvalidatesCache()
+    {
+        var created = await _svc.DataService.ChangeCategoryAsync(new Category { Name = "Temp" });
+
+        // Warm the cache: a non-invalidating delete (the pre-seam bug) would leave
+        // this stale copy visible after the delete.
+        (await _svc.DataService.GetCategoriesAsync()).Should().Contain(c => c.Name == "Temp");
+
+        (await _svc.DataService.DeleteCategoryAsync(created.Id)).Should().BeTrue();
+
+        (await _svc.DataService.GetCategoriesAsync()).Should().NotContain(c => c.Name == "Temp");
+    }
+
+    [Fact]
+    public async Task DeleteCategoryAsync_NotFound_ReturnsFalse()
+    {
+        (await _svc.DataService.DeleteCategoryAsync(99999)).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task GetCategoriesTreeAsync_ReturnsHierarchicalStructure()
     {
         var tree = await _svc.DataService.GetCategoriesTreeAsync();

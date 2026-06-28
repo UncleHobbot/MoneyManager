@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using MoneyManager.Api.Data;
 using MoneyManager.Api.Services;
 
@@ -66,15 +65,10 @@ public static class CategoryEndpoints
         return TypedResults.Ok(updated);
     }
 
-    internal static async Task<IResult> Delete(int id, IDbContextFactory<DataContext> contextFactory)
+    internal static async Task<IResult> Delete(int id, DataService dataService)
     {
-        await using var ctx = await contextFactory.CreateDbContextAsync();
-        var category = await ctx.Categories.FindAsync(id);
-        if (category is null)
-            return TypedResults.NotFound();
-
-        ctx.Categories.Remove(category);
-        await ctx.SaveChangesAsync();
-        return TypedResults.NoContent();
+        return await dataService.DeleteCategoryAsync(id)
+            ? TypedResults.NoContent()
+            : TypedResults.NotFound();
     }
 }

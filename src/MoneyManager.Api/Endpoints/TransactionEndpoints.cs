@@ -126,24 +126,10 @@ public static class TransactionEndpoints
         UpdateTransactionRequest request,
         DataService dataService)
     {
-        var query = await dataService.GetTransactionsAsync();
-        var transaction = await query.FirstOrDefaultAsync(t => t.Id == id);
-
-        if (transaction is null)
-            return TypedResults.NotFound();
-
-        if (request.Description is not null)
-            transaction.Description = request.Description;
-
-        if (request.CategoryId.HasValue)
-        {
-            var category = await dataService.GetCategoryByIdAsync(request.CategoryId.Value);
-            if (category is not null)
-                transaction.Category = category;
-        }
-
-        await dataService.ChangeTransactionAsync(transaction);
-        return TypedResults.Ok(transaction.ToDto());
+        var transaction = await dataService.UpdateTransactionAsync(id, request.Description, request.CategoryId);
+        return transaction is null
+            ? TypedResults.NotFound()
+            : TypedResults.Ok(transaction.ToDto());
     }
 
     internal static async Task<IResult> GetStats(

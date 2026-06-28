@@ -369,7 +369,9 @@ services, not in the cache.
   `category.Parent` being populated. Accounts are flat.
 - **Invalidation owners.** Every write to an Account (`ChangeAccountAsync`,
   `DeleteAccountAsync`) invalidates Accounts; every write to a Category
-  (`ChangeCategoryAsync` and everything routed through it) invalidates Categories.
+  (`ChangeCategoryAsync`, `DeleteCategoryAsync`, and everything routed through them)
+  invalidates Categories. Category delete now routes through the service for this
+  reason — the old `CategoryEndpoints.Delete` did EF directly and skipped invalidation.
   **Import** mutates reference data (it may create Accounts/Categories), so it
   unconditionally invalidates both at the end of a run — fixing the stale-UI-cache
   bug where a newly imported account did not appear until the next warm.

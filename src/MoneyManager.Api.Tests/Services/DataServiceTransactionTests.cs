@@ -75,6 +75,47 @@ public class DataServiceTransactionTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateTransactionAsync_NotFound_ReturnsNull()
+    {
+        (await _svc.DataService.UpdateTransactionAsync(9999, "x", null)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateTransactionAsync_PatchesDescriptionOnly_LeavesCategory()
+    {
+        var query = await _svc.DataService.GetTransactionsAsync();
+        var grocery = await query.FirstAsync(t => t.Description == "Loblaws Groceries");
+        var categoryIdBefore = grocery.Category!.Id;
+
+        var updated = await _svc.DataService.UpdateTransactionAsync(grocery.Id, "Renamed", null);
+
+        updated.Should().NotBeNull();
+        updated!.Description.Should().Be("Renamed");
+        updated.Category!.Id.Should().Be(categoryIdBefore); // category untouched
+
+        using var ctx = _svc.Factory.CreateDbContext();
+        var persisted = await ctx.Transactions.FirstAsync(t => t.Id == grocery.Id);
+        persisted.Description.Should().Be("Renamed");
+    }
+
+    [Fact]
+    public async Task UpdateTransactionAsync_PatchesCategoryOnly_LeavesDescription()
+    {
+        int netflixId, foodId;
+        using (var ctx = _svc.Factory.CreateDbContext())
+        {
+            netflixId = ctx.Transactions.First(t => t.Description == "Netflix").Id;
+            foodId = ctx.Categories.First(c => c.Name == "Food").Id;
+        }
+
+        var updated = await _svc.DataService.UpdateTransactionAsync(netflixId, null, foodId);
+
+        updated.Should().NotBeNull();
+        updated!.Description.Should().Be("Netflix"); // description untouched
+        updated.Category!.Id.Should().Be(foodId);
+    }
+
+    [Fact]
     public async Task GetTransactionsAsync_TransactionToDtoWorks()
     {
         var query = await _svc.DataService.GetTransactionsAsync();

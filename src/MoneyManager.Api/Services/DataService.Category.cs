@@ -103,6 +103,24 @@ public partial class DataService
     }
 
     /// <summary>
+    /// Deletes a category by id. Returns <c>true</c> if it existed and was removed,
+    /// <c>false</c> if no category had that id. Invalidates the category cache on
+    /// success (every category write routes through the service for this reason).
+    /// </summary>
+    public async Task<bool> DeleteCategoryAsync(int id)
+    {
+        await using var ctx = await contextFactory.CreateDbContextAsync();
+        var category = await ctx.Categories.FindAsync(id);
+        if (category is null)
+            return false;
+
+        ctx.Categories.Remove(category);
+        await ctx.SaveChangesAsync();
+        cache.InvalidateCategories();
+        return true;
+    }
+
+    /// <summary>
     /// Converts a category to a top-level parent category.
     /// </summary>
     /// <param name="category">
