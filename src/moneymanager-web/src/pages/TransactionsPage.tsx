@@ -26,7 +26,7 @@ import { useAccounts } from '@/hooks/useAccounts'
 import { useCategories } from '@/hooks/useCategories'
 import { useChartPeriods } from '@/hooks/useCharts'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { usePersistedFilters } from '@/hooks/usePersistedFilters'
+import { usePersistedFilters, TRANSACTIONS_FILTERS_KEY } from '@/hooks/usePersistedFilters'
 import {
   Button,
   Input,
@@ -139,7 +139,7 @@ export default function TransactionsPage() {
 
   // Persist filters so a bare sidebar entry (/transactions, no query) restores the
   // last view; deep links (chart drill-ins) keep their explicit params.
-  usePersistedFilters('transactions-filters', searchParams, setSearchParams)
+  usePersistedFilters(TRANSACTIONS_FILTERS_KEY, searchParams, setSearchParams)
 
   // Filter / sort / paging state lives in the URL so any view is deep-linkable
   // and the back button works (ADR-0005). Charts drill in by linking to this page

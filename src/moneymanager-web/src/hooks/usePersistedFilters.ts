@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 
+/** localStorage key for the persisted Transactions filter query string. */
+export const TRANSACTIONS_FILTERS_KEY = 'transactions-filters'
+
 /**
  * Persists a page's URL query string to localStorage and restores it when the
  * page is entered with no query params — e.g. a bare sidebar link. Deep links

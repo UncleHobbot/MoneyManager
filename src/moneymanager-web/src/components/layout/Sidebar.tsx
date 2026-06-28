@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { TRANSACTIONS_FILTERS_KEY } from '@/hooks/usePersistedFilters'
 import {
   LayoutDashboard,
   Receipt,
@@ -30,22 +31,42 @@ interface NavItemProps {
   onClick?: () => void
 }
 
+function navItemClassName({ isActive }: { isActive: boolean }) {
+  return `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+    isActive
+      ? 'bg-indigo-600 text-white'
+      : 'text-gray-400 hover:text-white hover:bg-white/5'
+  }`
+}
+
 function NavItem({ to, icon, label, onClick }: NavItemProps) {
   return (
-    <NavLink
-      to={to}
-      end
-      onClick={onClick}
-      className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-          isActive
-            ? 'bg-indigo-600 text-white'
-            : 'text-gray-400 hover:text-white hover:bg-white/5'
-        }`
-      }
-    >
+    <NavLink to={to} end onClick={onClick} className={navItemClassName}>
       {icon}
       <span>{label}</span>
+    </NavLink>
+  )
+}
+
+/**
+ * Transactions link that targets the persisted filter view. The saved query is
+ * read at click time, so the link always reflects the latest filters — and
+ * clicking it while already on the page restores them instead of clearing.
+ */
+function TransactionsNavItem({ onClick }: { onClick?: () => void }) {
+  const navigate = useNavigate()
+
+  function handleClick(event: React.MouseEvent) {
+    event.preventDefault()
+    const saved = localStorage.getItem(TRANSACTIONS_FILTERS_KEY)
+    navigate(saved ? `/transactions?${saved}` : '/transactions')
+    onClick?.()
+  }
+
+  return (
+    <NavLink to="/transactions" end onClick={handleClick} className={navItemClassName}>
+      <Receipt size={18} />
+      <span>Transactions</span>
     </NavLink>
   )
 }
@@ -93,7 +114,7 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex flex-col gap-0.5 px-3 flex-1">
         <NavItem to="/" icon={<LayoutDashboard size={18} />} label="Home" onClick={closeMobile} />
-        <NavItem to="/transactions" icon={<Receipt size={18} />} label="Transactions" onClick={closeMobile} />
+        <TransactionsNavItem onClick={closeMobile} />
 
         <CollapsibleGroup icon={<TrendingUp size={18} />} label="Trends" defaultOpen>
           <NavItem to="/charts/income" icon={<DollarSign size={16} />} label="Net Income" onClick={closeMobile} />
