@@ -33,10 +33,15 @@ A transaction whose meaningful category is unknown. Encoded today as
 - **Why both branches.** In practice almost no transactions have
   `Category == null`; uncategorized ones point at the "Uncategorized" category
   (this is how the dashboard finds them). The `null` branch is defensive.
-- **Known debt.** The string-match against `"uncategorized"` is duplicated
-  across backend (filters, charts, import) and frontend (dashboard, dialogs).
-  Candidate 3 (ReportingRow with `IsUncategorized` flag) is the planned
-  consolidation. Until then, all encodings must use the same operational rule.
+- **Frontend canonical helper.** The frontend matches and names the category
+  through one module, `lib/uncategorized.ts` (`UNCATEGORIZED_CATEGORY_NAME` +
+  `isUncategorizedCategory`, case-insensitive), consumed by the dashboard
+  (find the bucket) and budgets (exclude it). The display label and the
+  category-name match share that single source — no per-page re-spelling.
+- **Known debt (backend).** The string-match against `"uncategorized"` is still
+  duplicated across backend filters, charts, and import. A `ReportingRow.IsUncategorized`
+  flag is the planned backend consolidation. Until then, all backend encodings
+  must use the same operational rule.
 - **Distinct concept.** "Needs categorization" used by rule re-application
   (`Category == null || !IsRuleApplied`) is broader — it includes transactions
   whose rules may have been edited since the last application. Do not conflate

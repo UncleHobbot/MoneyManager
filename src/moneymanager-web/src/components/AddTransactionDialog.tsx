@@ -1,5 +1,6 @@
 import { useMemo, useState, type FC } from 'react'
 import { Button, Dialog, DialogFooter, Input, Select } from '@/components/ui'
+import { UNCATEGORIZED_CATEGORY_NAME } from '@/lib/uncategorized'
 import type { Account, Category, CreateTransactionRequest } from '@/types'
 
 interface AddTransactionDialogProps {
@@ -46,7 +47,7 @@ function AddTransactionForm({
   )
   const categoryOptions = useMemo(
     () => [
-      { label: 'Uncategorized', value: '' },
+      { label: UNCATEGORIZED_CATEGORY_NAME, value: '' },
       ...categories.map((c) => ({ label: c.name, value: c.id })),
     ],
     [categories],

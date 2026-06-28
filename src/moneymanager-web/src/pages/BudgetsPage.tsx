@@ -5,11 +5,13 @@ import { useCategories } from '@/hooks/useCategories'
 import { useTheme } from '@/components/layout/useTheme'
 import { Spinner, Card, ChartCard, EChart, CategoryIcon, Input, Button } from '@/components/ui'
 import { moneyGrid, categoryAxis, cadValueAxis, cadAxisTooltip } from '@/lib/chartOptions'
+import { isUncategorizedCategory } from '@/lib/uncategorized'
 import type { EChartsOption } from 'echarts'
 import type { BudgetDto, Category } from '@/types'
 
-// Income / Transfer / Uncategorized aren't spending budgets.
-const NON_BUDGETABLE = new Set(['Income', 'Transfer', 'Uncategorized'])
+// Income and Transfer aren't spending budgets; Uncategorized is matched via the
+// canonical predicate (case-insensitive).
+const NON_BUDGETABLE = new Set(['Income', 'Transfer'])
 
 function BudgetRow({
   category,
@@ -98,7 +100,7 @@ export default function BudgetsPage() {
   const topLevel = useMemo(
     () =>
       (categories ?? [])
-        .filter(c => c.parent == null && !NON_BUDGETABLE.has(c.name))
+        .filter(c => c.parent == null && !NON_BUDGETABLE.has(c.name) && !isUncategorizedCategory(c))
         .sort((a, b) => a.name.localeCompare(b.name)),
     [categories],
   )

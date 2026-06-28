@@ -9,6 +9,7 @@ import { Card, Spinner, Button, Badge, CategoryIcon, Money, EChart } from '@/com
 import { EditTransactionDialog } from '@/components/EditTransactionDialog'
 import { formatCAD } from '@/lib/format'
 import { CHART_COLORS, CHART_PALETTE } from '@/lib/chartTheme'
+import { UNCATEGORIZED_CATEGORY_NAME, isUncategorizedCategory } from '@/lib/uncategorized'
 import type { TransactionDto } from '@/types'
 import {
   Upload,
@@ -117,7 +118,7 @@ function TransactionRow({
                   {transaction.category.name}
                 </span>
               ) : (
-                <span className="italic">Uncategorized</span>
+                <span className="italic">{UNCATEGORIZED_CATEGORY_NAME}</span>
               )}
             </>
           )}
@@ -172,9 +173,7 @@ function UncategorizedCard() {
   const [editDesc, setEditDesc] = useState('')
   const [editCatId, setEditCatId] = useState<number | undefined>()
   const [editError, setEditError] = useState<string | null>(null)
-  const uncategorizedCategory = categories?.find(
-    category => category.name.toLowerCase() === 'uncategorized',
-  )
+  const uncategorizedCategory = categories?.find(isUncategorizedCategory)
   const {
     data,
     isLoading: isLoadingTransactions,

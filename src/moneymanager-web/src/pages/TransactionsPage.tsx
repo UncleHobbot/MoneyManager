@@ -40,6 +40,7 @@ import {
 import { EditTransactionDialog } from '@/components/EditTransactionDialog'
 import { AddTransactionDialog } from '@/components/AddTransactionDialog'
 import { formatCAD } from '@/lib/format'
+import { UNCATEGORIZED_CATEGORY_NAME } from '@/lib/uncategorized'
 import type { Column } from '@/components/ui'
 import type { CreateTransactionRequest, TransactionDto } from '@/types'
 
@@ -444,7 +445,7 @@ export default function TransactionsPage() {
             </FilterCell>
           ) : (
             <FilterCell onClick={filterUncategorized} title="Filter by uncategorized">
-              <span className="italic text-gray-400">Uncategorized</span>
+              <span className="italic text-gray-400">{UNCATEGORIZED_CATEGORY_NAME}</span>
             </FilterCell>
           ),
       },
