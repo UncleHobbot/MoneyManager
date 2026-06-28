@@ -1,15 +1,8 @@
-import { useState, type FC } from 'react'
-import { useApplyRuleToTransaction, usePossibleRules, useUpdateRule } from '@/hooks/useRules'
-import { Button, CategorySelect, Dialog, DialogFooter, Input, Select, Spinner, CategoryIcon } from '@/components/ui'
+import { type FC } from 'react'
+import { Button, CategorySelect, Dialog, DialogFooter, Input } from '@/components/ui'
+import { RuleManagementPanel } from '@/components/RuleManagementPanel'
 import { formatCAD } from '@/lib/format'
-import type { Category, Rule, TransactionDto } from '@/types'
-
-const RULE_COMPARE_OPTIONS = [
-  { label: 'Contains', value: 0 },
-  { label: 'Starts With', value: 1 },
-  { label: 'Ends With', value: 2 },
-  { label: 'Equals', value: 3 },
-] as const
+import type { Category, TransactionDto } from '@/types'
 
 interface EditTransactionDialogProps {
   open: boolean
@@ -30,17 +23,6 @@ interface EditTransactionDialogContentProps extends Omit<EditTransactionDialogPr
   transaction: TransactionDto
 }
 
-function findMatchingRule(rules: Rule[], ruleToMatch: Rule) {
-  return [...rules]
-    .sort((left, right) => right.id - left.id)
-    .find(rule =>
-      rule.originalDescription === ruleToMatch.originalDescription
-      && rule.newDescription === ruleToMatch.newDescription
-      && rule.compareType === ruleToMatch.compareType
-      && rule.category.id === ruleToMatch.category.id,
-    )
-}
-
 function EditTransactionDialogContent({
   transaction,
   description,
@@ -54,92 +36,6 @@ function EditTransactionDialogContent({
   onClose,
   onSave,
 }: EditTransactionDialogContentProps) {
-  const [preferredRulePanel, setPreferredRulePanel] = useState<'apply' | 'create'>(transaction.isRuleApplied ? 'create' : 'apply')
-  const [newRuleCompareType, setNewRuleCompareType] = useState(0)
-  const [newRuleOriginalDescription, setNewRuleOriginalDescription] = useState(transaction.originalDescription)
-  const [newRuleDescription, setNewRuleDescription] = useState('')
-  const [newRuleCategoryId, setNewRuleCategoryId] = useState<number | undefined>()
-
-  const possibleRules = usePossibleRules(transaction.id, !transaction.isRuleApplied)
-  const applyRule = useApplyRuleToTransaction()
-  const updateRule = useUpdateRule()
-
-  const matchingRules = possibleRules.data ?? []
-  const hasDraftChanges = description !== transaction.description || categoryId !== transaction.category?.id
-  const showApplyRulePanel = !transaction.isRuleApplied
-  const hasMatchingRules = matchingRules.length > 0
-  const effectiveRuleDescription = newRuleDescription.trim() || description.trim()
-  const effectiveRuleCategoryId = newRuleCategoryId ?? categoryId ?? transaction.category?.id
-  const activeRulePanel = transaction.isRuleApplied
-    ? 'create'
-    : preferredRulePanel === 'create' || (!possibleRules.isLoading && !possibleRules.isError && !hasMatchingRules)
-      ? 'create'
-      : 'apply'
-  const canCreateRule = newRuleOriginalDescription.trim() !== '' && effectiveRuleCategoryId !== undefined
-  const isSavingRule = updateRule.isPending || applyRule.isPending
-
-  function handleRuleApplied(updatedTransaction: TransactionDto) {
-    onDescriptionChange(updatedTransaction.description)
-    onCategoryChange(updatedTransaction.category?.id)
-    onClose()
-  }
-
-  function handleCreateRule() {
-    const selectedCategory = categories.find(category => category.id === effectiveRuleCategoryId)
-    if (!selectedCategory) {
-      return
-    }
-
-    const compareTypeLabel = RULE_COMPARE_OPTIONS.find(option => option.value === newRuleCompareType)?.label ?? ''
-    const newRule: Rule = {
-      id: 0,
-      originalDescription: newRuleOriginalDescription.trim(),
-      newDescription: effectiveRuleDescription,
-      compareType: newRuleCompareType,
-      compareTypeString: compareTypeLabel,
-      category: selectedCategory,
-    }
-
-    updateRule.mutate(newRule, {
-      onSuccess: async (savedRules: Rule[]) => {
-        const createdRule = findMatchingRule(savedRules, newRule)
-          ?? findMatchingRule((await possibleRules.refetch()).data ?? [], newRule)
-
-        if (!createdRule) {
-          setPreferredRulePanel('apply')
-          return
-        }
-
-        applyRule.mutate(
-          { transactionId: transaction.id, ruleId: createdRule.id },
-          {
-            onSuccess: (updatedTransaction: TransactionDto) => {
-              onDescriptionChange(updatedTransaction.description)
-              onCategoryChange(updatedTransaction.category?.id)
-              possibleRules.refetch()
-              setPreferredRulePanel('apply')
-            },
-          },
-        )
-      },
-    })
-  }
-
-  function handleApplyRule(ruleId: number) {
-    if (
-      hasDraftChanges &&
-      typeof window !== 'undefined' &&
-      !window.confirm('Applying a rule will replace your unsaved edits. Continue?')
-    ) {
-      return
-    }
-
-    applyRule.mutate(
-      { transactionId: transaction.id, ruleId },
-      { onSuccess: handleRuleApplied },
-    )
-  }
-
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -185,159 +81,15 @@ function EditTransactionDialogContent({
         </label>
       </div>
 
-      <div className="mt-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Rule management</h3>
-
-        <div className="mt-4 flex gap-2 border-b border-gray-200 pb-3 dark:border-gray-700">
-          {showApplyRulePanel && (
-            <Button
-              variant={activeRulePanel === 'apply' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setPreferredRulePanel('apply')}
-            >
-              Apply rule
-            </Button>
-          )}
-          <Button
-            variant={activeRulePanel === 'create' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setPreferredRulePanel('create')}
-          >
-            Create rule
-          </Button>
-        </div>
-
-        {possibleRules.isLoading ? (
-          activeRulePanel === 'apply' ? (
-            <div className="mt-4 flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-              <Spinner size="sm" />
-              <span>Loading matching rules...</span>
-            </div>
-          ) : (
-            <div className="mt-4 flex flex-col gap-4">
-              <Select
-                id="edit-rule-compare-type"
-                label="Comparison type"
-                options={RULE_COMPARE_OPTIONS.map(option => ({ label: option.label, value: option.value }))}
-                value={newRuleCompareType}
-                onChange={(value) => setNewRuleCompareType(Number(value))}
-              />
-              <Input
-                id="edit-rule-description"
-                label="Rule match text"
-                value={newRuleOriginalDescription}
-                onChange={setNewRuleOriginalDescription}
-              />
-              <Input
-                id="edit-rule-new-description"
-                label="Rule replacement description"
-                value={newRuleDescription}
-                onChange={setNewRuleDescription}
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Leave blank to use the current edited description: {description}
-              </p>
-              <CategorySelect
-                id="edit-rule-category"
-                label="Rule category"
-                categories={categories}
-                value={effectiveRuleCategoryId}
-                onChange={setNewRuleCategoryId}
-              />
-              <div className="flex justify-start">
-                <Button
-                  onClick={handleCreateRule}
-                  loading={isSavingRule}
-                  disabled={!canCreateRule || isSavingRule}
-                >
-                  Save New Rule
-                </Button>
-              </div>
-            </div>
-          )
-        ) : possibleRules.isError && activeRulePanel === 'apply' ? (
-          <p className="mt-4 text-sm text-red-600 dark:text-red-400">
-            Couldn&apos;t load matching rules.
-          </p>
-        ) : activeRulePanel === 'apply' && hasMatchingRules ? (
-          <div className="mt-4 space-y-3">
-            {matchingRules.map(rule => (
-              <div
-                key={rule.id}
-                className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-700"
-              >
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {rule.newDescription || (
-                      <span className="italic text-gray-500 dark:text-gray-400">
-                        No new description
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    <CategoryIcon icon={rule.category.icon ?? rule.category.pIcon ?? undefined} size={14} />
-                    <span>{rule.category.name}</span>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  aria-label={`Apply rule for ${rule.category.name}${rule.newDescription ? `: ${rule.newDescription}` : ''}`}
-                  onClick={() => handleApplyRule(rule.id)}
-                  loading={applyRule.isPending}
-                  disabled={applyRule.isPending}
-                >
-                  Apply
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : activeRulePanel === 'apply' ? (
-          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            No matching rules found for this transaction.
-          </p>
-        ) : (
-          <div className="mt-4 flex flex-col gap-4">
-            <Select
-              id="edit-rule-compare-type"
-              label="Comparison type"
-              options={RULE_COMPARE_OPTIONS.map(option => ({ label: option.label, value: option.value }))}
-              value={newRuleCompareType}
-              onChange={(value) => setNewRuleCompareType(Number(value))}
-            />
-            <Input
-              id="edit-rule-description"
-              label="Rule match text"
-              value={newRuleOriginalDescription}
-              onChange={setNewRuleOriginalDescription}
-            />
-            <Input
-              id="edit-rule-new-description"
-              label="Rule replacement description"
-              value={newRuleDescription}
-              onChange={setNewRuleDescription}
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Leave blank to use the current edited description: {description}
-            </p>
-            <CategorySelect
-              id="edit-rule-category"
-              label="Rule category"
-              categories={categories}
-              value={effectiveRuleCategoryId}
-              onChange={setNewRuleCategoryId}
-            />
-            <div className="flex justify-start">
-              <Button
-                onClick={handleCreateRule}
-                loading={isSavingRule}
-                disabled={!canCreateRule || isSavingRule}
-              >
-                Save New Rule
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+      <RuleManagementPanel
+        transaction={transaction}
+        categories={categories}
+        description={description}
+        categoryId={categoryId}
+        onDescriptionChange={onDescriptionChange}
+        onCategoryChange={onCategoryChange}
+        onClose={onClose}
+      />
 
       {errorMessage && (
         <p className="mt-4 text-sm text-red-600 dark:text-red-400" role="alert">
